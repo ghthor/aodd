@@ -6,12 +6,13 @@ import (
 
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/quad"
+	"github.com/ghthor/engine/sim/stime"
 )
 
 type inputPhase struct{}
 type narrowPhase struct{}
 
-func (inputPhase) ApplyInputsIn(c quad.Chunk) quad.Chunk {
+func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 	for _, e := range c.Entities {
 		switch a := e.(type) {
 		case actor:
@@ -24,7 +25,7 @@ func (inputPhase) ApplyInputsIn(c quad.Chunk) quad.Chunk {
 	return c
 }
 
-func (narrowPhase) ResolveCollisions(c quad.Chunk) quad.Chunk {
+func (narrowPhase) ResolveCollisions(c quad.Chunk, now stime.Time) quad.Chunk {
 	return c
 }
 
