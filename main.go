@@ -25,7 +25,7 @@ func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 	return c
 }
 
-func (narrowPhase) ResolveCollisions(c quad.Chunk, now stime.Time) quad.Chunk {
+func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad.CollisionGroup {
 	return c
 }
 
