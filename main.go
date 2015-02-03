@@ -1,43 +1,39 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
-
-	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/quad"
-	"github.com/ghthor/engine/sim/stime"
+	"net/http"
 )
 
-type inputPhase struct{}
-type narrowPhase struct{}
-
-func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
-	for _, e := range c.Entities {
-		switch a := e.(type) {
-		case actor:
-			input := a.ReadInput()
-			fmt.Println(input)
-
-			// Naively apply input to actor
-		}
-	}
-	return c
-}
-
-func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad.CollisionGroup {
-	return c
-}
-
 func main() {
-	simDef := rpg2d.SimulationDef{
-		FPS: 40,
+	laddrHTTP := flag.String("r", "localhost:8080",
+		"address for a HTTP server that redirects to the HTTPS game server")
+	laddrTLS := flag.String("s", "localhost:8081", "address for the HTTPS game server")
 
-		InputPhaseHandler:  inputPhase{},
-		NarrowPhaseHandler: narrowPhase{},
+	certFile := flag.String("cert", "cert.pem", "TLS cert filepath")
+	keyFile := flag.String("key", "key.pem", "TLS key filepath")
+
+	flag.Parse()
+
+	go func() {
+		http.Handle("/", http.RedirectHandler("https://"+*laddrTLS, 301))
+
+		log.Printf("started: redirect server http://%s -> https://%s", *laddrHTTP, *laddrTLS)
+		err := http.ListenAndServe(*laddrHTTP, nil)
+
+		if err != nil {
+			log.Fatal("error in redirect server:", err)
+		}
+	}()
+
+	s, err := newSimShard(*laddrTLS)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	_, err := simDef.Begin()
+	log.Printf("started: tls server https://%s", *laddrTLS)
+	err = s.ListenAndServeTLS(*certFile, *keyFile)
 	if err != nil {
 		log.Fatal(err)
 	}
