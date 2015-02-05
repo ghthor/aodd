@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -69,7 +70,7 @@ func (c actorHandler) loginHandler() (actorHandler, error) {
 	case encoding.PT_JSON:
 		switch packet.Msg {
 		case "login":
-			c.respondToLoginReq(packet)
+			return c.respondToLoginReq(packet)
 		default:
 			goto notLoggedIn
 		}
@@ -96,8 +97,21 @@ notLoggedIn:
 // state of the packet handler. If the login is
 // successful the packet handler will transition
 // to the input handler..
-func (c *actorHandler) respondToLoginReq(p encoding.Packet) {
+func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error) {
+	r := LoginReq{}
+
+	err := json.Unmarshal([]byte(p.Payload), &r)
+	if err != nil {
+		return c, errors.New(fmt.Sprint("error parsing login request:", err))
+	}
+
 	// TODO Check the datastore using the login information
+	// TODO Create an actor and input into the simulation
+
+	log.Print("actor logged in:", r.Name)
+
+	c.SendMessage("loginSuccess", r.Name)
+	return c, nil
 }
 
 func newWebsocketActorHandler(sim sim.RunningSimulation) websocket.Handler {
