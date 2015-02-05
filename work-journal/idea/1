@@ -1,0 +1,12 @@
+## [active] [1] Release 1
+- [ ] Fix phantomjs test runner
+
+- [ ] Rewrite of GUI to use react
+- [ ] Update CAAT graphics engine
+    - Look into other graphic engine alternatives
+
+- [ ] Update all vendored libs
+
+- [ ] Drop jade
+    - [ ] Conditionalize world width and height through a go tmpl
+    - [ ] Conditionalize websocket url and port through a go tmpl
