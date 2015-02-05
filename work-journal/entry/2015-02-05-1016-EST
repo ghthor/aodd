@@ -1,0 +1,24 @@
+Thu Feb  5 10:16:57 EST 2015
+
+# journal - Plan going forward
+After looking over the old client implementation last night I think
+I am not going to worry about a react rewrite. I'm also a little
+on the fence about changing much of current way you name yourself.
+I don't know how I want to go about attaching characters to accounts
+or anything really. I'm a mess, I don't know what I'm doing or how
+to move forward.
+
+I could use the DA model and just have characters with passwords.
+A real player could attach characters to their accounts later.
+This could streamline the new player experience a little.
+I do want redo the initial interface presented to the user.
+This is my chance to play with react.
+
+I wonder if I should move the character creation and login
+away from the websocket connection to an http post. No no,
+I shouldn't do that because actors also need to auth over
+udp in the future for a native client. Do it over the socket
+then the code is reused for free and adding udp support to
+the server will be easy.
+
+Thu Feb  5 10:28:13 EST 2015
