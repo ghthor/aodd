@@ -1,0 +1,45 @@
+Fri Feb  6 16:32:38 EST 2015
+
+# journal - Fixed phantomjs runner | Thoughts about user accounts
+Really happy with the way I got the jasmine specs running.
+I can run the jasmine specs with `go test`!
+How fucking cool is that.
+
+I just got done adding an in memory datastore for actors.
+I'm happy with an orthogonal approach to binding actors to user accounts.
+Similar to Darkages, an actor will have it's own password.
+Later I can add user accounts and you can bind actors to user accounts.
+Maybe even log actors in using ssh keys, enabled by binding the actor to a user account.
+
+I need to work on specifying the simplified login/create/etc connection protocol.
+Then I need to update the js client to this new protocol.
+Shouldn't be too difficult. 
+
+When I looked through the spec from the bitbucket repo for this
+messaging protocol I was impressed with how simple it was.
+The spec shouldn't take much longer to flesh out and impl.
+
+I'm slightly worried about how easy it will be to fix js client
+with these new changes. But I've been really happy with the code
+quality of all the .js files that I've imported from my private bitbucket
+repo. Glad I was using jshint and jasmine by this point.
+
+I guess I should clarify what is changing here.
+The previous implementation that I am importing the source from
+had User Accounts and Characters(Bound to a user account). This
+added a complication to the account creation process and required
+that after a user logs in they must then choose a character.
+
+This seems silly to me and after acknowledging that Darkages had
+an orthogonal relationship between characters and accounts I started
+leaning on this approach. It should be much more friendly to AI devs
+to create an actor and password and only have to login with those
+2 credentials to get a valid connection to the simulation.
+
+Moving towards this relationship greatly simplifies the login/create
+protocol as well. It also allows for all the account management to be
+implemented outside of the game server, perhaps in js with a direct
+connection to the database as Roml described. This architecture is what
+I want to aim for and this simplification will help in this regard.
+
+Fri Feb  6 16:51:59 EST 2015
