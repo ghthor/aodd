@@ -55,13 +55,26 @@ func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type ShardConfig struct {
+	// Is the resultant http server going to be
+	// run using TLS or just standard HTTP.
 	IsHTTPS bool
 
+	// LAddr for the http server
 	LAddr,
-	JsDir, JsMain string
 
+	// Path to javascript directory
+	JsDir,
+
+	// The javascript module that require.js should
+	// call as the javascript main.
+	JsMain string
+
+	// A template for the index page. The template
+	// will be executed with a game.ClientSettings{} struct.
 	IndexTmpl *template.Template
 
+	// A mux that http server will use. Is provided so the
+	// user can extend the server with additional routes.
 	Mux *http.ServeMux
 }
 
