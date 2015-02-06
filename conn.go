@@ -125,7 +125,7 @@ func newWebsocketActorHandler(sim sim.RunningSimulation) websocket.Handler {
 
 		// TODO Maybe send a http response if there is an error
 		if err != nil {
-			log.Printf("disconnected: %e", err)
+			log.Printf("disconnected: %v", err)
 		}
 	}
 }
