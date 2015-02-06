@@ -10,12 +10,17 @@ import (
 type Actor struct {
 	Name, password string
 
+	// Actor's Unique ID
 	Id uint
 
-	Loc    coord.Cell
+	// Location in the world
+	Loc coord.Cell
+
+	// Way the actor is facing
 	Facing coord.Direction
 }
 
+// Authenticate the credentials for an actor.
 func (a Actor) Authenticate(name, password string) bool {
 	return a.Name == name && a.password == password
 }
@@ -65,9 +70,13 @@ func (p actorPool) AddActor(name, password string) (Actor, error) {
 	return actor, nil
 }
 
-// Datastore interface
+// The behavior required to load information about
+// the game world from a remote database.
 type Datastore interface {
 	ActorExists(name string) (Actor, bool)
+
+	// Can return ErrActorExists if the actor's name
+	// already exists in the datastore.
 	AddActor(name, password string) (Actor, error)
 }
 
@@ -75,6 +84,9 @@ type memDb struct {
 	actorPool
 }
 
+// An implementation of the Datastore interface that
+// will store all the data in memory. Is safe for concurrency.
+// Data will be lost if process closes.
 func NewMemDatastore() Datastore {
 	return &memDb{
 		actorPool: newActorPool(10),
