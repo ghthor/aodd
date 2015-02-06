@@ -4,7 +4,12 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"text/template"
+
+	"github.com/ghthor/aodd/game"
 )
+
+var indexTmpl = template.Must(template.New("index.tmpl").ParseFiles("www/index.tmpl"))
 
 func main() {
 	laddrHTTP := flag.String("r", "localhost:8080",
@@ -27,7 +32,7 @@ func main() {
 		}
 	}()
 
-	s, err := newSimShard(*laddrTLS)
+	s, err := game.NewSimShard(*laddrTLS, indexTmpl)
 	if err != nil {
 		log.Fatal(err)
 	}

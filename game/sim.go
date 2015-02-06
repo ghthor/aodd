@@ -1,4 +1,4 @@
-package main
+package game
 
 import (
 	"fmt"
@@ -31,8 +31,6 @@ func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad
 	return c
 }
 
-var indexTmpl = template.Must(template.New("index.tmpl").ParseFiles("www/index.tmpl"))
-
 type serveIndex struct {
 	tmpl     *template.Template
 	settings clientSettings
@@ -55,7 +53,7 @@ func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func newSimShard(laddr string) (*http.Server, error) {
+func NewSimShard(laddr string, indexTmpl *template.Template) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	quadTree, err := quad.New(coord.Bounds{
 		coord.Cell{-1024, 1024},
