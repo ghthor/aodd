@@ -54,7 +54,7 @@ func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewSimShard(laddr string, indexTmpl *template.Template, jsMain string) (*http.Server, error) {
+func NewSimShard(laddr string, indexTmpl *template.Template, mux *http.ServeMux, jsMain string) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	quadTree, err := quad.New(coord.Bounds{
 		coord.Cell{-1024, 1024},
@@ -82,8 +82,6 @@ func NewSimShard(laddr string, indexTmpl *template.Template, jsMain string) (*ht
 	if err != nil {
 		return nil, err
 	}
-
-	mux := http.NewServeMux()
 
 	wsRoute := "/actor/socket"
 

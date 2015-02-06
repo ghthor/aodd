@@ -32,7 +32,7 @@ func main() {
 		}
 	}()
 
-	s, err := game.NewSimShard(*laddrTLS, indexTmpl, "js/ui")
+	s, err := game.NewSimShard(*laddrTLS, indexTmpl, http.NewServeMux(), "js/ui")
 	if err != nil {
 		log.Fatal(err)
 	}
