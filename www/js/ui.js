@@ -1,3 +1,4 @@
+// NOTE must be also eddited in main_test.js
 requirejs.config({
     baseUrl: "js",
     paths: {
