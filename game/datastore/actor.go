@@ -20,19 +20,19 @@ func (a Actor) Authenticate(name, password string) bool {
 	return a.Name == name && a.password == password
 }
 
-type ActorPool struct {
+type actorPool struct {
 	nextId uint
 	store  map[string]Actor
 	lock   sync.Mutex
 }
 
-func newActorPool(size int) ActorPool {
-	return ActorPool{
+func newActorPool(size int) actorPool {
+	return actorPool{
 		store: make(map[string]Actor, size),
 	}
 }
 
-func (p ActorPool) ActorExists(name string) (Actor, bool) {
+func (p actorPool) ActorExists(name string) (Actor, bool) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	a, exists := p.store[name]
@@ -43,7 +43,7 @@ var ErrActorExists = errors.New("actor already exists")
 
 var defaultSpawn = coord.Cell{0, 0}
 
-func (p ActorPool) AddActor(name, password string) (Actor, error) {
+func (p actorPool) AddActor(name, password string) (Actor, error) {
 	actor, actorExists := p.ActorExists(name)
 	if actorExists {
 		return actor, ErrActorExists
@@ -65,12 +65,18 @@ func (p ActorPool) AddActor(name, password string) (Actor, error) {
 	return actor, nil
 }
 
-type Db struct {
-	Actors ActorPool
+// Datastore interface
+type Datastore interface {
+	ActorExists(name string) (Actor, bool)
+	AddActor(name, password string) (Actor, error)
 }
 
-func NewDb() *Db {
-	return &Db{
-		Actors: newActorPool(10),
+type memDb struct {
+	actorPool
+}
+
+func NewMemDatastore() Datastore {
+	return &memDb{
+		actorPool: newActorPool(10),
 	}
 }
