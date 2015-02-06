@@ -1,3 +1,6 @@
 ## [active] [2] Release 2
+- [ ] mock the github.com/ghthor/engine/net/protocol.Conn for use in the conn_test.go specs
+    - NOTE the current specs are using a websocket for now, which is silly but it works
+
 - [ ] Assess a client code rewrite using gopherjs
 - [ ] Assess a UI code rewrite using gopherjs + react
