@@ -36,6 +36,14 @@ type serveIndex struct {
 	settings ClientSettings
 }
 
+func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := html.tmpl.Execute(w, html.settings)
+
+	if err != nil {
+		http.Error(w, fmt.Sprint("template error:", err), http.StatusInternalServerError)
+	}
+}
+
 // A set of data that the index page template will
 // have access to when it is executed.
 type ClientSettings struct {
@@ -47,14 +55,6 @@ type ClientSettings struct {
 // Part of the ClientSettings that are rpg2d.Simulation specific
 type SimulationSettings struct {
 	Width, Height int
-}
-
-func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := html.tmpl.Execute(w, html.settings)
-
-	if err != nil {
-		http.Error(w, fmt.Sprint("template error:", err), http.StatusInternalServerError)
-	}
 }
 
 type ShardConfig struct {
