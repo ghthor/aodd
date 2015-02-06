@@ -22,3 +22,20 @@ func TestAddActorShouldFailIfActorExists(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestActorShouldHaveAUniqueID(t *testing.T) {
+	pool := newActorPool(2)
+	a1, err := pool.AddActor("actor1", "password")
+	if err != nil {
+		t.Fail()
+	}
+
+	a2, err := pool.AddActor("actor2", "password")
+	if err != nil {
+		t.Fail()
+	}
+
+	if a1.Id == a2.Id {
+		t.Fail()
+	}
+}

@@ -37,7 +37,7 @@ func newActorPool(size int) actorPool {
 	}
 }
 
-func (p actorPool) ActorExists(name string) (Actor, bool) {
+func (p *actorPool) ActorExists(name string) (Actor, bool) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	a, exists := p.store[name]
@@ -48,7 +48,7 @@ var ErrActorExists = errors.New("actor already exists")
 
 var defaultSpawn = coord.Cell{0, 0}
 
-func (p actorPool) AddActor(name, password string) (Actor, error) {
+func (p *actorPool) AddActor(name, password string) (Actor, error) {
 	actor, actorExists := p.ActorExists(name)
 	if actorExists {
 		return actor, ErrActorExists
@@ -63,6 +63,8 @@ func (p actorPool) AddActor(name, password string) (Actor, error) {
 		Loc:    defaultSpawn,
 		Facing: coord.South,
 	}
+
+	p.nextId++
 
 	p.lock.Lock()
 	p.store[name] = actor
