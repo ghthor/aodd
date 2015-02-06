@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"text/template"
 
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
@@ -28,6 +29,30 @@ func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 
 func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad.CollisionGroup {
 	return c
+}
+
+var indexTmpl = template.Must(template.New("index.tmpl").ParseFiles("www/index.tmpl"))
+
+type serveIndex struct {
+	tmpl     *template.Template
+	settings clientSettings
+}
+
+type clientSettings struct {
+	WebsocketURL string
+	Simulation   simulationSettings
+}
+
+type simulationSettings struct {
+	Width, Height int
+}
+
+func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := html.tmpl.Execute(w, html.settings)
+
+	if err != nil {
+		http.Error(w, fmt.Sprint("template error:", err), http.StatusInternalServerError)
+	}
 }
 
 func newSimShard(laddr string) (*http.Server, error) {
@@ -61,8 +86,22 @@ func newSimShard(laddr string) (*http.Server, error) {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.Dir("www/")))
-	mux.Handle("/actor/socket", newWebsocketActorHandler(runningSim))
+	wsRoute := "/actor/socket"
+
+	indexHandler := serveIndex{
+		indexTmpl,
+		clientSettings{
+			"wss://" + laddr + wsRoute,
+			simulationSettings{
+				Width:  quadTree.Bounds().Width(),
+				Height: quadTree.Bounds().Height(),
+			},
+		},
+	}
+
+	mux.Handle("/", indexHandler)
+	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("www/js/"))))
+	mux.Handle(wsRoute, newWebsocketActorHandler(runningSim))
 
 	return &http.Server{
 		Addr:    laddr,
