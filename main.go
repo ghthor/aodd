@@ -39,6 +39,8 @@ func main() {
 		JsDir:  "www/js",
 		JsMain: "js/ui",
 
+		AssetDir: "www/img",
+
 		IndexTmpl: indexTmpl,
 
 		Mux: http.NewServeMux(),
