@@ -33,16 +33,19 @@ func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad
 
 type serveIndex struct {
 	tmpl     *template.Template
-	settings clientSettings
+	settings ClientSettings
 }
 
-type clientSettings struct {
+// A set of data that the index page template will
+// have access to when it is executed.
+type ClientSettings struct {
 	JsMain       string
 	WebsocketURL string
-	Simulation   simulationSettings
+	Simulation   SimulationSettings
 }
 
-type simulationSettings struct {
+// Part of the ClientSettings that are rpg2d.Simulation specific
+type SimulationSettings struct {
 	Width, Height int
 }
 
@@ -119,10 +122,10 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	indexHandler := serveIndex{
 		c.IndexTmpl,
-		clientSettings{
+		ClientSettings{
 			c.JsMain,
 			wsUrl,
-			simulationSettings{
+			SimulationSettings{
 				Width:  quadTree.Bounds().Width(),
 				Height: quadTree.Bounds().Height(),
 			},
