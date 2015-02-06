@@ -37,6 +37,7 @@ type serveIndex struct {
 }
 
 type clientSettings struct {
+	JsMain       string
 	WebsocketURL string
 	Simulation   simulationSettings
 }
@@ -53,7 +54,7 @@ func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewSimShard(laddr string, indexTmpl *template.Template) (*http.Server, error) {
+func NewSimShard(laddr string, indexTmpl *template.Template, jsMain string) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	quadTree, err := quad.New(coord.Bounds{
 		coord.Cell{-1024, 1024},
@@ -89,6 +90,7 @@ func NewSimShard(laddr string, indexTmpl *template.Template) (*http.Server, erro
 	indexHandler := serveIndex{
 		indexTmpl,
 		clientSettings{
+			jsMain,
 			"wss://" + laddr + wsRoute,
 			simulationSettings{
 				Width:  quadTree.Bounds().Width(),
