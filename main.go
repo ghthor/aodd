@@ -32,7 +32,19 @@ func main() {
 		}
 	}()
 
-	s, err := game.NewSimShard(*laddrTLS, indexTmpl, http.NewServeMux(), "js/ui")
+	c := game.ShardConfig{
+		LAddr:   *laddrTLS,
+		IsHTTPS: true,
+
+		JsDir:  "www/js",
+		JsMain: "js/ui",
+
+		IndexTmpl: indexTmpl,
+
+		Mux: http.NewServeMux(),
+	}
+
+	s, err := game.NewSimShard(c)
 	if err != nil {
 		log.Fatal(err)
 	}

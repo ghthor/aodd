@@ -1,6 +1,7 @@
 package www
 
 import (
+	"net/http"
 	"testing"
 	"text/template"
 
@@ -15,7 +16,19 @@ func DescribeClient(c gospec.Context) {
 
 	// TODO add a route to the http server that phantom can trigger
 	// to signify that the tests are completed running
-	_, err := game.NewSimShard("localhost:45001", indexTmpl, "js/main_test")
+	shardConfig := game.ShardConfig{
+		IsHTTPS: false,
+		LAddr:   "localhost:45001",
+
+		IndexTmpl: indexTmpl,
+
+		JsDir:  "js/",
+		JsMain: "js/main_test",
+
+		Mux: http.NewServeMux(),
+	}
+
+	_, err := game.NewSimShard(shardConfig)
 	c.Assume(err, IsNil)
 
 	// TODO verify that phantomjs is installed.

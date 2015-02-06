@@ -54,7 +54,18 @@ func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewSimShard(laddr string, indexTmpl *template.Template, mux *http.ServeMux, jsMain string) (*http.Server, error) {
+type ShardConfig struct {
+	IsHTTPS bool
+
+	LAddr,
+	JsDir, JsMain string
+
+	IndexTmpl *template.Template
+
+	Mux *http.ServeMux
+}
+
+func NewSimShard(c ShardConfig) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	quadTree, err := quad.New(coord.Bounds{
 		coord.Cell{-1024, 1024},
@@ -84,12 +95,20 @@ func NewSimShard(laddr string, indexTmpl *template.Template, mux *http.ServeMux,
 	}
 
 	wsRoute := "/actor/socket"
+	var wsUrl string
+	if c.IsHTTPS {
+		wsUrl = "wss://"
+	} else {
+		wsUrl = "ws://"
+	}
+
+	wsUrl += c.LAddr + wsRoute
 
 	indexHandler := serveIndex{
-		indexTmpl,
+		c.IndexTmpl,
 		clientSettings{
-			jsMain,
-			"wss://" + laddr + wsRoute,
+			c.JsMain,
+			wsUrl,
 			simulationSettings{
 				Width:  quadTree.Bounds().Width(),
 				Height: quadTree.Bounds().Height(),
@@ -97,12 +116,14 @@ func NewSimShard(laddr string, indexTmpl *template.Template, mux *http.ServeMux,
 		},
 	}
 
+	mux := c.Mux
+
 	mux.Handle("/", indexHandler)
-	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("www/js/"))))
+	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle(wsRoute, newWebsocketActorHandler(runningSim))
 
 	return &http.Server{
-		Addr:    laddr,
+		Addr:    c.LAddr,
 		Handler: mux,
 	}, nil
 }
