@@ -1,0 +1,87 @@
+{
+    "passfail"      : false,
+    "maxerr"        : 100,
+
+    "browser"       : true,
+
+    "node"          : false,
+    "rhino"         : false,
+    "couch"         : false,
+    "wsh"           : false,
+
+    "jquery"        : false,
+    "prototypejs"   : false,
+    "mootools"      : false,
+    "dojo"          : false,
+
+    "predef"        : [
+        "requirejs",
+        "require",
+        "define",
+
+        "phantom",
+        "jasmine",
+        "describe",
+        "xdescribe",
+        "it",
+        "xit",
+        "beforeEach",
+        "afterEach",
+        "spyOn",
+        "expect",
+
+        "CAAT",
+        "key",
+        "google"
+    ],
+
+
+    "debug"         : false,
+    "devel"         : true,
+
+    "es5"           : false,
+    "strict"        : false,
+    "globalstrict"  : false,
+
+
+    "bitwise"       : true,
+    "camelcase"     : true,
+    "curly"         : true,
+    "eqeqeq"        : true,
+    "forin"         : false,
+    "immed"         : true,
+
+    "undef"         : true,
+    "latedef"       : true,
+    "unused"        : true,
+
+    "boss"          : false,
+    "eqnull"        : false,
+    "evil"          : false,
+    "expr"          : false,
+    "loopfunc"      : false,
+    "noarg"         : true,
+    "regexp"        : true,
+    "regexdash"     : false,
+    "scripturl"     : true,
+    "shadow"        : false,
+    "supernew"      : false,
+
+    "laxbreak"      : false,
+    "laxcomma"      : false,
+
+    "asi"           : false,
+
+    // Persone styling prefrences.
+    "quotmark"      : "double",
+    "indent"        : 4,
+    "newcap"        : true,
+    "noempty"       : true,
+    "nonew"         : true,
+    "nomen"         : false,
+    "onevar"        : false,
+    "plusplus"      : false,
+    "sub"           : false,
+    "trailing"      : true,
+    "white"         : false
+}
