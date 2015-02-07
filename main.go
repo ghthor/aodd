@@ -36,10 +36,11 @@ func main() {
 		LAddr:   *laddrTLS,
 		IsHTTPS: true,
 
-		JsDir:  "www/js",
-		JsMain: "js/ui",
-
+		JsDir:    "www/js",
 		AssetDir: "www/img",
+		CssDir:   "www/css",
+
+		JsMain: "js/ui",
 
 		IndexTmpl: indexTmpl,
 

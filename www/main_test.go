@@ -45,15 +45,16 @@ func DescribeClient(c gospec.Context) {
 	mux.Handle("/triggerStart", hasStartedHandler{hasStarted})
 
 	shardConfig := game.ShardConfig{
-		IsHTTPS: false,
 		LAddr:   "localhost:45001",
+		IsHTTPS: false,
 
-		IndexTmpl: indexTmpl,
+		JsDir:    "js/",
+		AssetDir: "img/",
+		CssDir:   "css/",
 
-		JsDir:  "js/",
 		JsMain: "js/specs_console_report",
 
-		AssetDir: "img/",
+		IndexTmpl: indexTmpl,
 
 		Mux: mux,
 	}

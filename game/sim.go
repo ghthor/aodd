@@ -73,7 +73,10 @@ type ShardConfig struct {
 	JsMain,
 
 	// Path to the graphic asset directory
-	AssetDir string
+	AssetDir,
+
+	// Path to the css directory
+	CssDir string
 
 	// A template for the index page. The template
 	// will be executed with a game.ClientSettings{} struct.
@@ -140,6 +143,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/", indexHandler)
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(c.AssetDir))))
+	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
 	mux.Handle(wsRoute, newWebsocketActorHandler(runningSim))
 
 	return &http.Server{
