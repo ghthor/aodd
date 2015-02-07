@@ -1,4 +1,4 @@
-// NOTE must be also eddited in main_test.js
+// NOTE must be also eddited in specs.js
 requirejs.config({
     baseUrl: "js",
     paths: {

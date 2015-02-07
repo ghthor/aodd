@@ -51,7 +51,7 @@ func DescribeClient(c gospec.Context) {
 		IndexTmpl: indexTmpl,
 
 		JsDir:  "js/",
-		JsMain: "js/main_test",
+		JsMain: "js/specs_console_report",
 
 		AssetDir: "img/",
 

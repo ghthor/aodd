@@ -11,15 +11,6 @@ page.onConsoleMessage = function(msg) {
     }
 };
 
-var runTest = function() {
-    page.open("http://localhost:" + port, function() {
-        // Call into the jasmine test code
-        page.evaluate(function() {
-            require(["main_test"], function(tester) {
-                tester.runConsoleReport();
-            });
-        });
-    });
-};
-
-runTest();
+(function() {
+    page.open("http://localhost:" + port, function() {});
+}());
