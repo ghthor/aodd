@@ -17,9 +17,7 @@ var runTest = function(failCount) {
             failCount++;
             if (failCount > 20) {
                 console.log("Fatal: No webserver started@https://localhost:" + port, status);
-                // page.open("https://localhost:"+port+"/testRunCompleted", function() {
-                    phantom.exit();
-                // });
+                phantom.exit();
             } else {
                 console.log("Waiting for web server...");
 
