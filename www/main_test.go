@@ -33,6 +33,7 @@ var browser string
 
 // Used to store executable paths
 var phantomjs string
+var chromium string
 
 func init() {
 	flag.StringVar(&browser, "browser", "phantomjs", "the browser engine used to run the specifications")
@@ -157,6 +158,59 @@ func DescribeConsoleReport(c gospec.Context) {
 	c.Assume(err, IsNil)
 }
 
+type specsHaveBeenRanHandler struct {
+	haveCompleted chan<- struct{}
+}
+
+func (specs specsHaveBeenRanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "server shutting down")
+	specs.haveCompleted <- struct{}{}
+}
+
+func DescribeHtmlReport(c gospec.Context) {
+	indexTmpl := template.Must(template.New("index.tmpl").ParseFiles("index.tmpl"))
+
+	port := "45001"
+	laddr := fmt.Sprintf("localhost:%s", port)
+
+	specsHaveBeenRan := make(chan struct{})
+
+	mux := http.NewServeMux()
+	mux.Handle("/specs/complete", specsHaveBeenRanHandler{specsHaveBeenRan})
+
+	shardConfig := game.ShardConfig{
+		LAddr:   laddr,
+		IsHTTPS: false,
+
+		JsDir:    "js/",
+		AssetDir: "img/",
+		CssDir:   "css/",
+
+		JsMain: "js/specs_html_report",
+
+		IndexTmpl: indexTmpl,
+
+		Mux: mux,
+	}
+
+	_, err := startWebServer(shardConfig)
+	if err != nil {
+		// Print out error and exit early
+		c.Assume(err, IsNil)
+		return
+	}
+
+	err = exec.Command(chromium, "--incognito", "http://"+laddr).Run()
+	if err != nil {
+		c.Assume(err, IsNil)
+		return
+	}
+
+	// Wait for tests to signal
+	// they have been run.
+	<-specsHaveBeenRan
+}
+
 func TestRunJasmineSpecs(t *testing.T) {
 	var err error
 
@@ -170,6 +224,14 @@ func TestRunJasmineSpecs(t *testing.T) {
 		}
 
 		r.AddSpec(DescribeConsoleReport)
+
+	case "chromium":
+		chromium, err = exec.LookPath("chromium")
+		if err != nil {
+			t.Fatal("chromium must be installed")
+		}
+
+		r.AddSpec(DescribeHtmlReport)
 
 	default:
 		t.Fatal(browser, "is unimplemented as an engine target")

@@ -68,6 +68,17 @@ define(["jquery",
             var jasmineEnv = jasmine.getEnv();
             jasmineEnv.updateInterval = 1000;
 
+            var report = "";
+            var consoleReporter = new jasmine.ConsoleReporter(function(str) {
+                report += str;
+            }, function() {
+                console.log(report);
+
+                // Trigger the web server to shut down
+                $.post("/specs/complete");
+            });
+            jasmineEnv.addReporter(consoleReporter);
+
             var htmlReporter = new jasmine.HtmlReporter();
 
             jasmineEnv.addReporter(htmlReporter);
