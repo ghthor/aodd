@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -97,8 +98,11 @@ func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
 func DescribeConsoleReport(c gospec.Context) {
 	indexTmpl := template.Must(template.New("index.tmpl").ParseFiles("index.tmpl"))
 
+	port := "45001"
+	laddr := fmt.Sprintf("localhost:%s", port)
+
 	shardConfig := game.ShardConfig{
-		LAddr:   "localhost:45001",
+		LAddr:   laddr,
 		IsHTTPS: false,
 
 		JsDir:    "js/",
@@ -119,7 +123,25 @@ func DescribeConsoleReport(c gospec.Context) {
 		return
 	}
 
-	cmd := exec.Command(phantomjs, "client_test.js")
+	phantomjsScriptTmpl := template.Must(template.New("phantomjs_specs.js.tmpl").ParseFiles("phantomjs_specs.js.tmpl"))
+
+	// Create a file in os temp directory
+	tmpFile, err := ioutil.TempFile("", "phantomjs_specs.js")
+	c.Assume(err, IsNil)
+
+	// Remove temp file
+	defer func() {
+		c.Assume(os.RemoveAll(tmpFile.Name()), IsNil)
+	}()
+
+	type phantomjsTemplate struct {
+		LAddr string
+	}
+
+	// Write out the file using the script template
+	c.Assume(phantomjsScriptTmpl.Execute(tmpFile, phantomjsTemplate{laddr}), IsNil)
+
+	cmd := exec.Command(phantomjs, tmpFile.Name())
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr

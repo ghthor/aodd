@@ -1,6 +1,7 @@
 var page = require("webpage").create();
 
-var port = 45001;
+// A template var filled in via go
+var laddr = "{{.LAddr}}";
 
 // Provide a console.log for the test output
 page.onConsoleMessage = function(msg) {
@@ -12,5 +13,7 @@ page.onConsoleMessage = function(msg) {
 };
 
 (function() {
-    page.open("http://localhost:" + port, function() {});
+    page.open("http://" + laddr, function() {});
 }());
+
+// vim: filetype=javascript
