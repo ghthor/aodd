@@ -107,7 +107,6 @@ func DescribeActorConn(c gospec.Context) {
 		c.Assume(err, IsNil)
 		c.Assume(packet.Type, Equals, encoding.PT_MESSAGE)
 		c.Assume(packet.Msg, Equals, "loginSuccess")
-
 	}
 
 	c.Specify("packet processing should terminate", func() {
