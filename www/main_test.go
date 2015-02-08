@@ -18,17 +18,6 @@ import (
 	. "github.com/ghthor/gospec"
 )
 
-type triggerStartHandler struct {
-	hasStarted chan<- struct{}
-}
-
-// TODO This could accept POST test data that could be
-// checked and displayed here instead of phantomjs's stdout.
-func (s triggerStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.hasStarted <- struct{}{}
-	fmt.Fprint(w, "server is running")
-}
-
 var browser string
 
 // Used to store executable paths
@@ -38,6 +27,17 @@ var chromium string
 func init() {
 	flag.StringVar(&browser, "browser", "phantomjs", "the browser engine used to run the specifications")
 	flag.Parse()
+}
+
+type triggerStartHandler struct {
+	hasStarted chan<- struct{}
+}
+
+// TODO This could accept POST test data that could be
+// checked and displayed here instead of phantomjs's stdout.
+func (s triggerStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.hasStarted <- struct{}{}
+	fmt.Fprint(w, "server is running")
 }
 
 // Starts an http game server and verifies that is
