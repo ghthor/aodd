@@ -1,6 +1,7 @@
 package www
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -25,18 +26,17 @@ func (s hasStartedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "has started")
 }
 
+var browser string
+
+// Used to store executable paths
 var phantomjs string
 
 func init() {
-	var err error
-	phantomjs, err = exec.LookPath("phantomjs")
-	if err != nil {
-		fmt.Println("phantomjs must be installed")
-		os.Exit(1)
-	}
+	flag.StringVar(&browser, "browser", "phantomjs", "the browser engine used to run the specifications")
+	flag.Parse()
 }
 
-func DescribeClient(c gospec.Context) {
+func DescribeConsoleReport(c gospec.Context) {
 	indexTmpl := template.Must(template.New("index.tmpl").ParseFiles("index.tmpl"))
 
 	hasStarted := make(chan struct{})
@@ -93,10 +93,23 @@ func DescribeClient(c gospec.Context) {
 	//<-testsHaveCompleted
 }
 
-func TestClient(t *testing.T) {
+func TestRunJasmineSpecs(t *testing.T) {
+	var err error
+
 	r := gospec.NewRunner()
 
-	r.AddSpec(DescribeClient)
+	switch browser {
+	case "phantomjs":
+		phantomjs, err = exec.LookPath("phantomjs")
+		if err != nil {
+			t.Fatal("phantomjs must be installed")
+		}
+
+		r.AddSpec(DescribeConsoleReport)
+
+	default:
+		t.Fatal(browser, "is unimplemented as an engine target")
+	}
 
 	gospec.MainGoTest(r, t)
 }
