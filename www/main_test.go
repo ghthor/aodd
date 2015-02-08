@@ -18,15 +18,15 @@ import (
 	. "github.com/ghthor/gospec"
 )
 
-type hasStartedHandler struct {
+type triggerStartHandler struct {
 	hasStarted chan<- struct{}
 }
 
 // TODO This could accept POST test data that could be
 // checked and displayed here instead of phantomjs's stdout.
-func (s hasStartedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s triggerStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.hasStarted <- struct{}{}
-	fmt.Fprint(w, "has started")
+	fmt.Fprint(w, "server is running")
 }
 
 var browser string
@@ -46,7 +46,7 @@ func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
 
 	// Set a route that can be used
 	// to trigger starting the webserver
-	shardConfig.Mux.Handle("/triggerStart", hasStartedHandler{hasStarted})
+	shardConfig.Mux.Handle("/start", triggerStartHandler{hasStarted})
 
 	s, err := game.NewSimShard(shardConfig)
 	if err != nil {
@@ -67,7 +67,7 @@ func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
 
 	// Trigger s.ListenAndServe()
 	go func() {
-		_, err := http.Get("http://localhost:45001/triggerStart")
+		_, err := http.Get("http://localhost:45001/start")
 		if err != nil {
 			errch <- err
 		}
