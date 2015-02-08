@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/net/websocket"
 
+	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/sim"
@@ -24,7 +25,8 @@ type actorHandler struct {
 	protocol.Conn
 	handlePacket packetHandler
 
-	sim sim.RunningSimulation
+	sim       sim.RunningSimulation
+	datastore datastore.Datastore
 }
 
 // Starts the packet handler loop.
@@ -105,11 +107,22 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 		return c, errors.New(fmt.Sprint("error parsing login request:", err))
 	}
 
-	// TODO Check the datastore using the login information
+	actor, exists := c.datastore.ActorExists(r.Name)
+	if !exists {
+		log.Printf("login failed: actor %s doesn't exist", r.Name)
+		c.SendMessage("actorDoesntExist", "actor does not exist")
+		return c, nil
+	}
+
+	if !actor.Authenticate(r.Name, r.Password) {
+		log.Printf("login failed: password for %s was incorrect", r.Name)
+		c.SendMessage("authFailed", "invalid actor/password")
+		return c, nil
+	}
+
 	// TODO Create an actor and input into the simulation
 
-	log.Print("actor logged in:", r.Name)
-
+	log.Print("login success:", r.Name)
 	c.SendMessage("loginSuccess", r.Name)
 	return c, nil
 }

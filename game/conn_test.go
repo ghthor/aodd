@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
 	"golang.org/x/net/websocket"
@@ -82,9 +83,15 @@ func DescribeActorConn(c gospec.Context) {
 		}
 	}()
 
+	ds := datastore.NewMemDatastore()
+	ds.AddActor("actor", "password")
+
 	conn := actorHandler{
-		Conn:         protocol.NewWebsocketConn(wsServer),
+		Conn: protocol.NewWebsocketConn(wsServer),
+
 		handlePacket: (actorHandler).loginHandler,
+
+		datastore: ds,
 	}
 
 	client := protocol.NewWebsocketConn(ws)
