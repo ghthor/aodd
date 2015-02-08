@@ -67,6 +67,7 @@ func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
 
 	// Trigger s.ListenAndServe()
 	go func() {
+		// TODO Build this url using the shard config
 		_, err := http.Get("http://localhost:45001/start")
 		if err != nil {
 			errch <- err
