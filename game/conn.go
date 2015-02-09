@@ -108,7 +108,7 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 
 	if !actor.Authenticate(r.Name, r.Password) {
 		log.Printf("login failed: password for %s was incorrect", r.Name)
-		c.SendMessage("authFailed", "invalid actor/password")
+		c.SendMessage("authFailed", r.Name)
 		return c, nil
 	}
 
