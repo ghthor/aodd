@@ -75,6 +75,8 @@ func (c actorHandler) loginHandler() (actorHandler, error) {
 		switch packet.Msg {
 		case "login":
 			return c.respondToLoginReq(packet)
+		case "create":
+			return c.respondToCreateReq(packet)
 		default:
 			goto notLoggedIn
 		}
@@ -132,6 +134,24 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 
 	log.Print("login success:", r.Name)
 	c.SendMessage("loginSuccess", r.Name)
+	return c, nil
+}
+
+func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error) {
+	r := LoginReq{}
+
+	err := json.Unmarshal([]byte(p.Payload), &r)
+	if err != nil {
+		return c, errors.New(fmt.Sprint("error parsing login request:", err))
+	}
+
+	_, exists := c.datastore.ActorExists(r.Name)
+	if exists {
+		log.Printf("create failed: actor %s already exists", r.Name)
+		c.SendMessage("actorAlreadyExists", "actor already exists")
+		return c, nil
+	}
+
 	return c, nil
 }
 

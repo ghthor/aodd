@@ -228,5 +228,22 @@ func DescribeActorConn(c gospec.Context) {
 				c.Expect(conn.Actor().Name, Equals, "actor")
 			})
 		})
+
+		c.Specify("to create a new actor", func() {
+			c.Specify("the request should fail", func() {
+				c.Specify("if the actor already exists", func() {
+					client.SendJson("create", LoginReq{"actor", "password"})
+
+					conn, err = conn.handlePacket(conn)
+					c.Assume(err, IsNil)
+
+					packet, err := client.Read()
+					c.Assume(err, IsNil)
+
+					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+					c.Expect(packet.Msg, Equals, "actorAlreadyExists")
+				})
+			})
+		})
 	})
 }
