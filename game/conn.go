@@ -78,24 +78,12 @@ func (c actorHandler) loginHandler() (actorHandler, error) {
 		case "create":
 			return c.respondToCreateReq(packet)
 		default:
-			goto notLoggedIn
 		}
-	case encoding.PT_MESSAGE:
-		goto notLoggedIn
-
 	default:
-		return c, ErrUnexpectedPacket{
-			Handler: (actorHandler).loginHandler,
-			Packet:  packet,
-		}
 	}
 
-	return c, nil
-
-notLoggedIn:
 	// TODO Improve this message with how to login
 	c.SendMessage("notLoggedIn", "")
-
 	return c, nil
 }
 
