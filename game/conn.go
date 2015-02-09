@@ -140,6 +140,7 @@ func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
 	if err != nil {
+		// TODO determine if this an error that should terminate the connection
 		return c, errors.New(fmt.Sprint("error parsing login request:", err))
 	}
 
@@ -152,6 +153,8 @@ func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error
 
 	actor, err := c.datastore.AddActor(r.Name, r.Password)
 	if err != nil {
+		// TODO Instead of terminating the connection here
+		// we should retry contacting the database or something
 		return c, err
 	}
 
