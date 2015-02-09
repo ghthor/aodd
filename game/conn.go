@@ -124,13 +124,7 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 		return c, nil
 	}
 
-	// Set the actor this connection is now associated with
-	c.actor = actor
-
-	// Mutate the packet handler into the next state
-	c.handlePacket = (actorHandler).inputHandler
-
-	// TODO Create an actor and input into the simulation
+	c = c.loginActor(actor)
 
 	log.Print("login success:", r.Name)
 	c.SendMessage("loginSuccess", r.Name)
@@ -156,7 +150,26 @@ func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error
 		return c, nil
 	}
 
+	actor, err := c.datastore.AddActor(r.Name, r.Password)
+	if err != nil {
+		return c, err
+	}
+
+	c = c.loginActor(actor)
+
+	c.SendMessage("createSuccess", r.Name)
+
 	return c, nil
+}
+
+func (c actorHandler) loginActor(actor datastore.Actor) actorHandler {
+	// Set the actor this connection is now associated with
+	c.actor = actor
+	// Mutate the packet handler into the next state
+	c.handlePacket = (actorHandler).inputHandler
+
+	// TODO hook the actor into the simulation
+	return c
 }
 
 // An implementation of packetHandler which will

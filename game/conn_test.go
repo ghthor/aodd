@@ -258,6 +258,23 @@ func DescribeActorConn(c gospec.Context) {
 					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
 				})
 			})
+
+			c.Specify("the request should succeed", func() {
+				client.SendJson("create", LoginReq{"newActor", "password"})
+
+				conn, err = conn.handlePacket(conn)
+				c.Assume(err, IsNil)
+
+				packet, err := client.Read()
+				c.Assume(err, IsNil)
+
+				c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+				c.Expect(packet.Msg, Equals, "createSuccess")
+				c.Expect(conn.Actor().Name, Equals, "newActor")
+
+				_, exists := ds.ActorExists("newActor")
+				c.Expect(exists, IsTrue)
+			})
 		})
 	})
 }
