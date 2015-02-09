@@ -19,10 +19,10 @@ requirejs.config({
 
 require([
         "react",
-        "client/client",
+        "client/conn",
         "client/settings",
-], function(react, Client, settings) {
-    var client = new Client(new WebSocket(settings.websocketURL));
+], function(react, Conn, settings) {
+    var conn = new Conn(new WebSocket(settings.websocketURL));
 
     var LoginForm = react.createFactory(react.createClass({
                 getInitialState: function() {
@@ -39,7 +39,7 @@ require([
                     this.refs.name.getDOMNode().value = "";
                     this.refs.password.getDOMNode().value = "";
 
-                    this.props.client.attemptLogin(name, password);
+                    this.props.conn.attemptLogin(name, password);
                 },
 
                 handleNameChange: function(event) {
@@ -103,22 +103,26 @@ require([
                 }
     }));
 
-    react.render(new LoginForm({client: client, disabled: true}), document.body);
 
-    client.on("connected", function() {
+    conn.on("connected", function() {
         console.log("connected to " + settings.websocketURL);
 
-        react.render(new LoginForm({client: client, disabled: false}), document.body);
+        react.render(new LoginForm({conn: conn, disabled: false}), document.body);
     });
 
-    client.on("loginSuccess", function(name) {
+    conn.on("loginSuccess", function(name) {
         console.log(name + " login succeeded");
 
+        // TODO begin rendering the game here
+        react.render(react.DOM.canvas({}), document.body);
+    });
+
+    conn.on("authFailed", function(name) {
+        console.log("auth failed for", name);
         react.render(new LoginForm({
-                    client: client,
+                    conn:     conn,
                     disabled: false
         }), document.body).setState({name: name});
 
-        // TODO begin rendering the game here
     });
 });
