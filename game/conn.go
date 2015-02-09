@@ -192,13 +192,14 @@ alreadyLoggedIn:
 // Return the actor bound to the connection.
 func (c actorHandler) Actor() datastore.Actor { return c.actor }
 
-func newWebsocketActorHandler(sim sim.RunningSimulation) websocket.Handler {
+func newWebsocketActorHandler(sim sim.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		err := actorHandler{
 			Conn:         protocol.NewWebsocketConn(ws),
 			handlePacket: (actorHandler).loginHandler,
 
-			sim: sim,
+			sim:       sim,
+			datastore: datastore,
 		}.run()
 
 		// TODO Maybe send a http response if there is an error

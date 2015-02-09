@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"text/template"
 
+	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/quad"
@@ -116,6 +117,8 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		return nil, err
 	}
 
+	datastore := datastore.NewMemDatastore()
+
 	wsRoute := "/actor/socket"
 	var wsUrl string
 	if c.IsHTTPS {
@@ -144,7 +147,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newWebsocketActorHandler(runningSim))
+	mux.Handle(wsRoute, newWebsocketActorHandler(runningSim, datastore))
 
 	return &http.Server{
 		Addr:    c.LAddr,
