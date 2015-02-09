@@ -133,8 +133,8 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 
 // A create request is an event that can modify th
 // state of the packet handler. If the create is
-// successful the packet handler will transistion
-// in the input handler..
+// successful the packet handler will transition
+// in the input handler.
 func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error) {
 	r := LoginReq{}
 
