@@ -103,6 +103,74 @@ require([
                 }
     }));
 
+    var CreateActorForm = react.createFactory(react.createClass({
+                getInitialState: function() {
+                    return {password:""};
+                },
+
+                handleSubmit: function(event) {
+                    // Avoid default http post
+                    event.preventDefault();
+                },
+
+                handlePasswordChange: function(event) {
+                    this.setState({password: event.target.value});
+                },
+
+                render: function() {
+                    var passwordId = "password";
+
+                    var password = this.state.password;
+
+                    var disabled = true;
+                    var color = "red";
+
+                    if (password === this.props.actor.password) {
+                        disabled = false;
+                        color = "green";
+                    }
+
+                    var createActorForm = react.DOM.form({
+                            onSubmit: this.handleSubmit,
+                            id: "createActor"
+                    },
+                        react.DOM.div({},
+                            react.DOM.span({},
+                                "Creating: " + this.props.actor.name
+                            )
+                        ),
+
+                        react.DOM.div({},
+                            react.DOM.label({
+                                htmlFor: passwordId
+                            }, "Repeat password"),
+
+                            react.DOM.input({
+                                    id: passwordId,
+                                    ref: "password",
+
+                                    type: "password",
+                                    required: true,
+
+                                    onChange: this.handlePasswordChange,
+
+                                    style: { color: color },
+                                    value: password
+                            })
+                        ),
+
+                        react.DOM.div({},
+                            react.DOM.input({
+                                    type: "submit",
+                                    value: "create actor",
+                                    disabled: disabled
+                            })
+                        )
+                    );
+
+                    return createActorForm;
+                }
+    }));
 
     conn.on("connected", function() {
         console.log("connected to " + settings.websocketURL);
@@ -123,6 +191,17 @@ require([
                     conn:     conn,
                     disabled: false
         }), document.body).setState({name: name});
+    });
 
+    conn.on("actorDoesntExist", function(actor) {
+        console.log("actor doesn't exist");
+        react.render(new CreateActorForm({
+                    conn:     conn,
+                    actor: {
+                        name:     actor.name,
+                        password: actor.password
+                    },
+                    disabled: false
+        }), document.body).setState({password: ""});
     });
 });
