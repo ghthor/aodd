@@ -102,7 +102,7 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 	actor, exists := c.datastore.ActorExists(r.Name)
 	if !exists {
 		log.Printf("login failed: actor %s doesn't exist", r.Name)
-		c.SendMessage("actorDoesntExist", "actor does not exist")
+		c.SendJson("actorDoesntExist", r)
 		return c, nil
 	}
 

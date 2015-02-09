@@ -185,8 +185,9 @@ func DescribeActorConn(c gospec.Context) {
 					client.SendJson("login", LoginReq{"notAnActor", "anything"})
 					conn, packet = response(conn, client)
 
-					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+					c.Expect(packet.Type, Equals, encoding.PT_JSON)
 					c.Expect(packet.Msg, Equals, "actorDoesntExist")
+					c.Expect(packet.Payload, Equals, `{"name":"notAnActor","password":"anything"}`)
 
 					c.Expect(conn.Actor(), Equals, datastore.Actor{})
 				})
