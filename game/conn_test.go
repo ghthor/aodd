@@ -195,6 +195,22 @@ func DescribeActorConn(c gospec.Context) {
 
 					c.Expect(conn.Actor(), Equals, datastore.Actor{})
 				})
+
+				c.Specify("if the client is already logged in", func() {
+					login()
+					c.Assume(conn.Actor().Name, Equals, "actor")
+
+					client.SendJson("login", LoginReq{"actor", "password"})
+
+					conn, err = conn.handlePacket(conn)
+					c.Assume(err, IsNil)
+
+					packet, err := client.Read()
+					c.Assume(err, IsNil)
+
+					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
+				})
 			})
 
 			c.Specify("the request should succeed", func() {

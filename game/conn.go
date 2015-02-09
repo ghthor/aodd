@@ -122,11 +122,42 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 		return c, nil
 	}
 
+	// Set the actor this connection is now associated with
 	c.actor = actor
+
+	// Mutate the packet handler into the next state
+	c.handlePacket = (actorHandler).inputHandler
+
 	// TODO Create an actor and input into the simulation
 
 	log.Print("login success:", r.Name)
 	c.SendMessage("loginSuccess", r.Name)
+	return c, nil
+}
+
+// An implementation of packetHandler which will
+// process input requests and prepare them
+// for consumption by the input phase.
+func (c actorHandler) inputHandler() (actorHandler, error) {
+	packet, err := c.Read()
+	if err != nil {
+		return c, err
+	}
+
+	if packet.Type == encoding.PT_DISCONNECT {
+		return c, ErrWebsocketClientDisconnected
+	}
+
+	switch packet.Type {
+	case encoding.PT_JSON:
+		switch packet.Msg {
+		case "login", "create":
+			goto alreadyLoggedIn
+		}
+	}
+
+alreadyLoggedIn:
+	c.SendMessage("alreadyLoggedIn", "an actor has already been logged into this connection")
 	return c, nil
 }
 
