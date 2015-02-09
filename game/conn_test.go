@@ -109,6 +109,17 @@ func DescribeActorConn(c gospec.Context) {
 		c.Assume(packet.Msg, Equals, "loginSuccess")
 	}
 
+	createActor := func() {
+		client.SendJson("create", LoginReq{"newActor", "password"})
+		conn, err = conn.handlePacket(conn)
+		c.Assume(err, IsNil)
+
+		packet, err := client.Read()
+		c.Assume(err, IsNil)
+		c.Assume(packet.Type, Equals, encoding.PT_MESSAGE)
+		c.Assume(packet.Msg, Equals, "createSuccess")
+	}
+
 	c.Specify("packet processing should terminate", func() {
 		c.Specify("when a client disconnects", func() {
 			go func() {
@@ -246,6 +257,20 @@ func DescribeActorConn(c gospec.Context) {
 
 				c.Specify("if the an actor has been logged in", func() {
 					login()
+					client.SendJson("create", LoginReq{"newActor", "password"})
+
+					conn, err = conn.handlePacket(conn)
+					c.Assume(err, IsNil)
+
+					packet, err := client.Read()
+					c.Assume(err, IsNil)
+
+					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
+				})
+
+				c.Specify("if an actor has already been created", func() {
+					createActor()
 					client.SendJson("create", LoginReq{"newActor", "password"})
 
 					conn, err = conn.handlePacket(conn)
