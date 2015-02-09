@@ -27,6 +27,8 @@ type actorHandler struct {
 
 	sim       sim.RunningSimulation
 	datastore datastore.Datastore
+
+	actor datastore.Actor
 }
 
 // Starts the packet handler loop.
@@ -120,12 +122,16 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 		return c, nil
 	}
 
+	c.actor = actor
 	// TODO Create an actor and input into the simulation
 
 	log.Print("login success:", r.Name)
 	c.SendMessage("loginSuccess", r.Name)
 	return c, nil
 }
+
+// Return the actor bound to the connection.
+func (c actorHandler) Actor() datastore.Actor { return c.actor }
 
 func newWebsocketActorHandler(sim sim.RunningSimulation) websocket.Handler {
 	return func(ws *websocket.Conn) {

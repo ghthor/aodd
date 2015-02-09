@@ -162,4 +162,55 @@ func DescribeActorConn(c gospec.Context) {
 			c.Expect(isAnDisconnectionError, IsTrue)
 		})
 	})
+
+	c.Specify("when the client sends a request", func() {
+		c.Specify("to login", func() {
+			c.Specify("the request should fail", func() {
+				c.Specify("if the actor doesn't exist", func() {
+					client.SendJson("login", LoginReq{"notAnActor", "anything"})
+
+					conn, err = conn.handlePacket(conn)
+					c.Assume(err, IsNil)
+
+					packet, err := client.Read()
+					c.Assume(err, IsNil)
+
+					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+					c.Expect(packet.Msg, Equals, "actorDoesntExist")
+
+					c.Expect(conn.Actor(), Equals, datastore.Actor{})
+				})
+
+				c.Specify("if the password is incorrect", func() {
+					client.SendJson("login", LoginReq{"actor", "wrongpassword"})
+
+					conn, err = conn.handlePacket(conn)
+					c.Assume(err, IsNil)
+
+					packet, err := client.Read()
+					c.Assume(err, IsNil)
+
+					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+					c.Expect(packet.Msg, Equals, "authFailed")
+
+					c.Expect(conn.Actor(), Equals, datastore.Actor{})
+				})
+			})
+
+			c.Specify("the request should succeed", func() {
+				client.SendJson("login", LoginReq{"actor", "password"})
+
+				conn, err = conn.handlePacket(conn)
+				c.Assume(err, IsNil)
+
+				packet, err := client.Read()
+				c.Assume(err, IsNil)
+
+				c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+				c.Expect(packet.Msg, Equals, "loginSuccess")
+
+				c.Expect(conn.Actor().Name, Equals, "actor")
+			})
+		})
+	})
 }
