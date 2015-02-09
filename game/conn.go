@@ -58,8 +58,8 @@ func (e ErrUnexpectedPacket) Error() string {
 	return e.String()
 }
 
-// A implementation of packetHandler that will
-// handle an actor logging in.
+// An implementation of packetHandler which
+// will handle an actor logging in.
 func (c actorHandler) loginHandler() (actorHandler, error) {
 	packet, err := c.Read()
 	if err != nil {
