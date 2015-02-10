@@ -1,9 +1,13 @@
 ## [active] [1] Release 1
-- [ ] Rewrite of GUI to use react [WIP]
-- [ ] Specify connection protocol
-    - actor/login
-    - actor/create
-    - actor/input
+- [ ] Implement the input phase
+- [ ] Implement the narrow phase
+
+- [ ] Create character classes
+    - warrior
+    - wizard
+    - priest
+
+- [ ] Create spells and skills
 
 - [ ] Update all vendored libs [WIP]
     - [x] underscore - using 1.7.0
@@ -14,9 +18,3 @@
 
 - [ ] Update CAAT graphics engine
     - Look into other graphic engine alternatives
-
-- [x] Fix phantomjs test runner
-
-- [x] Drop jade
-    - [x] Conditionalize world width and height through a go tmpl
-    - [x] Conditionalize websocket url and port through a go tmpl
