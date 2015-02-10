@@ -18,10 +18,12 @@ requirejs.config({
 });
 
 require([
+        "jquery",
         "react",
         "client/loginConn",
+        "client/client",
         "client/settings",
-], function(react, LoginConn, settings) {
+], function($, react, LoginConn, Client, settings) {
     var conn = new LoginConn(new WebSocket(settings.websocketURL));
 
     var LoginForm = react.createFactory(react.createClass({
@@ -178,13 +180,6 @@ require([
         react.render(new LoginForm({conn: conn, disabled: false}), document.body);
     });
 
-    conn.on("loginSuccess", function(name) {
-        console.log(name + " login succeeded");
-
-        // TODO begin rendering the game here
-        react.render(react.DOM.canvas({}), document.body);
-    });
-
     conn.on("authFailed", function(name) {
         console.log("auth failed for", name);
         react.render(new LoginForm({
@@ -204,4 +199,15 @@ require([
                     disabled: false
         }), document.body).setState({password: ""});
     });
+
+    var loginSuccess = function(actor, socket) {
+        var client = new Client(socket, actor);
+
+        client.on("canvasReady", function(canvas) {
+            react.render(react.DOM.div({id: "clientCanvas"}), document.body);
+            $("#clientCanvas").append(canvas);
+        });
+    };
+
+    conn.on("loginSuccess", loginSuccess);
 });
