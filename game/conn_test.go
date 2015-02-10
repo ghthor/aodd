@@ -112,7 +112,7 @@ func DescribeActorConn(c gospec.Context) {
 		client.SendJson("login", LoginReq{"actor", "password"})
 		conn, packet = response(conn, client)
 
-		c.Assume(packet.Type, Equals, encoding.PT_MESSAGE)
+		c.Assume(packet.Type, Equals, encoding.PT_JSON)
 		c.Assume(packet.Msg, Equals, "loginSuccess")
 	}
 
@@ -120,7 +120,7 @@ func DescribeActorConn(c gospec.Context) {
 		client.SendJson("create", LoginReq{"newActor", "password"})
 		conn, packet = response(conn, client)
 
-		c.Assume(packet.Type, Equals, encoding.PT_MESSAGE)
+		c.Assume(packet.Type, Equals, encoding.PT_JSON)
 		c.Assume(packet.Msg, Equals, "createSuccess")
 	}
 
@@ -218,7 +218,7 @@ func DescribeActorConn(c gospec.Context) {
 				client.SendJson("login", LoginReq{"actor", "password"})
 				conn, packet = response(conn, client)
 
-				c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+				c.Expect(packet.Type, Equals, encoding.PT_JSON)
 				c.Expect(packet.Msg, Equals, "loginSuccess")
 
 				c.Expect(conn.Actor().Name, Equals, "actor")
@@ -258,7 +258,7 @@ func DescribeActorConn(c gospec.Context) {
 				client.SendJson("create", LoginReq{"newActor", "password"})
 				conn, packet = response(conn, client)
 
-				c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
+				c.Expect(packet.Type, Equals, encoding.PT_JSON)
 				c.Expect(packet.Msg, Equals, "createSuccess")
 				c.Expect(conn.Actor().Name, Equals, "newActor")
 

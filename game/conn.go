@@ -114,8 +114,8 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 
 	c = c.loginActor(actor)
 
-	log.Print("login success:", r.Name)
-	c.SendMessage("loginSuccess", r.Name)
+	log.Print("login success: ", r.Name)
+	c.SendJson("loginSuccess", actor)
 	return c, nil
 }
 
@@ -148,7 +148,9 @@ func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error
 
 	c = c.loginActor(actor)
 
-	c.SendMessage("createSuccess", r.Name)
+	log.Print("created actor: ", actor.Name)
+
+	c.SendJson("createSuccess", actor)
 
 	return c, nil
 }

@@ -30,26 +30,26 @@ define(["client/packet",
             },
 
             login: function(packet) {
-                var name;
 
                 switch(packet.msg) {
                 case "authFailed":
-                    name = packet.payload;
+                    var name = packet.payload;
                     conn.emit("authFailed", [name]);
                     break;
 
                 case "actorDoesntExist":
-                    conn.emit("actorDoesntExist", [JSON.parse(packet.payload)]);
+                    var loginReq = JSON.parse(packet.payload);
+                    conn.emit("actorDoesntExist", [loginReq.name, loginReq.password]);
                     break;
 
                 case "loginSuccess":
-                    name = packet.payload;
+                    var actor = JSON.parse(packet.payload);
 
                     // Unset the handler
                     onmessage = handlers.noop;
 
                     // Pass off the socket to the outside world
-                    conn.emit("loginSuccess", [name, socket]);
+                    conn.emit("loginSuccess", [actor, socket]);
                     break;
 
                 default:
@@ -58,22 +58,21 @@ define(["client/packet",
             },
 
             create: function(packet) {
-                var name;
 
                 switch (packet.msg) {
                 case "actorAlreadyExists":
-                    name = packet.payload;
+                    var name = packet.payload;
                     conn.emit("actorAlreadyExists", [name]);
                     break;
 
                 case "createSuccess":
-                    name = packet.payload;
+                    var actor = JSON.parse(packet.payload);
 
                     // Unset the handler
                     onmessage = handlers.noop;
 
                     // Pass off the socket to the outside world
-                    conn.emit("createSuccess", [name, socket]);
+                    conn.emit("createSuccess", [actor, socket]);
                     break;
 
                 default:

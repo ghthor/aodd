@@ -193,13 +193,13 @@ require([
         }), document.body).setState({name: name});
     });
 
-    conn.on("actorDoesntExist", function(actor) {
+    conn.on("actorDoesntExist", function(name, password) {
         console.log("actor doesn't exist");
         react.render(new CreateActorForm({
                     conn:     conn,
                     actor: {
-                        name:     actor.name,
-                        password: actor.password
+                        name:     name,
+                        password: password
                     },
                     disabled: false
         }), document.body).setState({password: ""});
