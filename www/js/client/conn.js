@@ -49,6 +49,25 @@ define(["client/packet",
                 default:
                     console.log("Unexpected packet in response to `login` request", packet);
                 }
+            },
+
+            create: function(packet) {
+                var name;
+
+                switch (packet.msg) {
+                case "actorAlreadyExists":
+                    name = packet.payload;
+                    conn.emit("actorAlreadyExists", [name]);
+                    break;
+
+                case "createSuccess":
+                    name = packet.payload;
+                    conn.emit("createSuccess", [name]);
+                    break;
+
+                default:
+                    console.log("Unexpected packet in response to `create` request", packet);
+                }
             }
         };
 
