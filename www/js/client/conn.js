@@ -43,7 +43,12 @@ define(["client/packet",
 
                 case "loginSuccess":
                     name = packet.payload;
-                    conn.emit("loginSuccess", [name]);
+
+                    // Unset the handler
+                    onmessage = handlers.noop;
+
+                    // Pass off the socket to the outside world
+                    conn.emit("loginSuccess", [name, socket]);
                     break;
 
                 default:
@@ -62,7 +67,12 @@ define(["client/packet",
 
                 case "createSuccess":
                     name = packet.payload;
-                    conn.emit("createSuccess", [name]);
+
+                    // Unset the handler
+                    onmessage = handlers.noop;
+
+                    // Pass off the socket to the outside world
+                    conn.emit("createSuccess", [name, socket]);
                     break;
 
                 default:
