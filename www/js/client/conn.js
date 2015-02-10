@@ -4,17 +4,17 @@ define(["client/packet",
     // A connection is constructed with a websocket
     var Conn = function(socket) {
         var conn = this;
-        conn.socket = socket;
+
+        var onmessage;
 
         // websocket has connected
         socket.onopen = function() {
-            conn.onmessage = handler.loginResp;
             conn.emit("connected");
         };
 
         // websocket has a message
         socket.onmessage = function(rawPacket) {
-            conn.onmessage(Packet.Decode(rawPacket.data));
+            onmessage(Packet.Decode(rawPacket.data));
         };
 
         // websocket had an error
@@ -23,12 +23,12 @@ define(["client/packet",
             conn.emit("error");
         };
 
-        var handler = {
+        var handlers = {
             noop: function(packet) {
                 console.log("noop packet processor", packet);
             },
 
-            loginResp: function(packet) {
+            login: function(packet) {
                 var name;
 
                 switch(packet.msg) {
@@ -38,38 +38,49 @@ define(["client/packet",
                     break;
 
                 case "actorDoesntExist":
-                    // State change
-                    //client.onmessage = handler.createActor;
                     conn.emit("actorDoesntExist", [JSON.parse(packet.payload)]);
                     break;
 
                 case "loginSuccess":
-                    // State change
-                    //conn.onmessage = handler.bufferUpdates;
                     name = packet.payload;
                     conn.emit("loginSuccess", [name]);
                     break;
 
                 default:
-                    console.log("Unexpected packet during `login`", packet);
+                    console.log("Unexpected packet in response to `login` request", packet);
                 }
             }
         };
 
         // Set the default packet handler
-        conn.onmessage = handler.noop;
+        onmessage = handlers.noop;
 
-        return conn;
-    };
+        // Create methods to send requests
+        conn.attemptLogin = function(name, password) {
+            // Set the response handler
+            onmessage = handlers.login;
 
-    Conn.prototype = {
-        attemptLogin: function(name, password) {
             var packet = Packet.JSON("login", {
                 name: name,
                 password: password
             });
-            this.socket.send(Packet.Encode(packet));
-        },
+
+            socket.send(Packet.Encode(packet));
+        };
+
+        conn.createActor = function(name, password) {
+            // Set response handler
+            onmessage = handlers.create;
+
+            var packet = Packet.JSON("create", {
+                name: name,
+                password: password
+            });
+
+            socket.send(Packet.Encode(packet));
+        };
+
+        return conn;
     };
 
     pubSub(Conn.prototype);
