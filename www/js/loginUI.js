@@ -113,6 +113,11 @@ require([
                 handleSubmit: function(event) {
                     // Avoid default http post
                     event.preventDefault();
+
+                    var name = this.props.actor.name;
+                    var password = this.props.actor.password;
+
+                    this.props.conn.createActor(name, password);
                 },
 
                 handlePasswordChange: function(event) {
@@ -210,4 +215,5 @@ require([
     };
 
     conn.on("loginSuccess", loginSuccess);
+    conn.on("createSuccess", loginSuccess);
 });
