@@ -14,10 +14,19 @@ type actorConn struct {
 }
 
 type actor struct {
-	id   int64
-	cell coord.Cell
+	id int64
 
 	actorConn
+}
+
+// Object stored in the quad tree
+type actorEntity struct {
+	id int64
+
+	cell   coord.Cell
+	facing coord.Direction
+
+	pathActions []coord.PathAction
 }
 
 // Implement sim.Actor
@@ -26,10 +35,19 @@ func (a actor) Conn() sim.StateWriter {
 	return sim.StateWriter(a)
 }
 
-// Implement entity.Entity
-func (a actor) Cell() coord.Cell { return a.cell }
-func (a actor) Bounds() coord.Bounds {
-	return coord.Bounds{}
+func (e actorEntity) Id() int64        { return e.id }
+func (e actorEntity) Cell() coord.Cell { return e.cell }
+func (e actorEntity) Bounds() coord.Bounds {
+	bounds := coord.Bounds{
+		e.cell,
+		e.cell,
+	}
+
+	for _, a := range e.pathActions {
+		bounds = bounds.Join(a.Bounds())
+	}
+
+	return bounds
 }
 
 func (a actorConn) startIO() {
