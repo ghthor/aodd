@@ -1,3 +1,4 @@
+// TODO This module is 100% unspecified
 define(["client/packet",
         "lib/minpubsub"
 ], function(Packet, pubSub) {

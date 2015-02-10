@@ -1,3 +1,4 @@
+// TODO This module is 100% unspecified
 define(["underscore",
        "client/sprite/human",
        "CAAT"
