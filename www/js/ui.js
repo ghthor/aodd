@@ -19,10 +19,10 @@ requirejs.config({
 
 require([
         "react",
-        "client/conn",
+        "client/loginConn",
         "client/settings",
-], function(react, Conn, settings) {
-    var conn = new Conn(new WebSocket(settings.websocketURL));
+], function(react, LoginConn, settings) {
+    var conn = new LoginConn(new WebSocket(settings.websocketURL));
 
     var LoginForm = react.createFactory(react.createClass({
                 getInitialState: function() {
