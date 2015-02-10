@@ -1,0 +1,11 @@
+Tue Feb 10 15:12:07 EST 2015
+
+# journal - Frustrated with JS
+After working for the past 5 weeks entirely in go,
+using amazing tools like gorename and goinfo I am struggling with
+working in the JS environment. It is a 100% awful experience in
+comparison. Really isn't much else to it. I'm going to have to
+re-write all the JS in Go using gopherjs. Otherwise I'm going
+to continue to write untested, get it done JS code that I hate.
+
+Tue Feb 10 15:19:46 EST 2015
