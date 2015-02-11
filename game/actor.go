@@ -214,15 +214,3 @@ func (a actorConn) stopIO() {
 	a.stop <- hasStopped
 	<-hasStopped
 }
-
-type warrior struct {
-	actor
-}
-
-type wizard struct {
-	actor
-}
-
-type priest struct {
-	actor
-}
