@@ -18,7 +18,7 @@ type narrowPhase struct{}
 func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 	for _, e := range c.Entities {
 		switch a := e.(type) {
-		case *actorEntity:
+		case actorEntity:
 			// TODO Resolve to an actor
 			// TODO Read in a movement request
 			// TODO Apply the movement request

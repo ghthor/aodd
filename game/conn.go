@@ -165,7 +165,7 @@ func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
 
 	// Create an actorEntity for this object
 	c.actor = actor{
-		&actorEntity{
+		actorEntity{
 			id: dsactor.Id,
 
 			name: dsactor.Name,
@@ -212,10 +212,6 @@ func (c actorHandler) inputHandler() (actorHandler, error) {
 
 // Return the actor bound to the connection.
 func (c actorHandler) Actor() datastore.Actor {
-	if c.actor.actorEntity == nil {
-		return datastore.Actor{}
-	}
-
 	return datastore.Actor{
 		Id: c.actor.id,
 

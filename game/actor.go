@@ -56,11 +56,11 @@ type actorEntity struct {
 	cell   coord.Cell
 	facing coord.Direction
 
-	pathActions []coord.PathAction
+	pathAction coord.PathAction
 }
 
 type actor struct {
-	*actorEntity
+	actorEntity
 	actorConn
 }
 
@@ -69,16 +69,10 @@ func (a actor) Entity() entity.Entity { return a.actorEntity }
 func (e actorEntity) Id() int64        { return e.id }
 func (e actorEntity) Cell() coord.Cell { return e.cell }
 func (e actorEntity) Bounds() coord.Bounds {
-	bounds := coord.Bounds{
+	return coord.JoinBounds(coord.Bounds{
 		e.cell,
 		e.cell,
-	}
-
-	for _, a := range e.pathActions {
-		bounds = bounds.Join(a.Bounds())
-	}
-
-	return bounds
+	}, e.pathAction.Bounds())
 }
 
 func (a *actorConn) startIO() {
