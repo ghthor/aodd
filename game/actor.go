@@ -110,7 +110,24 @@ func (a *actorConn) startIO() {
 
 	go func() {
 		var hasStopped chan<- struct{}
+
+		// Buffer of 1 used to store the most recently
+		// received actor cmd from the network.
 		var cmdReq actorCmdRequest
+
+		updateCmdReqWith := func(c actorCmd) {
+			switch c.cmd {
+			case "move":
+				// TODO This is a shit place to be having an error to deal with
+				// TODO It needs to be dealt with at the packet handler level
+				d, _ := coord.NewDirectionWithString(c.params)
+
+				cmdReq.moveRequest = moveRequest{
+					Time:      stime.Time(c.timeIssued),
+					Direction: d,
+				}
+			}
+		}
 
 	unlocked:
 		// # This select prioritizes the following events.
@@ -133,8 +150,8 @@ func (a *actorConn) startIO() {
 		// 2. ReadCmdRequest() method requests the actor command request
 		// 3. stopIO() method has been called
 		select {
-		case _ = <-newCmd:
-			// TODO update the entities movement state
+		case c := <-newCmd:
+			updateCmdReqWith(c)
 
 			// Transition: unlocked -> unlocked
 			goto unlocked
