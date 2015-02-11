@@ -8,13 +8,25 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/rpg2d/quad"
 	"github.com/ghthor/engine/sim"
 	"github.com/ghthor/engine/sim/stime"
 )
 
+type entityResolver struct{}
 type inputPhase struct{}
 type narrowPhase struct{}
+
+func (entityResolver) EntityForActor(a sim.Actor) entity.Entity {
+	switch a := a.(type) {
+	case actor:
+		return a.actorEntity
+	default:
+		panic(fmt.Sprint("unexpected actor type:", a))
+	}
+	return nil
+}
 
 func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 	for _, e := range c.Entities {
@@ -146,6 +158,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		QuadTree: quadTree,
 		Now:      now,
 
+		EntityResolver:     entityResolver{},
 		InputPhaseHandler:  inputPhase{},
 		NarrowPhaseHandler: narrowPhase{},
 	}
