@@ -36,6 +36,8 @@ func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 			// TODO Read in a movement request
 			// TODO Apply the movement request
 			fmt.Print(a.Id())
+		default:
+			panic(fmt.Sprint("unexpected entity type:", a))
 		}
 	}
 	return c
