@@ -12,7 +12,7 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
-	"github.com/ghthor/engine/sim"
+	"github.com/ghthor/engine/rpg2d"
 )
 
 type LoginReq struct {
@@ -26,7 +26,7 @@ type actorHandler struct {
 	protocol.Conn
 	handlePacket packetHandler
 
-	sim       sim.RunningSimulation
+	sim       rpg2d.RunningSimulation
 	datastore datastore.Datastore
 
 	actor actor
@@ -177,7 +177,6 @@ func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
 		newActorConn(c),
 	}
 
-	// TODO don't ignore this error
 	c.sim.ConnectActor(c.actor)
 	return c
 }
@@ -227,7 +226,7 @@ func (c actorHandler) Actor() datastore.Actor {
 	}
 }
 
-func newWebsocketActorHandler(sim sim.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
+func newWebsocketActorHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		err := actorHandler{
 			Conn:         protocol.NewWebsocketConn(ws),

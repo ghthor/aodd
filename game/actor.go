@@ -7,7 +7,7 @@ import (
 
 	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d/coord"
-	"github.com/ghthor/engine/sim"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/sim/stime"
 )
 
@@ -64,10 +64,7 @@ type actor struct {
 	actorConn
 }
 
-// Implement sim.Actor
-func (a actor) StateWriter() sim.StateWriter {
-	return sim.StateWriter(a)
-}
+func (a actor) Entity() entity.Entity { return a.actorEntity }
 
 func (e actorEntity) Id() int64        { return e.id }
 func (e actorEntity) Cell() coord.Cell { return e.cell }

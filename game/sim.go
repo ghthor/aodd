@@ -8,25 +8,12 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
-	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/rpg2d/quad"
-	"github.com/ghthor/engine/sim"
 	"github.com/ghthor/engine/sim/stime"
 )
 
-type entityResolver struct{}
 type inputPhase struct{}
 type narrowPhase struct{}
-
-func (entityResolver) EntityForActor(a sim.Actor) entity.Entity {
-	switch a := a.(type) {
-	case actor:
-		return a.actorEntity
-	default:
-		panic(fmt.Sprint("unexpected actor type:", a))
-	}
-	return nil
-}
 
 func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 	for _, e := range c.Entities {
@@ -106,14 +93,11 @@ type ShardConfig struct {
 // Type used to wrap a running simulation interface
 // and start and stop the actor's IO muxer.
 type simulation struct {
-	sim.RunningSimulation
+	rpg2d.RunningSimulation
 }
 
-func (s simulation) ConnectActor(a sim.Actor) error {
-	err := s.RunningSimulation.ConnectActor(a)
-	if err != nil {
-		return err
-	}
+func (s simulation) ConnectActor(a rpg2d.Actor) {
+	s.RunningSimulation.ConnectActor(a)
 
 	switch a := a.(type) {
 	case actor:
@@ -122,13 +106,10 @@ func (s simulation) ConnectActor(a sim.Actor) error {
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
 	}
-
-	return nil
-
 }
 
-func (s simulation) RemoveActor(a sim.Actor) error {
-	err := s.RunningSimulation.RemoveActor(a)
+func (s simulation) RemoveActor(a rpg2d.Actor) {
+	s.RunningSimulation.RemoveActor(a)
 
 	switch a := a.(type) {
 	case actor:
@@ -137,7 +118,6 @@ func (s simulation) RemoveActor(a sim.Actor) error {
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
 	}
-	return err
 }
 
 func NewSimShard(c ShardConfig) (*http.Server, error) {
@@ -160,7 +140,6 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		QuadTree: quadTree,
 		Now:      now,
 
-		EntityResolver:     entityResolver{},
 		InputPhaseHandler:  inputPhase{},
 		NarrowPhaseHandler: narrowPhase{},
 	}

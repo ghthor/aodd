@@ -8,7 +8,7 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
-	"github.com/ghthor/engine/sim"
+	"github.com/ghthor/engine/rpg2d"
 	"golang.org/x/net/websocket"
 
 	"github.com/ghthor/gospec"
@@ -70,9 +70,9 @@ func twoWebsockets() (*websocket.Conn, *websocket.Conn, chan<- bool, <-chan bool
 
 type mockSimulation struct{}
 
-func (mockSimulation) ConnectActor(sim.Actor) error        { return nil }
-func (mockSimulation) RemoveActor(sim.Actor) error         { return nil }
-func (mockSimulation) Halt() (sim.HaltedSimulation, error) { return nil, nil }
+func (mockSimulation) ConnectActor(rpg2d.Actor)              {}
+func (mockSimulation) RemoveActor(rpg2d.Actor)               {}
+func (mockSimulation) Halt() (rpg2d.HaltedSimulation, error) { return nil, nil }
 
 func DescribeActorConn(c gospec.Context) {
 	// Setup
