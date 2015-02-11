@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"golang.org/x/net/websocket"
 
@@ -195,14 +196,17 @@ func (c actorHandler) inputHandler() (actorHandler, error) {
 	}
 
 	switch packet.Type {
-	case encoding.PT_JSON:
-		switch packet.Msg {
-		case "login", "create":
-			goto alreadyLoggedIn
+	case encoding.PT_MESSAGE:
+		if strings.Contains(packet.Msg, "move") {
+			err := c.actor.SubmitCmd(packet.Msg, packet.Payload)
+			if err != nil {
+				c.SendError("invalidActorCommand", err.Error())
+			}
+			return c, nil
 		}
+	default:
 	}
 
-alreadyLoggedIn:
 	c.SendMessage("alreadyLoggedIn", "an actor has already been logged into this connection")
 	return c, nil
 }
