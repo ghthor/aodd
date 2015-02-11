@@ -11,7 +11,7 @@ type Actor struct {
 	Name, password string
 
 	// Actor's Unique ID
-	Id uint
+	Id int64
 
 	// Location in the world
 	Loc coord.Cell
@@ -26,7 +26,7 @@ func (a Actor) Authenticate(name, password string) bool {
 }
 
 type actorPool struct {
-	nextId uint
+	nextId int64
 	store  map[string]Actor
 	lock   sync.Mutex
 }
