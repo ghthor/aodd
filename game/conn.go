@@ -28,7 +28,7 @@ type actorHandler struct {
 	sim       sim.RunningSimulation
 	datastore datastore.Datastore
 
-	actor datastore.Actor
+	actor actor
 }
 
 // Starts the packet handler loop.
@@ -155,13 +155,29 @@ func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error
 	return c, nil
 }
 
-func (c actorHandler) loginActor(actor datastore.Actor) actorHandler {
+// Creates a new actor struct using a datastore.Actor struct.
+// Adds this new actor into the simulation.
+func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
 	// Set the actor this connection is now associated with
-	c.actor = actor
 	// Mutate the packet handler into the next state
 	c.handlePacket = (actorHandler).inputHandler
 
-	// TODO hook the actor into the simulation
+	// Create an actorEntity for this object
+	c.actor = actor{
+		&actorEntity{
+			id: dsactor.Id,
+
+			name: dsactor.Name,
+
+			cell:   dsactor.Loc,
+			facing: dsactor.Facing,
+		},
+
+		newActorConn(c),
+	}
+
+	// TODO don't ignore this error
+	c.sim.ConnectActor(c.actor)
 	return c
 }
 
@@ -192,7 +208,20 @@ alreadyLoggedIn:
 }
 
 // Return the actor bound to the connection.
-func (c actorHandler) Actor() datastore.Actor { return c.actor }
+func (c actorHandler) Actor() datastore.Actor {
+	if c.actor.actorEntity == nil {
+		return datastore.Actor{}
+	}
+
+	return datastore.Actor{
+		Id: c.actor.id,
+
+		Name: c.actor.name,
+
+		Loc:    c.actor.cell,
+		Facing: c.actor.facing,
+	}
+}
 
 func newWebsocketActorHandler(sim sim.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
 	return func(ws *websocket.Conn) {
