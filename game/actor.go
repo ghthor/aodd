@@ -111,9 +111,11 @@ func (a *actorConn) startIO() {
 		// 2. stopIO() method has been called
 		select {
 		case sendCmdReq <- cmdReq:
+			// Transition: unlocked -> locked
 			goto locked
 
 		case hasStopped = <-stopReq:
+			// Transition: unlocked -> exit
 			goto exit
 		default:
 		}
@@ -125,12 +127,16 @@ func (a *actorConn) startIO() {
 		select {
 		case _ = <-newCmd:
 			// TODO update the entities movement state
+
+			// Transition: unlocked -> unlocked
 			goto unlocked
 
 		case sendCmdReq <- cmdReq:
+			// Transition: unlocked -> locked
 			goto locked
 
 		case hasStopped = <-stopReq:
+			// Transition: unlocked -> exit
 			goto exit
 		}
 
@@ -148,12 +154,15 @@ func (a *actorConn) startIO() {
 			// Reset the cmdReq object
 			cmdReq = actorCmdRequest{}
 
+			// Transition: locked -> unlocked
 			goto unlocked
 
 		case sendCmdReq <- cmdReq:
+			// Transition: locked -> locked
 			goto locked
 
 		case hasStopped = <-stopReq:
+			// Transition: locked -> exit
 			goto exit
 		}
 
