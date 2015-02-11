@@ -105,37 +105,33 @@ func (a *actorConn) startIO() {
 		var cmdReq actorCmdRequest
 
 	unlocked:
-		// Reset the cmdReq object
-		cmdReq = actorCmdRequest{}
+		// # This select prioritizes the following events.
+		// ## 2 potential events to respond to
+		// 1. ReadCmdRequest() method requests the actor command request
+		// 2. stopIO() method has been called
+		select {
+		case sendCmdReq <- cmdReq:
+			goto locked
 
-		for {
-			// # This select prioritizes the following events.
-			// ## 2 potential events to respond to
-			// 1. ReadCmdRequest() method requests the actor command request
-			// 2. stopIO() method has been called
-			select {
-			case sendCmdReq <- cmdReq:
-				goto locked
+		case hasStopped = <-stopReq:
+			goto exit
+		default:
+		}
 
-			case hasStopped = <-stopReq:
-				goto exit
-			default:
-			}
+		// ## 3 potential events to respond to
+		// 1. SubmitInput() method has been called with a new command
+		// 2. ReadCmdRequest() method requests the actor command request
+		// 3. stopIO() method has been called
+		select {
+		case _ = <-newCmd:
+			// TODO update the entities movement state
+			goto unlocked
 
-			// ## 3 potential events to respond to
-			// 1. SubmitInput() method has been called with a new command
-			// 2. ReadCmdRequest() method requests the actor command request
-			// 3. stopIO() method has been called
-			select {
-			case _ = <-newCmd:
-				// TODO update the entities movement state
+		case sendCmdReq <- cmdReq:
+			goto locked
 
-			case sendCmdReq <- cmdReq:
-				goto locked
-
-			case hasStopped = <-stopReq:
-				goto exit
-			}
+		case hasStopped = <-stopReq:
+			goto exit
 		}
 
 	locked:
@@ -148,6 +144,10 @@ func (a *actorConn) startIO() {
 		select {
 		case _ = <-newState:
 			// TODO send state out over connection
+
+			// Reset the cmdReq object
+			cmdReq = actorCmdRequest{}
+
 			goto unlocked
 
 		case sendCmdReq <- cmdReq:
