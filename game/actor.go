@@ -1,27 +1,49 @@
 package game
 
 import (
-	"fmt"
+	"errors"
+	"strconv"
+	"strings"
 
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/sim"
+	"github.com/ghthor/engine/sim/stime"
 )
 
-type actorConn struct {
-	readInput <-chan string
-	sendState chan<- interface{}
-	stop      chan<- chan<- struct{}
+type actorCmd struct {
+	timeIssued stime.Time
+	cmd        string
+	params     string
 }
 
-type actor struct {
-	id int64
+type moveRequest struct {
+	stime.Time
+	coord.Direction
+}
 
-	actorConn
+type actorCmdRequest struct {
+	moveRequest
+}
+
+type actorConn struct {
+	// Comm interface to muxer used by WriteInput() method
+	submitCmd chan<- actorCmd
+
+	// Comm interface to muxer used by getEntity() method
+	readCmdReq <-chan actorCmdRequest
+
+	// Comm interface to muxer used by SendState() method
+	sendState chan<- interface{}
+
+	// Comm interface to muxer used by stopIO() method
+	stop chan<- chan<- struct{}
 }
 
 // Object stored in the quad tree
 type actorEntity struct {
 	id int64
+
+	name string
 
 	cell   coord.Cell
 	facing coord.Direction
@@ -29,8 +51,12 @@ type actorEntity struct {
 	pathActions []coord.PathAction
 }
 
+type actor struct {
+	*actorEntity
+	actorConn
+}
+
 // Implement sim.Actor
-func (a actor) Id() int64 { return a.id }
 func (a actor) Conn() sim.StateWriter {
 	return sim.StateWriter(a)
 }
@@ -50,52 +76,111 @@ func (e actorEntity) Bounds() coord.Bounds {
 	return bounds
 }
 
-func (a actorConn) startIO() {
+func (a *actorConn) startIO() {
 	// Setup communication channels
-	inputCh := make(chan string)
+	cmdCh := make(chan actorCmd)
+	cmdReqCh := make(chan actorCmdRequest)
 	outputCh := make(chan interface{})
 	stopCh := make(chan chan<- struct{})
 
 	// Set the channels accessible to the outside world
-	a.readInput = inputCh
+	a.submitCmd = cmdCh
+	a.readCmdReq = cmdReqCh
 	a.sendState = outputCh
 	a.stop = stopCh
 
-	// Establish the channel endpoints used inside the loop
-	var sendInput chan<- string
+	// Establish the channel endpoints used inside the go routine
+	var newCmd <-chan actorCmd
+	var sendCmdReq chan<- actorCmdRequest
 	var newState <-chan interface{}
 	var stopReq <-chan chan<- struct{}
 
-	sendInput = inputCh
+	newCmd = cmdCh
+	sendCmdReq = cmdReqCh
 	newState = outputCh
 	stopReq = stopCh
 
 	go func() {
 		var hasStopped chan<- struct{}
+		var cmdReq actorCmdRequest
 
-	inputLoop:
+	unlocked:
+		// Reset the cmdReq object
+		cmdReq = actorCmdRequest{}
+
 		for {
+			// # This select prioritizes the following events.
+			// ## 2 potential events to respond to
+			// 1. ReadCmdRequest() method requests the actor command request
+			// 2. stopIO() method has been called
 			select {
+			case sendCmdReq <- cmdReq:
+				goto locked
+
 			case hasStopped = <-stopReq:
-				break inputLoop
+				goto exit
 			default:
 			}
 
+			// ## 3 potential events to respond to
+			// 1. SubmitInput() method has been called with a new command
+			// 2. ReadCmdRequest() method requests the actor command request
+			// 3. stopIO() method has been called
 			select {
-			case sendInput <- "":
-			case s := <-newState:
-				fmt.Println(s)
+			case _ = <-newCmd:
+				// TODO update the entities movement state
+
+			case sendCmdReq <- cmdReq:
+				goto locked
+
 			case hasStopped = <-stopReq:
-				break inputLoop
+				goto exit
 			}
 		}
 
+	locked:
+		// Accepting and processing input commands is now on hold
+
+		// ## 3 potential events to respond to
+		// 1. WriteState() method has been called with a new world state
+		// 2. ReadCmdRequest() method requests the actor command request.. again!
+		// 3. stopIO() method has been called
+		select {
+		case _ = <-newState:
+			// TODO send state out over connection
+			goto unlocked
+
+		case sendCmdReq <- cmdReq:
+			goto locked
+
+		case hasStopped = <-stopReq:
+			goto exit
+		}
+
+	exit:
 		hasStopped <- struct{}{}
 	}()
 }
 
-func (c actorConn) ReadInput() string {
-	return <-c.readInput
+func (c actorConn) SubmitCmd(cmd, params string) error {
+	parts := strings.Split(cmd, "=")
+
+	if len(parts) != 2 {
+		return errors.New("invalid command")
+	}
+
+	timeIssued, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	c.submitCmd <- actorCmd{
+		timeIssued: stime.Time(timeIssued),
+		cmd:        parts[0],
+		params:     params,
+	}
+
+	return nil
 }
 
 func (c actorConn) WriteState(s interface{}) error {
