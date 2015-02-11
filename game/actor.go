@@ -140,6 +140,8 @@ func (a *actorConn) startIO() {
 			goto exit
 		}
 
+		panic("unclosed case in unlocked state select")
+
 	locked:
 		// Accepting and processing input commands is now on hold
 
@@ -166,6 +168,7 @@ func (a *actorConn) startIO() {
 			goto exit
 		}
 
+		panic("unclosed case in locked state select")
 	exit:
 		hasStopped <- struct{}{}
 	}()
