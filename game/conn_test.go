@@ -8,6 +8,7 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
+	"github.com/ghthor/engine/sim"
 	"golang.org/x/net/websocket"
 
 	"github.com/ghthor/gospec"
@@ -67,6 +68,12 @@ func twoWebsockets() (*websocket.Conn, *websocket.Conn, chan<- bool, <-chan bool
 	return ws1, ws2, closeServer, serverClosed, nil
 }
 
+type mockSimulation struct{}
+
+func (mockSimulation) ConnectActor(sim.Actor) error        { return nil }
+func (mockSimulation) RemoveActor(sim.Actor) error         { return nil }
+func (mockSimulation) Halt() (sim.HaltedSimulation, error) { return nil, nil }
+
 func DescribeActorConn(c gospec.Context) {
 	// Setup
 	ws, wsServer, closeServer, serverClosed, err := twoWebsockets()
@@ -91,6 +98,7 @@ func DescribeActorConn(c gospec.Context) {
 
 		handlePacket: (actorHandler).loginHandler,
 
+		sim:       mockSimulation{},
 		datastore: ds,
 	}
 
