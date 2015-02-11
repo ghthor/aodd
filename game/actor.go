@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/sim"
 	"github.com/ghthor/engine/sim/stime"
@@ -37,6 +38,13 @@ type actorConn struct {
 
 	// Comm interface to muxer used by stopIO() method
 	stop chan<- chan<- struct{}
+
+	// External connection used to publish the world state
+	protocol.Conn
+}
+
+func newActorConn(conn protocol.Conn) actorConn {
+	return actorConn{Conn: conn}
 }
 
 // Object stored in the quad tree
