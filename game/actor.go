@@ -65,7 +65,7 @@ type actor struct {
 }
 
 // Implement sim.Actor
-func (a actor) Conn() sim.StateWriter {
+func (a actor) StateWriter() sim.StateWriter {
 	return sim.StateWriter(a)
 }
 

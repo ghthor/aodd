@@ -9,6 +9,7 @@ import (
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/quad"
+	"github.com/ghthor/engine/sim"
 	"github.com/ghthor/engine/sim/stime"
 )
 
@@ -88,6 +89,43 @@ type ShardConfig struct {
 	Mux *http.ServeMux
 }
 
+// Type used to wrap a running simulation interface
+// and start and stop the actor's IO muxer.
+type simulation struct {
+	sim.RunningSimulation
+}
+
+func (s simulation) ConnectActor(a sim.Actor) error {
+	err := s.RunningSimulation.ConnectActor(a)
+	if err != nil {
+		return err
+	}
+
+	switch a := a.(type) {
+	case actor:
+		a.startIO()
+
+	default:
+		panic(fmt.Sprint("unexpected sim.Actor:", a))
+	}
+
+	return nil
+
+}
+
+func (s simulation) RemoveActor(a sim.Actor) error {
+	err := s.RunningSimulation.RemoveActor(a)
+
+	switch a := a.(type) {
+	case actor:
+		a.stopIO()
+
+	default:
+		panic(fmt.Sprint("unexpected sim.Actor:", a))
+	}
+	return err
+}
+
 func NewSimShard(c ShardConfig) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	quadTree, err := quad.New(coord.Bounds{
@@ -147,7 +185,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newWebsocketActorHandler(runningSim, datastore))
+	mux.Handle(wsRoute, newWebsocketActorHandler(simulation{runningSim}, datastore))
 
 	return &http.Server{
 		Addr:    c.LAddr,
