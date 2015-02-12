@@ -269,6 +269,10 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 	return nil
 }
 
+func (c actorConn) ReadCmdRequest() actorCmdRequest {
+	return <-c.readCmdReq
+}
+
 // Culls the world state to the actor's viewport
 func (a *actor) WriteState(state rpg2d.WorldState) {
 	c := a.Cell()
