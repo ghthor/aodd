@@ -12,17 +12,22 @@ import (
 	"github.com/ghthor/engine/sim/stime"
 )
 
-type inputPhase struct{}
-type narrowPhase struct{}
+type actorIndex map[int64]*actor
 
-func (inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
+type inputPhase struct {
+	index actorIndex
+}
+type narrowPhase struct {
+	index actorIndex
+}
+
+func (phase inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 	for _, e := range c.Entities {
 		switch a := e.(type) {
 		case actorEntity:
-			// TODO Resolve to an actor
-			// TODO Read in a movement request
+			actor := phase.index[a.Id()]
+			_ = actor.ReadCmdRequest()
 			// TODO Apply the movement request
-			fmt.Print(a.Id())
 		default:
 			panic(fmt.Sprint("unexpected entity type:", a))
 		}
@@ -93,6 +98,7 @@ type ShardConfig struct {
 // Type used to wrap a running simulation interface
 // and start and stop the actor's IO muxer.
 type simulation struct {
+	actorIndex
 	rpg2d.RunningSimulation
 }
 
@@ -100,8 +106,9 @@ func (s simulation) ConnectActor(a rpg2d.Actor) {
 	s.RunningSimulation.ConnectActor(a)
 
 	switch a := a.(type) {
-	case actor:
+	case *actor:
 		a.startIO()
+		s.actorIndex[a.Id()] = a
 
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
@@ -112,8 +119,9 @@ func (s simulation) RemoveActor(a rpg2d.Actor) {
 	s.RunningSimulation.RemoveActor(a)
 
 	switch a := a.(type) {
-	case actor:
+	case *actor:
 		a.stopIO()
+		delete(s.actorIndex, a.Id())
 
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
@@ -133,6 +141,8 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	now := stime.Time(0)
 
+	actorIndex := make(actorIndex)
+
 	simDef := rpg2d.SimulationDef{
 		FPS: 40,
 
@@ -140,8 +150,8 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		QuadTree: quadTree,
 		Now:      now,
 
-		InputPhaseHandler:  inputPhase{},
-		NarrowPhaseHandler: narrowPhase{},
+		InputPhaseHandler:  inputPhase{actorIndex},
+		NarrowPhaseHandler: narrowPhase{actorIndex},
 	}
 
 	runningSim, err := simDef.Begin()
@@ -179,7 +189,10 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newWebsocketActorHandler(simulation{runningSim}, datastore))
+	mux.Handle(wsRoute, newWebsocketActorHandler(simulation{
+		actorIndex,
+		runningSim,
+	}, datastore))
 
 	return &http.Server{
 		Addr:    c.LAddr,

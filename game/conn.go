@@ -29,7 +29,7 @@ type actorHandler struct {
 	sim       rpg2d.RunningSimulation
 	datastore datastore.Datastore
 
-	actor actor
+	actor *actor
 }
 
 // Starts the packet handler loop.
@@ -164,7 +164,7 @@ func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
 	c.handlePacket = (actorHandler).inputHandler
 
 	// Create an actorEntity for this object
-	c.actor = actor{
+	c.actor = &actor{
 		actorEntity{
 			id: dsactor.Id,
 
@@ -212,6 +212,10 @@ func (c actorHandler) inputHandler() (actorHandler, error) {
 
 // Return the actor bound to the connection.
 func (c actorHandler) Actor() datastore.Actor {
+	if c.actor == nil {
+		return datastore.Actor{}
+	}
+
 	return datastore.Actor{
 		Id: c.actor.id,
 
