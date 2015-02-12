@@ -130,11 +130,17 @@ func (s simulation) RemoveActor(a rpg2d.Actor) {
 
 func NewSimShard(c ShardConfig) (*http.Server, error) {
 	// TODO pull this information from a datastore
-	quadTree, err := quad.New(coord.Bounds{
+	bounds := coord.Bounds{
 		coord.Cell{-1024, 1024},
 		coord.Cell{1023, -1023},
-	}, 40, nil)
+	}
 
+	quadTree, err := quad.New(bounds, 40, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	terrainMap, err := rpg2d.NewTerrainMap(bounds, string(rpg2d.TT_GRASS))
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +153,9 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		FPS: 40,
 
 		// Initial World State
-		QuadTree: quadTree,
-		Now:      now,
+		Now:        now,
+		QuadTree:   quadTree,
+		TerrainMap: terrainMap,
 
 		InputPhaseHandler:  inputPhase{actorIndex},
 		NarrowPhaseHandler: narrowPhase{actorIndex},
