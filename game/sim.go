@@ -103,8 +103,6 @@ type simulation struct {
 }
 
 func (s simulation) ConnectActor(a rpg2d.Actor) {
-	s.RunningSimulation.ConnectActor(a)
-
 	switch a := a.(type) {
 	case *actor:
 		a.startIO()
@@ -113,6 +111,8 @@ func (s simulation) ConnectActor(a rpg2d.Actor) {
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
 	}
+
+	s.RunningSimulation.ConnectActor(a)
 }
 
 func (s simulation) RemoveActor(a rpg2d.Actor) {
