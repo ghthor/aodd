@@ -41,8 +41,8 @@ define(["underscore",
             world.scene.addChild(actor);
 
             player.update = function(time, update) {
-                if (!_.isNull(update.pathActions)) {
-                    var pathAction = update.pathActions[0];
+                if (!_.isNull(update.pathAction)) {
+                    var pathAction = update.pathAction;
 
                     if (pathAction.start === time) {
                         var duration = pathAction.end - pathAction.start;

@@ -37,7 +37,7 @@ define(["underscore",
     var setAnimation = function(entity) {
         var sprite, sprites = this.sprites;
 
-        if (!_.isNull(entity.pathActions)) {
+        if (!_.isNull(entity.pathAction)) {
             // Walking
             switch (entity.facing) {
             case "north":

@@ -140,8 +140,8 @@ define(["underscore",
                 world.entities[entity.id] = entity;
 
                 // Check if the entity is moving
-                if (!_.isNull(entity.pathActions)) {
-                    var pathAction = entity.pathActions[0];
+                if (!_.isNull(entity.pathAction)) {
+                    var pathAction = entity.pathAction;
                     if (pathAction.start === world.time) {
                         var duration = pathAction.end - pathAction.start;
                         actorSetMovement(entity, pathAction.orig, pathAction.dest, duration);

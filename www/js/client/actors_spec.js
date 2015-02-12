@@ -58,7 +58,7 @@ define(["client/player",
                         id:          0,
                         name:        "PlayerEntity",
                         facing:      "north",
-                        pathActions: null,
+                        pathAction: null,
                         cell:        {x: 0, y: 0}
                     };
                     world = new MockWorld(scene);
@@ -97,12 +97,12 @@ define(["client/player",
                         return { setAnimation: jasmine.createSpy("setAnimation") };
                     };
 
-                    playerEntity.pathActions = [{
+                    playerEntity.pathAction = {
                         orig: playerEntity.cell,
                         dest: {x: 0, y: 1},
                         start: 0,
                         end: 10
-                    }];
+                    };
 
                     spyOn(world, "move");
                     player.update(0, playerEntity);
@@ -145,7 +145,7 @@ define(["client/player",
                     expect(human.sprite).not.toBeDefined();
                     expect(human.sprites).toBeDefined();
 
-                    var entity = { pathActions: null, facing: "north" };
+                    var entity = { pathAction: null, facing: "north" };
                     human.setAnimation(entity);
                     expect(human.sprite).toBe(sprites.standNorth);
 
@@ -188,7 +188,7 @@ define(["client/player",
                     expect(human.sprite).not.toBeDefined();
                     expect(human.sprites).toBeDefined();
 
-                    var entity = { pathActions: {}, facing: "north" };
+                    var entity = { pathAction: {}, facing: "north" };
                     human.setAnimation(entity);
                     expect(human.sprite).toBe(sprites.walkNorth);
 
