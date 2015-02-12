@@ -77,6 +77,11 @@ func (e actorEntity) Bounds() coord.Bounds {
 	}, e.pathAction.Bounds())
 }
 
+func (e actorEntity) ToState() entity.State { return e }
+func (e actorEntity) IsDifferentFrom(entity.State) bool {
+	return true
+}
+
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	cmdCh := make(chan actorCmd)
