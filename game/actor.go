@@ -72,7 +72,7 @@ type actorEntityState struct {
 	Cell   coord.Cell `json:"cell"`
 	bounds coord.Bounds
 
-	PathAction *coord.PathAction `json:"pathAction"`
+	PathAction *coord.PathActionJson `json:"pathAction"`
 }
 
 type actor struct {
@@ -99,6 +99,13 @@ func (e actorEntity) Bounds() coord.Bounds {
 }
 
 func (e actorEntity) ToState() entity.State {
+	var pathAction *coord.PathActionJson
+
+	if e.pathAction != nil {
+		pa := e.pathAction.Json()
+		pathAction = &pa
+	}
+
 	return actorEntityState{
 		EntityId: e.id,
 
@@ -109,7 +116,7 @@ func (e actorEntity) ToState() entity.State {
 
 		bounds: e.Bounds(),
 
-		PathAction: e.pathAction,
+		PathAction: pathAction,
 	}
 }
 
