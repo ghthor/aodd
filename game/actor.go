@@ -292,7 +292,8 @@ func (c actorConn) ReadCmdRequest() *actorCmdRequest {
 	return <-c.readCmdReq
 }
 
-// Culls the world state to the actor's viewport
+// Culls the world state to the actor's viewport.
+// Is called before actorConn.WriteState()
 func (a *actor) WriteState(state rpg2d.WorldState) {
 	c := a.Cell()
 
@@ -304,7 +305,9 @@ func (a *actor) WriteState(state rpg2d.WorldState) {
 	a.actorConn.WriteState(state)
 }
 
-// Diffs the world state so only the changes are sent
+// Diffs the world state so only the changes are sent.
+// Is called after actor.WriteState(). Expects the state
+// to have been culled already.
 func (a *actorConn) WriteState(state rpg2d.WorldState) {
 	diff := a.lastState.Diff(state)
 	a.lastState = state
