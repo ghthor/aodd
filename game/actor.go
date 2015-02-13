@@ -246,9 +246,6 @@ func (a *actorConn) startIO() {
 				a.SendJson("update", state)
 			}
 
-			// Reset the cmdReq object
-			cmdReq = nil
-
 			// Transition: locked -> unlocked
 			goto unlocked
 
