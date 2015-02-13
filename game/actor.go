@@ -102,6 +102,8 @@ func (e actorEntity) ToState() entity.State {
 	return actorEntityState{
 		EntityId: e.id,
 
+		Name: e.name,
+
 		Cell:   e.cell,
 		Facing: e.facing.String(),
 
