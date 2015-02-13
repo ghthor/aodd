@@ -175,6 +175,8 @@ func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
 		},
 
 		newActorConn(c),
+
+		actorCmdRequest{},
 	}
 
 	c.sim.ConnectActor(c.actor)

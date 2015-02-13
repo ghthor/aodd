@@ -24,7 +24,7 @@ type moveRequest struct {
 }
 
 type actorCmdRequest struct {
-	moveRequest
+	*moveRequest
 }
 
 type actorConn struct {
@@ -32,7 +32,7 @@ type actorConn struct {
 	submitCmd chan<- actorCmd
 
 	// Comm interface to muxer used by getEntity() method
-	readCmdReq <-chan actorCmdRequest
+	readCmdReq <-chan *actorCmdRequest
 
 	// Comm interface to muxer used by SendState() method
 	sendState chan<- *rpg2d.WorldState
@@ -59,7 +59,8 @@ type actorEntity struct {
 	cell   coord.Cell
 	facing coord.Direction
 
-	pathAction *coord.PathAction
+	pathAction     *coord.PathAction
+	lastMoveAction coord.MoveAction
 }
 
 type actorEntityState struct {
@@ -77,6 +78,8 @@ type actorEntityState struct {
 type actor struct {
 	actorEntity
 	actorConn
+
+	actorCmdRequest
 }
 
 func (a *actor) Entity() entity.Entity { return &a.actorEntity }
@@ -134,7 +137,7 @@ func (e actorEntityState) IsDifferentFrom(other entity.State) bool {
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	cmdCh := make(chan actorCmd)
-	cmdReqCh := make(chan actorCmdRequest)
+	cmdReqCh := make(chan *actorCmdRequest)
 	outputCh := make(chan *rpg2d.WorldState)
 	stopCh := make(chan chan<- struct{})
 
@@ -146,7 +149,7 @@ func (a *actorConn) startIO() {
 
 	// Establish the channel endpoints used inside the go routine
 	var newCmd <-chan actorCmd
-	var sendCmdReq chan<- actorCmdRequest
+	var sendCmdReq chan<- *actorCmdRequest
 	var newState <-chan *rpg2d.WorldState
 	var stopReq <-chan chan<- struct{}
 
@@ -160,18 +163,29 @@ func (a *actorConn) startIO() {
 
 		// Buffer of 1 used to store the most recently
 		// received actor cmd from the network.
-		var cmdReq actorCmdRequest
+		var cmdReq *actorCmdRequest
 
 		updateCmdReqWith := func(c actorCmd) {
+			if cmdReq == nil {
+				cmdReq = &actorCmdRequest{}
+			}
+
 			switch c.cmd {
 			case "move":
 				// TODO This is a shit place to be having an error to deal with
 				// TODO It needs to be dealt with at the packet handler level
 				d, _ := coord.NewDirectionWithString(c.params)
 
-				cmdReq.moveRequest = moveRequest{
+				cmdReq.moveRequest = &moveRequest{
 					Time:      stime.Time(c.timeIssued),
 					Direction: d,
+				}
+			case "moveCancel":
+				d, _ := coord.NewDirectionWithString(c.params)
+				if cmdReq.moveRequest != nil {
+					if cmdReq.moveRequest.Direction == d {
+						cmdReq.moveRequest = nil
+					}
 				}
 			}
 		}
@@ -228,7 +242,7 @@ func (a *actorConn) startIO() {
 			}
 
 			// Reset the cmdReq object
-			cmdReq = actorCmdRequest{}
+			cmdReq = nil
 
 			// Transition: locked -> unlocked
 			goto unlocked
@@ -269,7 +283,7 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 	return nil
 }
 
-func (c actorConn) ReadCmdRequest() actorCmdRequest {
+func (c actorConn) ReadCmdRequest() *actorCmdRequest {
 	return <-c.readCmdReq
 }
 

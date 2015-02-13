@@ -26,8 +26,71 @@ func (phase inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 		switch a := e.(type) {
 		case *actorEntity:
 			actor := phase.index[a.Id()]
-			_ = actor.ReadCmdRequest()
-			// TODO Apply the movement request
+
+			// Remove any movement actions that have completed
+			if actor.pathAction != nil && actor.pathAction.End() <= now {
+				actor.lastMoveAction = actor.pathAction
+				actor.cell = actor.pathAction.Dest
+				actor.pathAction = nil
+			}
+
+			cmdReq := actor.ReadCmdRequest()
+
+			// Haven't recieved any commands
+			if cmdReq == nil {
+				continue
+			}
+
+			// recieved a move cancel request
+			if cmdReq.moveRequest == nil {
+				actor.actorCmdRequest.moveRequest = nil
+				continue
+			}
+
+			actor.actorCmdRequest = *cmdReq
+
+			// Actor is already moving so we can't accept a new movement request
+			if actor.pathAction != nil {
+				continue
+			}
+
+			dest := actor.Cell().Neighbor(cmdReq.Direction)
+			direction := actor.Cell().DirectionTo(dest)
+
+			// If the last MoveAction was a PathAction that ended on this step
+			// And the direction was the same as the requested movement
+			if pathAction, ok := actor.lastMoveAction.(*coord.PathAction); (ok && pathAction.End() == now) || actor.facing == direction {
+				pathAction = &coord.PathAction{
+					// now+speed
+					stime.NewSpan(now, now+stime.Time(20)),
+					actor.Cell(),
+					dest,
+				}
+
+				if pathAction.CanHappenAfter(actor.lastMoveAction) {
+					// actor.ApplyAction(pathAction)
+					actor.pathAction = pathAction
+					actor.facing = pathAction.Direction()
+					actor.actorCmdRequest.moveRequest = nil
+				}
+
+				// If the requested direction is different from
+				// the actor's current facing.
+			} else if actor.facing != direction {
+				turnAction := coord.TurnAction{
+					actor.facing,
+					direction,
+					now,
+				}
+
+				if turnAction.CanHappenAfter(actor.lastMoveAction) {
+					// actor.ApplyAction(turnAction
+					actor.facing = direction
+					actor.lastMoveAction = turnAction
+					actor.actorCmdRequest.moveRequest = nil
+				}
+			}
+
 		default:
 			panic(fmt.Sprint("unexpected entity type:", a))
 		}
