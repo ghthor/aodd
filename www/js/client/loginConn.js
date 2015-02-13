@@ -24,6 +24,12 @@ define(["client/packet",
             conn.emit("error");
         };
 
+        window.onbeforeunload = function() {
+            socket.send(Packet.Encode({
+                        type: Packet.Type.PT_DISCONNECT,
+            }));
+        };
+
         var handlers = {
             noop: function(packet) {
                 console.log("noop packet processor", packet);
