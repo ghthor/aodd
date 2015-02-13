@@ -38,6 +38,9 @@ func (c actorHandler) run() (err error) {
 	for {
 		c, err = c.handlePacket(c)
 		if err != nil {
+			if c.actor != nil {
+				c.sim.RemoveActor(c.actor)
+			}
 			break
 		}
 	}
