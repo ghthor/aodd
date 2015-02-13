@@ -115,21 +115,17 @@ func (e actorEntity) ToState() entity.State {
 
 func (e actorEntityState) Id() int64            { return e.EntityId }
 func (e actorEntityState) Bounds() coord.Bounds { return e.bounds }
-func (e actorEntityState) IsDifferentFrom(other entity.State) bool {
+func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 	o := other.(actorEntityState)
 
 	switch {
 	case e.Facing != o.Facing:
 		return true
-
 	case e.PathAction != nil && o.PathAction != nil:
 		if *e.PathAction != *o.PathAction {
 			return true
 		}
-
-	case e.PathAction == nil && o.PathAction != nil:
-		return true
-	case e.PathAction != nil && o.PathAction == nil:
+	case e.bounds != o.bounds:
 		return true
 	}
 
