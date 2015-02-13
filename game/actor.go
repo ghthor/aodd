@@ -32,7 +32,7 @@ type actorConn struct {
 	submitCmd chan<- actorCmd
 
 	// Comm interface to muxer used by getEntity() method
-	readCmdReq <-chan *actorCmdRequest
+	readCmdReq <-chan actorCmdRequest
 
 	// Comm interface to muxer used by SendState() method
 	sendState chan<- *rpg2d.WorldState
@@ -142,7 +142,7 @@ func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	cmdCh := make(chan actorCmd)
-	cmdReqCh := make(chan *actorCmdRequest)
+	cmdReqCh := make(chan actorCmdRequest)
 	outputCh := make(chan *rpg2d.WorldState)
 	stopCh := make(chan chan<- struct{})
 
@@ -154,7 +154,7 @@ func (a *actorConn) startIO() {
 
 	// Establish the channel endpoints used inside the go routine
 	var newCmd <-chan actorCmd
-	var sendCmdReq chan<- *actorCmdRequest
+	var sendCmdReq chan<- actorCmdRequest
 	var newState <-chan *rpg2d.WorldState
 	var stopReq <-chan chan<- struct{}
 
@@ -168,13 +168,9 @@ func (a *actorConn) startIO() {
 
 		// Buffer of 1 used to store the most recently
 		// received actor cmd from the network.
-		var cmdReq *actorCmdRequest
+		var cmdReq actorCmdRequest
 
 		updateCmdReqWith := func(c actorCmd) {
-			if cmdReq == nil {
-				cmdReq = &actorCmdRequest{}
-			}
-
 			switch c.cmd {
 			case "move":
 				// TODO This is a shit place to be having an error to deal with
@@ -285,7 +281,7 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 	return nil
 }
 
-func (c actorConn) ReadCmdRequest() *actorCmdRequest {
+func (c actorConn) ReadCmdRequest() actorCmdRequest {
 	return <-c.readCmdReq
 }
 

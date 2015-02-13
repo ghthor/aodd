@@ -36,18 +36,14 @@ func (phase inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 
 			cmdReq := actor.ReadCmdRequest()
 
-			// Haven't recieved any commands
-			if cmdReq == nil {
-				continue
-			}
-
-			// recieved a move cancel request
 			if cmdReq.moveRequest == nil {
+				// The client has canceled all move requests
 				actor.actorCmdRequest.moveRequest = nil
 				continue
+			} else {
+				// The client has a standing move request
+				actor.actorCmdRequest.moveRequest = cmdReq.moveRequest
 			}
-
-			actor.actorCmdRequest = *cmdReq
 
 			// Actor is already moving so we can't accept a new movement request
 			if actor.pathAction != nil {
