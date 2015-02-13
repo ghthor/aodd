@@ -119,6 +119,7 @@ func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error)
 	c = c.loginActor(actor)
 
 	log.Print("login success: ", r.Name)
+
 	c.SendJson("loginSuccess", c.actor.ToState())
 	return c, nil
 }
