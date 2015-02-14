@@ -98,13 +98,13 @@ func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad
 	return c
 }
 
-type serveIndex struct {
+type indexHandler struct {
 	tmpl     *template.Template
 	settings ClientSettings
 }
 
-func (html serveIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := html.tmpl.Execute(w, html.settings)
+func (index indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	err := index.tmpl.Execute(w, index.settings)
 
 	if err != nil {
 		http.Error(w, fmt.Sprint("template error:", err), http.StatusInternalServerError)
@@ -237,7 +237,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	wsUrl += c.LAddr + wsRoute
 
-	indexHandler := serveIndex{
+	indexHandler := indexHandler{
 		c.IndexTmpl,
 		ClientSettings{
 			c.JsMain,
