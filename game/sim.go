@@ -40,17 +40,19 @@ func (phase inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
 				// The client has canceled all move requests
 				actor.actorCmdRequest.moveRequest = nil
 				continue
-			} else {
-				// The client has a standing move request
-				actor.actorCmdRequest.moveRequest = cmdReq.moveRequest
 			}
 
-			// Actor is already moving so we can't accept a new movement request
+			// The client has a standing move request
+			moveRequest := cmdReq.moveRequest
+			actor.actorCmdRequest.moveRequest = moveRequest
+
+			// Actor is already moving so the moveRequest won't be
+			// consumed until the path action has been completed
 			if actor.pathAction != nil {
 				continue
 			}
 
-			dest := actor.Cell().Neighbor(cmdReq.Direction)
+			dest := actor.Cell().Neighbor(moveRequest.Direction)
 			direction := actor.Cell().DirectionTo(dest)
 
 			// If the last MoveAction was a PathAction that ended on this step
