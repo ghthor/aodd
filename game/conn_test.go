@@ -93,10 +93,8 @@ func DescribeActorConn(c gospec.Context) {
 	ds := datastore.NewMemDatastore()
 	ds.AddActor("actor", "password")
 
-	conn := actorHandler{
+	conn := &actorHandler{
 		Conn: protocol.NewWebsocketConn(wsServer),
-
-		handlePacket: (actorHandler).loginHandler,
 
 		sim:       mockSimulation{},
 		datastore: ds,
@@ -106,28 +104,23 @@ func DescribeActorConn(c gospec.Context) {
 
 	var packet encoding.Packet
 
-	response := func(conn actorHandler, client *protocol.WebsocketConn) (actorHandler, encoding.Packet) {
-		conn, err := conn.handlePacket(conn)
-		c.Assume(err, IsNil)
-
+	getResp := func(client protocol.Conn) encoding.Packet {
 		packet, err := client.Read()
 		c.Assume(err, IsNil)
-		return conn, packet
+		return packet
 	}
 
 	// Convenience function for sending requests
 	login := func() {
 		client.SendJson("login", LoginReq{"actor", "password"})
-		conn, packet = response(conn, client)
-
+		packet := getResp(client)
 		c.Assume(packet.Type, Equals, encoding.PT_JSON)
 		c.Assume(packet.Msg, Equals, "loginSuccess")
 	}
 
 	createActor := func() {
 		client.SendJson("create", LoginReq{"newActor", "password"})
-		conn, packet = response(conn, client)
-
+		packet := getResp(client)
 		c.Assume(packet.Type, Equals, encoding.PT_JSON)
 		c.Assume(packet.Msg, Equals, "createSuccess")
 	}
@@ -135,8 +128,8 @@ func DescribeActorConn(c gospec.Context) {
 	c.Specify("packet processing should terminate", func() {
 		c.Specify("when a client disconnects", func() {
 			go func() {
-				client.Send(encoding.Packet{})
-				ws.Close()
+				c.Assume(client.Send(encoding.Packet{}), IsNil)
+				c.Assume(ws.Close(), IsNil)
 			}()
 
 			err := conn.run()
@@ -146,11 +139,11 @@ func DescribeActorConn(c gospec.Context) {
 		})
 
 		c.Specify("when a client disconnects after the actor logs in", func() {
-			login()
 
 			go func() {
-				client.Send(encoding.Packet{})
-				ws.Close()
+				login()
+				c.Assume(client.Send(encoding.Packet{}), IsNil)
+				c.Assume(ws.Close(), IsNil)
 			}()
 
 			err := conn.run()
@@ -161,7 +154,7 @@ func DescribeActorConn(c gospec.Context) {
 
 		c.Specify("when the connection is lost", func() {
 			go func() {
-				ws.Close()
+				c.Assume(ws.Close(), IsNil)
 			}()
 
 			err := conn.run()
@@ -172,10 +165,10 @@ func DescribeActorConn(c gospec.Context) {
 		})
 
 		c.Specify("when the connection is lost after the actor logs in", func() {
-			login()
 
 			go func() {
-				ws.Close()
+				login()
+				c.Assume(ws.Close(), IsNil)
 			}()
 
 			err := conn.run()
@@ -187,11 +180,30 @@ func DescribeActorConn(c gospec.Context) {
 	})
 
 	c.Specify("when the client sends a request", func() {
+		handlerHasTerminated := make(chan struct{})
+
+		// Run the packet handler
+		go func() {
+			c.Assume(conn.run(), Equals, ErrWebsocketClientDisconnected)
+
+			// Signal the handler has terminated
+			handlerHasTerminated <- struct{}{}
+		}()
+
+		// Close the packet handler and clean up
+		defer func() {
+			c.Assume(client.Send(encoding.Packet{}), IsNil)
+			c.Assume(ws.Close(), IsNil)
+
+			// Wait for the handler to exit the packetHandler loop
+			<-handlerHasTerminated
+		}()
+
 		c.Specify("to login", func() {
 			c.Specify("the request should fail", func() {
 				c.Specify("if the actor doesn't exist", func() {
-					client.SendJson("login", LoginReq{"notAnActor", "anything"})
-					conn, packet = response(conn, client)
+					c.Assume(client.SendJson("login", LoginReq{"notAnActor", "anything"}), IsNil)
+					packet := getResp(client)
 
 					c.Expect(packet.Type, Equals, encoding.PT_JSON)
 					c.Expect(packet.Msg, Equals, "actorDoesntExist")
@@ -201,8 +213,8 @@ func DescribeActorConn(c gospec.Context) {
 				})
 
 				c.Specify("if the password is incorrect", func() {
-					client.SendJson("login", LoginReq{"actor", "wrongpassword"})
-					conn, packet = response(conn, client)
+					c.Assume(client.SendJson("login", LoginReq{"actor", "wrongpassword"}), IsNil)
+					packet := getResp(client)
 
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "authFailed")
@@ -214,8 +226,8 @@ func DescribeActorConn(c gospec.Context) {
 					login()
 					c.Assume(conn.Actor().Name, Equals, "actor")
 
-					client.SendJson("login", LoginReq{"actor", "password"})
-					conn, packet = response(conn, client)
+					c.Assume(client.SendJson("login", LoginReq{"actor", "password"}), IsNil)
+					packet := getResp(client)
 
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
@@ -223,8 +235,8 @@ func DescribeActorConn(c gospec.Context) {
 			})
 
 			c.Specify("the request should succeed", func() {
-				client.SendJson("login", LoginReq{"actor", "password"})
-				conn, packet = response(conn, client)
+				c.Assume(client.SendJson("login", LoginReq{"actor", "password"}), IsNil)
+				packet = getResp(client)
 
 				c.Expect(packet.Type, Equals, encoding.PT_JSON)
 				c.Expect(packet.Msg, Equals, "loginSuccess")
@@ -236,8 +248,8 @@ func DescribeActorConn(c gospec.Context) {
 		c.Specify("to create a new actor", func() {
 			c.Specify("the request should fail", func() {
 				c.Specify("if the actor already exists", func() {
-					client.SendJson("create", LoginReq{"actor", "password"})
-					conn, packet = response(conn, client)
+					c.Assume(client.SendJson("create", LoginReq{"actor", "password"}), IsNil)
+					packet = getResp(client)
 
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "actorAlreadyExists")
@@ -245,8 +257,8 @@ func DescribeActorConn(c gospec.Context) {
 
 				c.Specify("if the an actor has been logged in", func() {
 					login()
-					client.SendJson("create", LoginReq{"newActor", "password"})
-					conn, packet = response(conn, client)
+					c.Assume(client.SendJson("create", LoginReq{"newActor", "password"}), IsNil)
+					packet = getResp(client)
 
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
@@ -254,8 +266,8 @@ func DescribeActorConn(c gospec.Context) {
 
 				c.Specify("if an actor has already been created", func() {
 					createActor()
-					client.SendJson("create", LoginReq{"newActor", "password"})
-					conn, packet = response(conn, client)
+					c.Assume(client.SendJson("create", LoginReq{"newActor", "password"}), IsNil)
+					packet = getResp(client)
 
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
@@ -263,8 +275,8 @@ func DescribeActorConn(c gospec.Context) {
 			})
 
 			c.Specify("the request should succeed", func() {
-				client.SendJson("create", LoginReq{"newActor", "password"})
-				conn, packet = response(conn, client)
+				c.Assume(client.SendJson("create", LoginReq{"newActor", "password"}), IsNil)
+				packet = getResp(client)
 
 				c.Expect(packet.Type, Equals, encoding.PT_JSON)
 				c.Expect(packet.Msg, Equals, "createSuccess")

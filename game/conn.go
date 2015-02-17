@@ -20,11 +20,10 @@ type LoginReq struct {
 	Password string `json:"password"`
 }
 
-type packetHandler func(actorHandler) (actorHandler, error)
+type packetHandler func(*actorHandler) (packetHandler, error)
 
 type actorHandler struct {
 	protocol.Conn
-	handlePacket packetHandler
 
 	sim       rpg2d.RunningSimulation
 	datastore datastore.Datastore
@@ -34,17 +33,17 @@ type actorHandler struct {
 
 // Starts the packet handler loop.
 // This function is blocking.
-func (c actorHandler) run() (err error) {
-	for {
-		c, err = c.handlePacket(c)
-		if err != nil {
-			if c.actor != nil {
-				c.sim.RemoveActor(c.actor)
-			}
-			break
-		}
+func (c *actorHandler) run() (err error) {
+	handlePacket := loginHandler
+
+	for err == nil {
+		handlePacket, err = handlePacket(c)
 	}
-	return
+
+	if c.actor != nil {
+		c.sim.RemoveActor(c.actor)
+	}
+	return err
 }
 
 var ErrWebsocketClientDisconnected = errors.New("websocket client disconnected")
@@ -64,14 +63,14 @@ func (e ErrUnexpectedPacket) Error() string {
 
 // An implementation of packetHandler which
 // will handle an actor logging in.
-func (c actorHandler) loginHandler() (actorHandler, error) {
+func loginHandler(c *actorHandler) (packetHandler, error) {
 	packet, err := c.Read()
 	if err != nil {
-		return c, err
+		return nil, err
 	}
 
 	if packet.Type == encoding.PT_DISCONNECT {
-		return c, ErrWebsocketClientDisconnected
+		return nil, ErrWebsocketClientDisconnected
 	}
 
 	switch packet.Type {
@@ -88,84 +87,111 @@ func (c actorHandler) loginHandler() (actorHandler, error) {
 
 	// TODO Improve this message with how to login
 	c.SendMessage("notLoggedIn", "")
-	return c, nil
+	return loginHandler, nil
+}
+
+// An implementation of packetHandler which will
+// process input requests and prepare them
+// for consumption by the input phase.
+func inputHandler(c *actorHandler) (packetHandler, error) {
+	packet, err := c.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	if packet.Type == encoding.PT_DISCONNECT {
+		return nil, ErrWebsocketClientDisconnected
+	}
+
+	switch packet.Type {
+	case encoding.PT_MESSAGE:
+		if strings.Contains(packet.Msg, "move") {
+			err := c.actor.SubmitCmd(packet.Msg, packet.Payload)
+			if err != nil {
+				c.SendError("invalidActorCommand", err.Error())
+			}
+			return inputHandler, nil
+		}
+	default:
+	}
+
+	c.SendMessage("alreadyLoggedIn", "an actor has already been logged into this connection")
+
+	return inputHandler, nil
 }
 
 // A login request is a event that can modify the
 // state of the packet handler. If the login is
 // successful the packet handler will transition
 // to the input handler..
-func (c actorHandler) respondToLoginReq(p encoding.Packet) (actorHandler, error) {
+func (c *actorHandler) respondToLoginReq(p encoding.Packet) (packetHandler, error) {
 	r := LoginReq{}
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
 	if err != nil {
-		return c, errors.New(fmt.Sprint("error parsing login request:", err))
+		return nil, errors.New(fmt.Sprint("error parsing login request:", err))
 	}
 
 	actor, exists := c.datastore.ActorExists(r.Name)
 	if !exists {
 		log.Printf("login failed: actor %s doesn't exist", r.Name)
 		c.SendJson("actorDoesntExist", r)
-		return c, nil
+		return loginHandler, nil
 	}
 
 	if !actor.Authenticate(r.Name, r.Password) {
 		log.Printf("login failed: password for %s was incorrect", r.Name)
 		c.SendMessage("authFailed", r.Name)
-		return c, nil
+		return loginHandler, nil
 	}
 
-	c = c.loginActor(actor)
+	c.loginActor(actor)
 
 	log.Print("login success: ", r.Name)
 
 	c.SendJson("loginSuccess", c.actor.ToState())
-	return c, nil
+	return inputHandler, nil
 }
 
 // A create request is an event that can modify th
 // state of the packet handler. If the create is
 // successful the packet handler will transition
 // in the input handler.
-func (c actorHandler) respondToCreateReq(p encoding.Packet) (actorHandler, error) {
+func (c *actorHandler) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
 	r := LoginReq{}
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
 	if err != nil {
 		// TODO determine if this an error that should terminate the connection
-		return c, errors.New(fmt.Sprint("error parsing login request:", err))
+		return nil, errors.New(fmt.Sprint("error parsing login request:", err))
 	}
 
 	_, exists := c.datastore.ActorExists(r.Name)
 	if exists {
 		log.Printf("create failed: actor %s already exists", r.Name)
 		c.SendMessage("actorAlreadyExists", "actor already exists")
-		return c, nil
+		return loginHandler, nil
 	}
 
 	actor, err := c.datastore.AddActor(r.Name, r.Password)
 	if err != nil {
 		// TODO Instead of terminating the connection here
 		// we should retry contacting the database or something
-		return c, err
+		return loginHandler, err
 	}
 
-	c = c.loginActor(actor)
+	c.loginActor(actor)
 
 	log.Print("created actor: ", actor.Name)
 
 	c.SendJson("createSuccess", c.actor.ToState())
-	return c, nil
+
+	return inputHandler, nil
 }
 
 // Creates a new actor struct using a datastore.Actor struct.
 // Adds this new actor into the simulation.
-func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
-	// Set the actor this connection is now associated with
-	// Mutate the packet handler into the next state
-	c.handlePacket = (actorHandler).inputHandler
-
+func (c *actorHandler) loginActor(dsactor datastore.Actor) {
 	// Create an actorEntity for this object
 	c.actor = &actor{
 		actorEntity{
@@ -183,36 +209,6 @@ func (c actorHandler) loginActor(dsactor datastore.Actor) actorHandler {
 	}
 
 	c.sim.ConnectActor(c.actor)
-	return c
-}
-
-// An implementation of packetHandler which will
-// process input requests and prepare them
-// for consumption by the input phase.
-func (c actorHandler) inputHandler() (actorHandler, error) {
-	packet, err := c.Read()
-	if err != nil {
-		return c, err
-	}
-
-	if packet.Type == encoding.PT_DISCONNECT {
-		return c, ErrWebsocketClientDisconnected
-	}
-
-	switch packet.Type {
-	case encoding.PT_MESSAGE:
-		if strings.Contains(packet.Msg, "move") {
-			err := c.actor.SubmitCmd(packet.Msg, packet.Payload)
-			if err != nil {
-				c.SendError("invalidActorCommand", err.Error())
-			}
-			return c, nil
-		}
-	default:
-	}
-
-	c.SendMessage("alreadyLoggedIn", "an actor has already been logged into this connection")
-	return c, nil
 }
 
 // Return the actor bound to the connection.
@@ -233,13 +229,14 @@ func (c actorHandler) Actor() datastore.Actor {
 
 func newWebsocketActorHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
 	return func(ws *websocket.Conn) {
-		err := actorHandler{
-			Conn:         protocol.NewWebsocketConn(ws),
-			handlePacket: (actorHandler).loginHandler,
+		handler := actorHandler{
+			Conn: protocol.NewWebsocketConn(ws),
 
 			sim:       sim,
 			datastore: datastore,
-		}.run()
+		}
+
+		err := handler.run()
 
 		// TODO Maybe send a http response if there is an error
 		if err != nil {
