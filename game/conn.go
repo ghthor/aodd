@@ -263,9 +263,8 @@ func newWebsocketActorHandler(sim rpg2d.RunningSimulation, datastore datastore.D
 
 		err := handler.run()
 
-		// TODO Maybe send a http response if there is an error
 		if err != nil {
-			log.Printf("disconnected: %v", err)
+			log.Printf("packet handler terminated: %v", err)
 		}
 	}
 }
