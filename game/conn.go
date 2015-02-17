@@ -86,7 +86,11 @@ func loginHandler(c *actorHandler) (packetHandler, error) {
 	}
 
 	// TODO Improve this message with how to login
-	c.SendMessage("notLoggedIn", "")
+	serr := c.SendMessage("notLoggedIn", "")
+	if serr != nil {
+		return nil, serr
+	}
+
 	return loginHandler, nil
 }
 
@@ -108,14 +112,23 @@ func inputHandler(c *actorHandler) (packetHandler, error) {
 		if strings.Contains(packet.Msg, "move") {
 			err := c.actor.SubmitCmd(packet.Msg, packet.Payload)
 			if err != nil {
-				c.SendError("invalidActorCommand", err.Error())
+				serr := c.SendError("invalidActorCommand", err.Error())
+				if serr != nil {
+					return nil, serr
+				}
 			}
 			return inputHandler, nil
 		}
 	default:
 	}
 
-	c.SendMessage("alreadyLoggedIn", "an actor has already been logged into this connection")
+	serr := c.SendMessage(
+		"alreadyLoggedIn",
+		"an actor has already been logged into this connection",
+	)
+	if serr != nil {
+		return nil, serr
+	}
 
 	return inputHandler, nil
 }
@@ -135,13 +148,23 @@ func (c *actorHandler) respondToLoginReq(p encoding.Packet) (packetHandler, erro
 	actor, exists := c.datastore.ActorExists(r.Name)
 	if !exists {
 		log.Printf("login failed: actor %s doesn't exist", r.Name)
-		c.SendJson("actorDoesntExist", r)
+
+		serr := c.SendJson("actorDoesntExist", r)
+		if serr != nil {
+			return nil, serr
+		}
+
 		return loginHandler, nil
 	}
 
 	if !actor.Authenticate(r.Name, r.Password) {
 		log.Printf("login failed: password for %s was incorrect", r.Name)
-		c.SendMessage("authFailed", r.Name)
+
+		serr := c.SendMessage("authFailed", r.Name)
+		if serr != nil {
+			return nil, serr
+		}
+
 		return loginHandler, nil
 	}
 
@@ -149,7 +172,11 @@ func (c *actorHandler) respondToLoginReq(p encoding.Packet) (packetHandler, erro
 
 	log.Print("login success: ", r.Name)
 
-	c.SendJson("loginSuccess", c.actor.ToState())
+	serr := c.SendJson("loginSuccess", c.actor.ToState())
+	if serr != nil {
+		return nil, serr
+	}
+
 	return inputHandler, nil
 }
 
@@ -169,7 +196,12 @@ func (c *actorHandler) respondToCreateReq(p encoding.Packet) (packetHandler, err
 	_, exists := c.datastore.ActorExists(r.Name)
 	if exists {
 		log.Printf("create failed: actor %s already exists", r.Name)
-		c.SendMessage("actorAlreadyExists", "actor already exists")
+
+		serr := c.SendMessage("actorAlreadyExists", "actor already exists")
+		if serr != nil {
+			return nil, serr
+		}
+
 		return loginHandler, nil
 	}
 
@@ -184,7 +216,10 @@ func (c *actorHandler) respondToCreateReq(p encoding.Packet) (packetHandler, err
 
 	log.Print("created actor: ", actor.Name)
 
-	c.SendJson("createSuccess", c.actor.ToState())
+	serr := c.SendJson("createSuccess", c.actor.ToState())
+	if serr != nil {
+		return nil, serr
+	}
 
 	return inputHandler, nil
 }
