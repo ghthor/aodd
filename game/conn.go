@@ -142,7 +142,12 @@ func (c *actorHandler) respondToLoginReq(p encoding.Packet) (packetHandler, erro
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
 	if err != nil {
-		return nil, errors.New(fmt.Sprint("error parsing login request:", err))
+		serr := c.SendError("invalidLoginRequest", p.Payload)
+		if serr != nil {
+			return nil, serr
+		}
+
+		return loginHandler, nil
 	}
 
 	actor, exists := c.datastore.ActorExists(r.Name)
@@ -183,8 +188,12 @@ func (c *actorHandler) respondToCreateReq(p encoding.Packet) (packetHandler, err
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
 	if err != nil {
-		// TODO determine if this an error that should terminate the connection
-		return nil, errors.New(fmt.Sprint("error parsing login request:", err))
+		serr := c.SendError("invalidCreateRequest", p.Payload)
+		if serr != nil {
+			return nil, serr
+		}
+
+		return loginHandler, nil
 	}
 
 	_, exists := c.datastore.ActorExists(r.Name)

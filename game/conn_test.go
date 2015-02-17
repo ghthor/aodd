@@ -232,6 +232,21 @@ func DescribeActorConn(c gospec.Context) {
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
 				})
+
+				c.Specify("if the login request payload json", func() {
+					c.Specify("is invalid", func() {
+						c.Assume(client.Send(encoding.Packet{
+							Type:    encoding.PT_JSON,
+							Msg:     "login",
+							Payload: "{malformed json",
+						}), IsNil)
+						packet := getResp(client)
+
+						c.Expect(packet.Type, Equals, encoding.PT_ERROR)
+						c.Expect(packet.Msg, Equals, "invalidLoginRequest")
+						c.Expect(packet.Payload, Equals, "{malformed json")
+					})
+				})
 			})
 
 			c.Specify("the request should succeed", func() {
@@ -271,6 +286,21 @@ func DescribeActorConn(c gospec.Context) {
 
 					c.Expect(packet.Type, Equals, encoding.PT_MESSAGE)
 					c.Expect(packet.Msg, Equals, "alreadyLoggedIn")
+				})
+
+				c.Specify("if the create request payload json", func() {
+					c.Specify("is invalid", func() {
+						c.Assume(client.Send(encoding.Packet{
+							Type:    encoding.PT_JSON,
+							Msg:     "create",
+							Payload: "{malformed json",
+						}), IsNil)
+						packet := getResp(client)
+
+						c.Expect(packet.Type, Equals, encoding.PT_ERROR)
+						c.Expect(packet.Msg, Equals, "invalidCreateRequest")
+						c.Expect(packet.Payload, Equals, "{malformed json")
+					})
 				})
 			})
 
