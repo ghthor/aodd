@@ -257,7 +257,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/img/", http.StripPrefix("/img/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newWebsocketActorHandler(simulation{
+	mux.Handle(wsRoute, newWebsocketHandler(simulation{
 		actorIndex,
 		runningSim,
 	}, datastore))

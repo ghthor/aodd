@@ -20,9 +20,9 @@ type LoginReq struct {
 	Password string `json:"password"`
 }
 
-type packetHandler func(*actorHandler) (packetHandler, error)
+type packetHandler func(*conn) (packetHandler, error)
 
-type actorHandler struct {
+type conn struct {
 	protocol.Conn
 
 	sim       rpg2d.RunningSimulation
@@ -31,9 +31,9 @@ type actorHandler struct {
 	actor *actor
 }
 
-// Starts the packet handler loop.
+// Starts the packet handling state machine loop.
 // This function is blocking.
-func (c *actorHandler) run() (err error) {
+func (c *conn) startPacketHandler() (err error) {
 	handlePacket := loginHandler
 
 	for err == nil {
@@ -63,7 +63,7 @@ func (e ErrUnexpectedPacket) Error() string {
 
 // An implementation of packetHandler which
 // will handle an actor logging in.
-func loginHandler(c *actorHandler) (packetHandler, error) {
+func loginHandler(c *conn) (packetHandler, error) {
 	packet, err := c.Read()
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func loginHandler(c *actorHandler) (packetHandler, error) {
 // An implementation of packetHandler which will
 // process input requests and prepare them
 // for consumption by the input phase.
-func inputHandler(c *actorHandler) (packetHandler, error) {
+func inputHandler(c *conn) (packetHandler, error) {
 	packet, err := c.Read()
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func inputHandler(c *actorHandler) (packetHandler, error) {
 // state of the packet handler. If the login is
 // successful the packet handler will transition
 // to the input handler..
-func (c *actorHandler) respondToLoginReq(p encoding.Packet) (packetHandler, error) {
+func (c *conn) respondToLoginReq(p encoding.Packet) (packetHandler, error) {
 	r := LoginReq{}
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
@@ -183,7 +183,7 @@ func (c *actorHandler) respondToLoginReq(p encoding.Packet) (packetHandler, erro
 // state of the packet handler. If the create is
 // successful the packet handler will transition
 // in the input handler.
-func (c *actorHandler) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
+func (c *conn) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
 	r := LoginReq{}
 
 	err := json.Unmarshal([]byte(p.Payload), &r)
@@ -225,7 +225,7 @@ func (c *actorHandler) respondToCreateReq(p encoding.Packet) (packetHandler, err
 
 // Creates a new actor struct using a datastore.Actor struct.
 // Adds this new actor into the simulation.
-func (c *actorHandler) loginActor(dsactor datastore.Actor) {
+func (c *conn) loginActor(dsactor datastore.Actor) {
 	// Create an actorEntity for this object
 	c.actor = &actor{
 		actorEntity{
@@ -246,7 +246,7 @@ func (c *actorHandler) loginActor(dsactor datastore.Actor) {
 }
 
 // Return the actor bound to the connection.
-func (c actorHandler) Actor() datastore.Actor {
+func (c conn) Actor() datastore.Actor {
 	if c.actor == nil {
 		return datastore.Actor{}
 	}
@@ -261,16 +261,17 @@ func (c actorHandler) Actor() datastore.Actor {
 	}
 }
 
-func newWebsocketActorHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
+func newWebsocketHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
 	return func(ws *websocket.Conn) {
-		handler := actorHandler{
+		c := conn{
 			Conn: protocol.NewWebsocketConn(ws),
 
 			sim:       sim,
 			datastore: datastore,
 		}
 
-		err := handler.run()
+		// Blocks until the connection is disconnected
+		err := c.startPacketHandler()
 
 		if err != nil {
 			log.Printf("packet handler terminated: %v", err)

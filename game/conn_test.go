@@ -93,7 +93,7 @@ func DescribeActorConn(c gospec.Context) {
 	ds := datastore.NewMemDatastore()
 	ds.AddActor("actor", "password")
 
-	conn := &actorHandler{
+	conn := &conn{
 		Conn: protocol.NewWebsocketConn(wsServer),
 
 		sim:       mockSimulation{},
@@ -132,7 +132,7 @@ func DescribeActorConn(c gospec.Context) {
 				c.Assume(ws.Close(), IsNil)
 			}()
 
-			err := conn.run()
+			err := conn.startPacketHandler()
 			c.Assume(err, Not(IsNil))
 
 			c.Expect(err, Equals, ErrWebsocketClientDisconnected)
@@ -146,7 +146,7 @@ func DescribeActorConn(c gospec.Context) {
 				c.Assume(ws.Close(), IsNil)
 			}()
 
-			err := conn.run()
+			err := conn.startPacketHandler()
 			c.Assume(err, Not(IsNil))
 
 			c.Expect(err, Equals, ErrWebsocketClientDisconnected)
@@ -157,7 +157,7 @@ func DescribeActorConn(c gospec.Context) {
 				c.Assume(ws.Close(), IsNil)
 			}()
 
-			err := conn.run()
+			err := conn.startPacketHandler()
 			c.Assume(err, Not(IsNil))
 
 			_, isAnDisconnectionError := err.(*protocol.DisconnectionError)
@@ -171,7 +171,7 @@ func DescribeActorConn(c gospec.Context) {
 				c.Assume(ws.Close(), IsNil)
 			}()
 
-			err := conn.run()
+			err := conn.startPacketHandler()
 			c.Assume(err, Not(IsNil))
 
 			_, isAnDisconnectionError := err.(*protocol.DisconnectionError)
@@ -184,7 +184,7 @@ func DescribeActorConn(c gospec.Context) {
 
 		// Run the packet handler
 		go func() {
-			c.Assume(conn.run(), Equals, ErrWebsocketClientDisconnected)
+			c.Assume(conn.startPacketHandler(), Equals, ErrWebsocketClientDisconnected)
 
 			// Signal the handler has terminated
 			handlerHasTerminated <- struct{}{}
