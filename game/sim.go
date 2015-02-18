@@ -158,6 +158,8 @@ type ShardConfig struct {
 
 // Type used to wrap a running simulation interface
 // and start and stop the actor's IO muxer.
+// Also adds and removes actors from the
+// simulation's actor index.
 type simulation struct {
 	actorIndex
 	rpg2d.RunningSimulation
