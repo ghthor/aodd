@@ -43,6 +43,7 @@ func (c *conn) startPacketHandler() (err error) {
 	if c.actor != nil {
 		c.sim.RemoveActor(c.actor)
 	}
+
 	return err
 }
 
