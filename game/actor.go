@@ -58,6 +58,7 @@ type actorEntity struct {
 
 	cell   coord.Cell
 	facing coord.Direction
+	speed  int
 
 	pathAction     *coord.PathAction
 	lastMoveAction coord.MoveAction

@@ -236,6 +236,7 @@ func (c *conn) loginActor(dsactor datastore.Actor) {
 
 			cell:   dsactor.Loc,
 			facing: dsactor.Facing,
+			speed:  15,
 		},
 
 		newActorConn(c),

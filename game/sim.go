@@ -76,7 +76,7 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		if pathAction, ok := actor.lastMoveAction.(*coord.PathAction); (ok && pathAction.End() == now) || actor.facing == direction {
 			pathAction = &coord.PathAction{
 				// now+speed
-				stime.NewSpan(now, now+stime.Time(20)),
+				stime.NewSpan(now, now+stime.Time(actor.speed)),
 				actor.Cell(),
 				dest,
 			}
