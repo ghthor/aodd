@@ -1,6 +1,7 @@
 ## [active] [1] Release 1
-- [ ] Implement the input phase
-- [ ] Implement the narrow phase
+- [x] Implement the update phase
+- [x] Implement the input phase
+- [ ] Implement the narrow phase [WIP]
 
 - [ ] Create character classes
     - warrior
