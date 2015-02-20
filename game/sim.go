@@ -100,8 +100,26 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	}
 }
 
-func (narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
-	return cg.Entities, nil
+func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
+	var entities []entity.Entity
+
+	for _, c := range cg.Collisions {
+		a1, a2 := phase.index[c.A.Id()], phase.index[c.B.Id()]
+
+		pathCollision := coord.NewPathCollision(*a1.pathAction, *a2.pathAction)
+
+		switch pathCollision.Type() {
+		case coord.CT_A_INTO_B:
+			if *a1.pathAction == pathCollision.A {
+				a1.undoLastMoveAction()
+			} else if *a2.pathAction == pathCollision.A {
+				a2.undoLastMoveAction()
+			}
+		}
+
+		entities = append(entities, a1.Entity(), a2.Entity())
+	}
+	return entities, nil
 }
 
 type indexHandler struct {

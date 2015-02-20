@@ -77,10 +77,11 @@ type actorEntityState struct {
 }
 
 type actor struct {
-	actorEntity
-	actorConn
-
 	actorCmdRequest
+	actorEntity
+	undoLastMoveAction func()
+
+	actorConn
 }
 
 func (a *actor) Entity() entity.Entity { return a.actorEntity }
@@ -141,12 +142,32 @@ func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 }
 
 func (a *actor) applyPathAction(pa *coord.PathAction) {
+	prevPathAction := a.pathAction
+	prevFacing := a.facing
+	prevMoveRequest := a.actorCmdRequest.moveRequest
+
+	a.undoLastMoveAction = func() {
+		a.pathAction = prevPathAction
+		a.facing = prevFacing
+		a.actorCmdRequest.moveRequest = prevMoveRequest
+	}
+
 	a.pathAction = pa
 	a.facing = pa.Direction()
 	a.actorCmdRequest.moveRequest = nil
 }
 
 func (a *actor) applyTurnAction(ta coord.TurnAction) {
+	prevAction := a.lastMoveAction
+	prevFacing := a.facing
+	prevMoveRequest := a.actorCmdRequest.moveRequest
+
+	a.undoLastMoveAction = func() {
+		a.lastMoveAction = prevAction
+		a.facing = prevFacing
+		a.actorCmdRequest.moveRequest = prevMoveRequest
+	}
+
 	a.lastMoveAction = ta
 	a.facing = ta.To
 	a.actorCmdRequest.moveRequest = nil
