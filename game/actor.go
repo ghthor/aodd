@@ -82,7 +82,7 @@ type actor struct {
 	actorCmdRequest
 }
 
-func (a *actor) Entity() entity.Entity { return &a.actorEntity }
+func (a *actor) Entity() entity.Entity { return a.actorEntity }
 func (e actorEntity) Id() int64        { return e.id }
 func (e actorEntity) Cell() coord.Cell { return e.cell }
 func (e actorEntity) Bounds() coord.Bounds {

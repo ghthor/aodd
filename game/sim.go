@@ -8,12 +8,16 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/rpg2d/quad"
 	"github.com/ghthor/engine/sim/stime"
 )
 
 type actorIndex map[int64]*actor
 
+type updatePhase struct {
+	index actorIndex
+}
 type inputPhase struct {
 	index actorIndex
 }
@@ -21,83 +25,95 @@ type narrowPhase struct {
 	index actorIndex
 }
 
-func (phase inputPhase) ApplyInputsIn(c quad.Chunk, now stime.Time) quad.Chunk {
-	for _, e := range c.Entities {
-		switch a := e.(type) {
-		case *actorEntity:
-			actor := phase.index[a.Id()]
+func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
+	switch e := e.(type) {
+	case actorEntity:
+		actor := phase.index[e.Id()]
 
-			// Remove any movement actions that have completed
-			if actor.pathAction != nil && actor.pathAction.End() <= now {
-				actor.lastMoveAction = actor.pathAction
-				actor.cell = actor.pathAction.Dest
-				actor.pathAction = nil
-			}
-
-			cmdReq := actor.ReadCmdRequest()
-
-			if cmdReq.moveRequest == nil {
-				// The client has canceled all move requests
-				actor.actorCmdRequest.moveRequest = nil
-				continue
-			}
-
-			// The client has a standing move request
-			moveRequest := cmdReq.moveRequest
-			actor.actorCmdRequest.moveRequest = moveRequest
-
-			// Actor is already moving so the moveRequest won't be
-			// consumed until the path action has been completed
-			if actor.pathAction != nil {
-				continue
-			}
-
-			dest := actor.Cell().Neighbor(moveRequest.Direction)
-			direction := actor.Cell().DirectionTo(dest)
-
-			// If the last MoveAction was a PathAction that ended on this step
-			// And the direction was the same as the requested movement
-			if pathAction, ok := actor.lastMoveAction.(*coord.PathAction); (ok && pathAction.End() == now) || actor.facing == direction {
-				pathAction = &coord.PathAction{
-					// now+speed
-					stime.NewSpan(now, now+stime.Time(20)),
-					actor.Cell(),
-					dest,
-				}
-
-				if pathAction.CanHappenAfter(actor.lastMoveAction) {
-					// actor.ApplyAction(pathAction)
-					actor.pathAction = pathAction
-					actor.facing = pathAction.Direction()
-					actor.actorCmdRequest.moveRequest = nil
-				}
-
-				// If the requested direction is different from
-				// the actor's current facing.
-			} else if actor.facing != direction {
-				turnAction := coord.TurnAction{
-					actor.facing,
-					direction,
-					now,
-				}
-
-				if turnAction.CanHappenAfter(actor.lastMoveAction) {
-					// actor.ApplyAction(turnAction
-					actor.facing = direction
-					actor.lastMoveAction = turnAction
-					actor.actorCmdRequest.moveRequest = nil
-				}
-			}
-
-		default:
-			panic(fmt.Sprint("unexpected entity type:", a))
+		// Remove any movement actions that have completed
+		if actor.pathAction != nil && actor.pathAction.End() <= now {
+			actor.lastMoveAction = actor.pathAction
+			actor.cell = actor.pathAction.Dest
+			actor.pathAction = nil
+			fmt.Println(actor.Entity())
+			fmt.Println(e)
 		}
+
+		return actor.Entity()
+
+	default:
+		panic(fmt.Sprint("unexpected entity type:", e))
 	}
-	return c
 }
 
-func (narrowPhase) ResolveCollisions(c quad.CollisionGroup, now stime.Time) quad.CollisionGroup {
-	return c
+func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
+	switch e := e.(type) {
+	case actorEntity:
+		actor := phase.index[e.Id()]
+		cmdReq := actor.ReadCmdRequest()
+
+		if cmdReq.moveRequest == nil {
+			// The client has canceled all move requests
+			actor.actorCmdRequest.moveRequest = nil
+			return []entity.Entity{actor.Entity()}
+		}
+
+		// The client has a standing move request
+		moveRequest := cmdReq.moveRequest
+		actor.actorCmdRequest.moveRequest = moveRequest
+
+		// Actor is already moving so the moveRequest won't be
+		// consumed until the path action has been completed
+		if actor.pathAction != nil {
+			return []entity.Entity{actor.Entity()}
+		}
+
+		dest := actor.Cell().Neighbor(moveRequest.Direction)
+		direction := actor.Cell().DirectionTo(dest)
+
+		// If the last MoveAction was a PathAction that ended on this step
+		// And the direction was the same as the requested movement
+		if pathAction, ok := actor.lastMoveAction.(*coord.PathAction); (ok && pathAction.End() == now) || actor.facing == direction {
+			pathAction = &coord.PathAction{
+				// now+speed
+				stime.NewSpan(now, now+stime.Time(20)),
+				actor.Cell(),
+				dest,
+			}
+
+			if pathAction.CanHappenAfter(actor.lastMoveAction) {
+				// actor.ApplyAction(pathAction)
+				actor.pathAction = pathAction
+				actor.facing = pathAction.Direction()
+				actor.actorCmdRequest.moveRequest = nil
+			}
+
+			// If the requested direction is different from
+			// the actor's current facing.
+		} else if actor.facing != direction {
+			turnAction := coord.TurnAction{
+				actor.facing,
+				direction,
+				now,
+			}
+
+			if turnAction.CanHappenAfter(actor.lastMoveAction) {
+				// actor.ApplyAction(turnAction
+				actor.facing = direction
+				actor.lastMoveAction = turnAction
+				actor.actorCmdRequest.moveRequest = nil
+			}
+		}
+
+		return []entity.Entity{actor.Entity()}
+
+	default:
+		panic(fmt.Sprint("unexpected entity type:", e))
+	}
+}
+
+func (narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
+	return cg.Entities, nil
 }
 
 type indexHandler struct {
@@ -220,6 +236,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		QuadTree:   quadTree,
 		TerrainMap: terrainMap,
 
+		UpdatePhaseHandler: updatePhase{actorIndex},
 		InputPhaseHandler:  inputPhase{actorIndex},
 		NarrowPhaseHandler: narrowPhase{actorIndex},
 	}
