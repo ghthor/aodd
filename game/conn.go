@@ -13,6 +13,7 @@ import (
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/engine/rpg2d/coord"
 )
 
 type LoginReq struct {
@@ -229,7 +230,8 @@ func (c *conn) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
 func (c *conn) loginActor(dsactor datastore.Actor) {
 	// Create an actorEntity for this object
 	c.actor = &actor{
-		actorEntity{
+		actorCmdRequest: actorCmdRequest{},
+		actorEntity: actorEntity{
 			id: dsactor.Id,
 
 			name: dsactor.Name,
@@ -237,11 +239,14 @@ func (c *conn) loginActor(dsactor datastore.Actor) {
 			cell:   dsactor.Loc,
 			facing: dsactor.Facing,
 			speed:  15,
+
+			lastMoveAction: coord.TurnAction{
+				From: dsactor.Facing,
+				To:   dsactor.Facing,
+			},
 		},
 
-		newActorConn(c),
-
-		actorCmdRequest{},
+		actorConn: newActorConn(c),
 	}
 
 	c.sim.ConnectActor(c.actor)

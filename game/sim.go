@@ -68,40 +68,28 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 			return []entity.Entity{actor.Entity()}
 		}
 
-		dest := actor.Cell().Neighbor(moveRequest.Direction)
-		direction := actor.Cell().DirectionTo(dest)
+		// Actor may be able to move
+		pathAction := &coord.PathAction{
+			Span: stime.NewSpan(now, now+stime.Time(actor.speed)),
+			Orig: actor.Cell(),
+			Dest: actor.Cell().Neighbor(moveRequest.Direction),
+		}
 
-		// If the last MoveAction was a PathAction that ended on this step
-		// And the direction was the same as the requested movement
-		if pathAction, ok := actor.lastMoveAction.(*coord.PathAction); (ok && pathAction.End() == now) || actor.facing == direction {
-			pathAction = &coord.PathAction{
-				// now+speed
-				stime.NewSpan(now, now+stime.Time(actor.speed)),
-				actor.Cell(),
-				dest,
-			}
+		if pathAction.CanHappenAfter(actor.lastMoveAction) {
+			actor.applyPathAction(pathAction)
+			return []entity.Entity{actor.Entity()}
+		}
 
-			if pathAction.CanHappenAfter(actor.lastMoveAction) {
-				// actor.ApplyAction(pathAction)
-				actor.pathAction = pathAction
-				actor.facing = pathAction.Direction()
-				actor.actorCmdRequest.moveRequest = nil
-			}
-
-			// If the requested direction is different from
-			// the actor's current facing.
-		} else if actor.facing != direction {
+		// Actor must change facing
+		if actor.facing != moveRequest.Direction {
 			turnAction := coord.TurnAction{
-				actor.facing,
-				direction,
-				now,
+				From: actor.facing,
+				To:   moveRequest.Direction,
+				Time: now,
 			}
 
 			if turnAction.CanHappenAfter(actor.lastMoveAction) {
-				// actor.ApplyAction(turnAction
-				actor.facing = direction
-				actor.lastMoveAction = turnAction
-				actor.actorCmdRequest.moveRequest = nil
+				actor.applyTurnAction(turnAction)
 			}
 		}
 

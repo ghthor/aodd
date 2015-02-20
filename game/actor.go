@@ -140,6 +140,18 @@ func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 	return false
 }
 
+func (a *actor) applyPathAction(pa *coord.PathAction) {
+	a.pathAction = pa
+	a.facing = pa.Direction()
+	a.actorCmdRequest.moveRequest = nil
+}
+
+func (a *actor) applyTurnAction(ta coord.TurnAction) {
+	a.lastMoveAction = ta
+	a.facing = ta.To
+	a.actorCmdRequest.moveRequest = nil
+}
+
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	cmdCh := make(chan actorCmd)
