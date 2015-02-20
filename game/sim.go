@@ -35,8 +35,6 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 			actor.lastMoveAction = actor.pathAction
 			actor.cell = actor.pathAction.Dest
 			actor.pathAction = nil
-			fmt.Println(actor.Entity())
-			fmt.Println(e)
 		}
 
 		return actor.Entity()
