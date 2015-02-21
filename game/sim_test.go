@@ -174,8 +174,55 @@ func DescribeCollision(c gospec.Context) {
 					})
 				}
 
+				c.Specify("in perpendicular directions", func() {
+					testCases := []spec_2moving{{
+						spec: "allows the leader to move",
+						paths: []coord.PathAction{
+							pa(0, 10, cell(0, 0), cell(1, 0)),
+							pa(0, 9, cell(0, -1), cell(0, 0)),
+						},
+						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+							c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
+							c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
+							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+							c.Expect(index[1].pathAction, IsNil)
+						},
+					}, {
+						spec: "allows both to move",
+						paths: []coord.PathAction{
+							pa(0, 10, cell(0, 0), cell(1, 0)),
+							pa(0, 10, cell(0, -1), cell(0, 0)),
+						},
+						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+							c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
+							c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
+							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+							c.Expect(*index[1].pathAction, Equals, testCase.paths[1])
+						},
+					}, {
+						spec: "allows both to move",
+						paths: []coord.PathAction{
+							pa(0, 10, cell(0, 0), cell(1, 0)),
+							pa(0, 11, cell(0, -1), cell(0, 0)),
+						},
+						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+							c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
+							c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
+							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+							c.Expect(*index[1].pathAction, Equals, testCase.paths[1])
+						},
+					}}
+
+					for _, testCase := range testCases {
+						c.Specify(testCase.spec, func() {
+							testCase.runSpec(c)
+						})
+					}
+				})
+
 				c.Specify("and contesting the same location", func() {
 					c.Specify("from the side", func() {
+
 						testCases := []spec_2moving{{
 							spec: "moving east loses to moving north",
 							paths: []coord.PathAction{

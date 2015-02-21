@@ -139,6 +139,17 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 		pathCollision := coord.NewPathCollision(*a.pathAction, *b.pathAction)
 
 		switch pathCollision.Type() {
+		case coord.CT_A_INTO_B_FROM_SIDE:
+			if *a.pathAction == pathCollision.B {
+				a, b = b, a
+			}
+
+			if a.pathAction.End() >= b.pathAction.End() {
+				return
+			}
+
+			fallthrough
+
 		case coord.CT_A_INTO_B:
 			if *a.pathAction == pathCollision.A {
 				a.undoLastMoveAction()
