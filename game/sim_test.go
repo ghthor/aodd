@@ -157,7 +157,7 @@ func DescribeCollision(c gospec.Context) {
 						c.Expect(*index[1].pathAction, Equals, testCase.paths[1])
 					},
 				}, {
-					spec: "head to head",
+					spec: "and attempting to swap positions",
 					paths: []coord.PathAction{
 						pa(0, 10, cell(0, 0), cell(0, 1)),
 						pa(0, 10, cell(0, 1), cell(0, 0)),
