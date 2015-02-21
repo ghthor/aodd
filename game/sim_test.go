@@ -179,6 +179,32 @@ func DescribeCollision(c gospec.Context) {
 					func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
 						c.Expect(index[0].pathAction, IsNil)
 					},
+				}, {
+					"moving into stationary from behind",
+
+					// entity 0
+					pa(0, 10, cell(0, 0), cell(1, 0)),
+
+					// entity 1
+					cell(1, 0),
+					coord.East,
+
+					func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
+						c.Expect(index[0].pathAction, IsNil)
+					},
+				}, {
+					"moving into stationary from in front",
+
+					// entity 0
+					pa(0, 10, cell(0, 0), cell(1, 0)),
+
+					// entity 1
+					cell(1, 0),
+					coord.West,
+
+					func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
+						c.Expect(index[0].pathAction, IsNil)
+					},
 				}}
 
 				for _, testCase := range testCases {
