@@ -145,6 +145,10 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			} else if *b.pathAction == pathCollision.A {
 				b.undoLastMoveAction()
 			}
+
+		case coord.CT_SWAP:
+			a.undoLastMoveAction()
+			b.undoLastMoveAction()
 		}
 	}
 }

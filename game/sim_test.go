@@ -157,8 +157,18 @@ func DescribeCollision(c gospec.Context) {
 					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
 						c.Expect(index[0].pathAction, IsNil)
 						c.Expect(*index[1].pathAction, Equals, testCase.paths[1])
-					}},
-				}
+					},
+				}, {
+					spec: "head to head",
+					paths: []coord.PathAction{
+						pa(0, 10, cell(0, 0), cell(0, 1)),
+						pa(0, 10, cell(0, 1), cell(0, 0)),
+					},
+					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						c.Expect(index[0].pathAction, IsNil)
+						c.Expect(index[1].pathAction, IsNil)
+					},
+				}}
 
 				for _, testCase := range testCases {
 					testCase.runSpec(c)
