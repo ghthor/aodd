@@ -58,17 +58,15 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 		}),
 	}}
 
-	c.Specify(t.spec, func() {
-		for _, testCase := range testCases {
-			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
-				c.Assume(len(stillExisting), Equals, 2)
-				c.Assume(len(removed), Equals, 0)
+	for _, testCase := range testCases {
+		c.Specify(testCase.spec, func() {
+			stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+			c.Assume(len(stillExisting), Equals, 2)
+			c.Assume(len(removed), Equals, 0)
 
-				t.expectations(t, index, c)
-			})
-		}
-	})
+			t.expectations(t, index, c)
+		})
+	}
 }
 
 type spec_1move_1stand struct {
@@ -171,7 +169,9 @@ func DescribeCollision(c gospec.Context) {
 				}}
 
 				for _, testCase := range testCases {
-					testCase.runSpec(c)
+					c.Specify(testCase.spec, func() {
+						testCase.runSpec(c)
+					})
 				}
 			})
 
