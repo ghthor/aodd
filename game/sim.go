@@ -151,6 +151,28 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			b.undoLastMoveAction()
 
 		case coord.CT_FROM_SIDE:
+			if a.pathAction.Start() < b.pathAction.Start() {
+				// A has already won the destination
+				b.undoLastMoveAction()
+				return
+			} else if a.pathAction.Start() > b.pathAction.Start() {
+				// B has already won the destination
+				a.undoLastMoveAction()
+				return
+			}
+			// Start values are equal
+
+			if a.pathAction.End() < b.pathAction.End() {
+				// A is moving faster and wins the destination
+				b.undoLastMoveAction()
+				return
+			} else if a.pathAction.End() > b.pathAction.End() {
+				// B is moving faster and wins the destination
+				a.undoLastMoveAction()
+				return
+			}
+			// End values are equal
+
 			// Priority in movement goes in this order
 			// N -> E -> S -> W
 			if a.facing < b.facing {
