@@ -149,12 +149,14 @@ func DescribeCollision(c gospec.Context) {
 				testCases := []spec_2moving{{
 					spec: "in the same direction",
 					paths: []coord.PathAction{
-						pa(0, 5, cell(0, 0), cell(0, 1)),
-						pa(0, 10, cell(0, 1), cell(0, 2)),
+						pa(0, 10, cell(0, 0), cell(0, 1)),
+						pa(0, 9, cell(0, -1), cell(0, 0)),
 					},
 					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
-						c.Expect(index[0].pathAction, IsNil)
-						c.Expect(*index[1].pathAction, Equals, testCase.paths[1])
+						c.Assume(testCase.paths[0].Direction(), Equals, coord.North)
+						c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
+						c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+						c.Expect(index[1].pathAction, IsNil)
 					},
 				}, {
 					spec: "and attempting to swap positions",
