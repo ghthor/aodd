@@ -244,6 +244,64 @@ func DescribeCollision(c gospec.Context) {
 							})
 						}
 					})
+
+					c.Specify("head to head", func() {
+						testCases := []spec_2moving{{
+							spec: "moving south loses to moving north",
+							paths: []coord.PathAction{
+								pa(0, 10, cell(0, 0), cell(0, 1)),
+								pa(0, 10, cell(0, 2), cell(0, 1)),
+							},
+							expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+								c.Assume(testCase.paths[0].Direction(), Equals, coord.North)
+								c.Assume(testCase.paths[1].Direction(), Equals, coord.South)
+								c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+								c.Expect(index[1].pathAction, IsNil)
+							},
+						}, {
+							spec: "moving west loses to moving east",
+							paths: []coord.PathAction{
+								pa(0, 10, cell(0, 0), cell(1, 0)),
+								pa(0, 10, cell(2, 0), cell(1, 0)),
+							},
+							expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+								c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
+								c.Assume(testCase.paths[1].Direction(), Equals, coord.West)
+								c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+								c.Expect(index[1].pathAction, IsNil)
+							},
+						}, {
+							spec: "moving slower loses to moving faster",
+							paths: []coord.PathAction{
+								pa(0, 9, cell(0, 0), cell(-1, 0)),
+								pa(0, 10, cell(-2, 0), cell(-1, 0)),
+							},
+							expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+								c.Assume(testCase.paths[0].Direction(), Equals, coord.West)
+								c.Assume(testCase.paths[1].Direction(), Equals, coord.East)
+								c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+								c.Expect(index[1].pathAction, IsNil)
+							},
+						}, {
+							spec: "moving first wins",
+							paths: []coord.PathAction{
+								pa(0, 10, cell(0, 0), cell(-1, 0)),
+								pa(1, 9, cell(-2, 0), cell(-1, 0)),
+							},
+							expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+								c.Assume(testCase.paths[0].Direction(), Equals, coord.West)
+								c.Assume(testCase.paths[1].Direction(), Equals, coord.East)
+								c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+								c.Expect(index[1].pathAction, IsNil)
+							},
+						}}
+
+						for _, testCase := range testCases {
+							c.Specify(testCase.spec, func() {
+								testCase.runSpec(c)
+							})
+						}
+					})
 				})
 			})
 

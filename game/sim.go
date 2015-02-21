@@ -150,6 +150,9 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			a.undoLastMoveAction()
 			b.undoLastMoveAction()
 
+		case coord.CT_HEAD_TO_HEAD:
+			fallthrough
+
 		case coord.CT_FROM_SIDE:
 			if a.pathAction.Start() < b.pathAction.Start() {
 				// A has already won the destination
