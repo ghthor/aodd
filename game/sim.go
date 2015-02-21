@@ -102,22 +102,51 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 	var entities []entity.Entity
 
 	for _, c := range cg.Collisions {
-		a1, a2 := phase.index[c.A.Id()], phase.index[c.B.Id()]
-
-		pathCollision := coord.NewPathCollision(*a1.pathAction, *a2.pathAction)
-
-		switch pathCollision.Type() {
-		case coord.CT_A_INTO_B:
-			if *a1.pathAction == pathCollision.A {
-				a1.undoLastMoveAction()
-			} else if *a2.pathAction == pathCollision.A {
-				a2.undoLastMoveAction()
-			}
+		switch e := c.A.(type) {
+		case actorEntity:
+			phase.resolveActorCollision(phase.index[e.Id()], c.B)
 		}
+		a1, a2 := phase.index[c.A.Id()], phase.index[c.B.Id()]
 
 		entities = append(entities, a1.Entity(), a2.Entity())
 	}
 	return entities, nil
+}
+
+func (phase narrowPhase) resolveActorCollision(a *actor, with entity.Entity) {
+	switch e := with.(type) {
+	case actorEntity:
+		b := phase.index[e.Id()]
+
+		phase.resolveActorActorCollision(a, b)
+	}
+}
+
+func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
+	switch {
+	case a.pathAction == nil && b.pathAction != nil:
+		a, b = b, a
+		fallthrough
+	case a.pathAction != nil && b.pathAction == nil:
+		cellCollision := coord.NewCellCollision(*a.pathAction, b.Cell())
+
+		switch cellCollision.Type() {
+		case coord.CT_CELL_DEST:
+			a.undoLastMoveAction()
+		}
+
+	case a.pathAction != nil && b.pathAction != nil:
+		pathCollision := coord.NewPathCollision(*a.pathAction, *b.pathAction)
+
+		switch pathCollision.Type() {
+		case coord.CT_A_INTO_B:
+			if *a.pathAction == pathCollision.A {
+				a.undoLastMoveAction()
+			} else if *b.pathAction == pathCollision.A {
+				b.undoLastMoveAction()
+			}
+		}
+	}
 }
 
 type indexHandler struct {
