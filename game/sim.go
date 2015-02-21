@@ -149,6 +149,15 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 		case coord.CT_SWAP:
 			a.undoLastMoveAction()
 			b.undoLastMoveAction()
+
+		case coord.CT_FROM_SIDE:
+			// Priority in movement goes in this order
+			// N -> E -> S -> W
+			if a.facing < b.facing {
+				b.undoLastMoveAction()
+			} else {
+				a.undoLastMoveAction()
+			}
 		}
 	}
 }

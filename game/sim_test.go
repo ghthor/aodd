@@ -173,6 +173,26 @@ func DescribeCollision(c gospec.Context) {
 						testCase.runSpec(c)
 					})
 				}
+
+				c.Specify("and contesting the same location", func() {
+					testCases := []spec_2moving{{
+						spec: "priority goes to moving north",
+						paths: []coord.PathAction{
+							pa(0, 10, cell(0, 0), cell(0, 1)),
+							pa(0, 10, cell(-1, 1), cell(0, 1)),
+						},
+						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
+							c.Expect(index[1].pathAction, IsNil)
+						},
+					}}
+
+					for _, testCase := range testCases {
+						c.Specify(testCase.spec, func() {
+							testCase.runSpec(c)
+						})
+					}
+				})
 			})
 
 			c.Specify("where 1 is moving and 1 is standing still,", func() {
