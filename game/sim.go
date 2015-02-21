@@ -173,12 +173,16 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			}
 			// End values are equal
 
-			// Priority in movement goes in this order
+			// Movement direction priority goes in this order
 			// N -> E -> S -> W
 			if a.facing < b.facing {
+				// A's movement direction has a higher priority
 				b.undoLastMoveAction()
+				return
 			} else {
+				// B's movement direction has a higher priority
 				a.undoLastMoveAction()
+				return
 			}
 		}
 	}
