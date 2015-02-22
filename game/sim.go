@@ -142,6 +142,10 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 		case coord.CT_NONE:
 			return
 
+		case coord.CT_SWAP:
+			a.undoLastMoveAction()
+			b.undoLastMoveAction()
+
 		case coord.CT_A_INTO_B_FROM_SIDE:
 			if *a.pathAction == pathCollision.B {
 				a, b = b, a
@@ -159,10 +163,6 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			} else if *b.pathAction == pathCollision.A {
 				b.undoLastMoveAction()
 			}
-
-		case coord.CT_SWAP:
-			a.undoLastMoveAction()
-			b.undoLastMoveAction()
 
 		case coord.CT_HEAD_TO_HEAD:
 			fallthrough
