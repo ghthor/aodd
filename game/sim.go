@@ -138,6 +138,14 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 	case a.pathAction != nil && b.pathAction != nil:
 		pathCollision := coord.NewPathCollision(*a.pathAction, *b.pathAction)
 
+		// coord.NewPathCollision can flip the,
+		// A and B paths to simplify the number
+		// of cases. This normalizes our A and B
+		// with the path collision.
+		if *a.pathAction != pathCollision.A {
+			a, b = b, a
+		}
+
 		switch pathCollision.Type() {
 		case coord.CT_NONE:
 			return
@@ -147,10 +155,6 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			b.undoLastMoveAction()
 
 		case coord.CT_A_INTO_B_FROM_SIDE:
-			if *a.pathAction == pathCollision.B {
-				a, b = b, a
-			}
-
 			if a.pathAction.End() >= b.pathAction.End() {
 				return
 			}
@@ -158,11 +162,7 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			fallthrough
 
 		case coord.CT_A_INTO_B:
-			if *a.pathAction == pathCollision.A {
-				a.undoLastMoveAction()
-			} else if *b.pathAction == pathCollision.A {
-				b.undoLastMoveAction()
-			}
+			a.undoLastMoveAction()
 
 		case coord.CT_HEAD_TO_HEAD:
 			fallthrough
