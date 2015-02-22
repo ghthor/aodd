@@ -192,6 +192,9 @@ func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
 
 		collision = pathCollision
 	case a.pathAction == nil && b.pathAction == nil:
+		// This case handles actors being on the same square.
+		// There isn't a coord.CollisionType for this case.
+		// Maybe there should be?
 		return a, b, nil
 
 	default:
