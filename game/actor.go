@@ -173,6 +173,12 @@ func (a *actor) applyTurnAction(ta coord.TurnAction) {
 	a.actorCmdRequest.moveRequest = nil
 }
 
+func (a *actor) revertMoveAction() {
+	if a.undoLastMoveAction != nil {
+		a.undoLastMoveAction()
+	}
+}
+
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	cmdCh := make(chan actorCmd)

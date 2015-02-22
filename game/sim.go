@@ -132,7 +132,7 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 
 		switch cellCollision.Type() {
 		case coord.CT_CELL_DEST:
-			a.undoLastMoveAction()
+			a.revertMoveAction()
 		}
 
 	case a.pathAction != nil && b.pathAction != nil:
@@ -151,8 +151,8 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			return
 
 		case coord.CT_SWAP:
-			a.undoLastMoveAction()
-			b.undoLastMoveAction()
+			a.revertMoveAction()
+			b.revertMoveAction()
 
 		case coord.CT_A_INTO_B_FROM_SIDE:
 			if a.pathAction.End() >= b.pathAction.End() {
@@ -162,7 +162,7 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			fallthrough
 
 		case coord.CT_A_INTO_B:
-			a.undoLastMoveAction()
+			a.revertMoveAction()
 
 		case coord.CT_HEAD_TO_HEAD:
 			fallthrough
@@ -170,22 +170,22 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 		case coord.CT_FROM_SIDE:
 			if a.pathAction.Start() < b.pathAction.Start() {
 				// A has already won the destination
-				b.undoLastMoveAction()
+				b.revertMoveAction()
 				return
 			} else if a.pathAction.Start() > b.pathAction.Start() {
 				// B has already won the destination
-				a.undoLastMoveAction()
+				a.revertMoveAction()
 				return
 			}
 			// Start values are equal
 
 			if a.pathAction.End() < b.pathAction.End() {
 				// A is moving faster and wins the destination
-				b.undoLastMoveAction()
+				b.revertMoveAction()
 				return
 			} else if a.pathAction.End() > b.pathAction.End() {
 				// B is moving faster and wins the destination
-				a.undoLastMoveAction()
+				a.revertMoveAction()
 				return
 			}
 			// End values are equal
@@ -194,11 +194,11 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			// N -> E -> S -> W
 			if a.facing < b.facing {
 				// A's movement direction has a higher priority
-				b.undoLastMoveAction()
+				b.revertMoveAction()
 				return
 			} else {
 				// B's movement direction has a higher priority
-				a.undoLastMoveAction()
+				a.revertMoveAction()
 				return
 			}
 		}
