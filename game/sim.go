@@ -21,8 +21,18 @@ type updatePhase struct {
 type inputPhase struct {
 	index actorIndex
 }
+
 type narrowPhase struct {
-	index actorIndex
+	actorIndex actorIndex
+
+	// Reset at the beginning of every ResolveCollisions call
+	resolved []quad.Collision
+	// Generated at the beginning of every ResolveCollisions call
+	collisionIndex quad.CollisionIndex
+}
+
+func newNarrowPhase(actorIndex actorIndex) narrowPhase {
+	return narrowPhase{actorIndex, make([]quad.Collision, 0, 10), nil}
 }
 
 func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
@@ -99,42 +109,66 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 }
 
 func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
-	var entities []entity.Entity
+	// Reset the resolved slice
+	phase.resolved = phase.resolved[:0]
 
+	// Generate a collision index for the collision group
+	phase.collisionIndex = cg.CollisionIndex()
+
+	// A map to store entities that still remain in the world
+	remaining := make(map[int64]entity.Entity, len(cg.Entities))
+	remainingSlice := func() []entity.Entity {
+		// Build a slice from the `remaining` map
+		s := make([]entity.Entity, 0, len(remaining))
+		for _, e := range remaining {
+			s = append(s, e)
+		}
+		return s
+	}
+
+toNextCollision:
 	for _, c := range cg.Collisions {
+		for _, resolved := range phase.resolved {
+			if c.IsSameAs(resolved) {
+				continue toNextCollision
+			}
+		}
+
+		var entities []entity.Entity
+
 		switch e := c.A.(type) {
 		case actorEntity:
-			phase.resolveActorCollision(phase.index[e.Id()], c.B)
+			entities = phase.resolveActorCollision(phase.actorIndex[e.Id()], c.B, c)
 		}
-		a1, a2 := phase.index[c.A.Id()], phase.index[c.B.Id()]
 
-		entities = append(entities, a1.Entity(), a2.Entity())
+		for _, e := range entities {
+			remaining[e.Id()] = e
+		}
 	}
-	return entities, nil
+
+	return remainingSlice(), nil
 }
 
-func (phase narrowPhase) resolveActorCollision(a *actor, with entity.Entity) {
+func (phase narrowPhase) resolveActorCollision(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
 	switch e := with.(type) {
 	case actorEntity:
-		b := phase.index[e.Id()]
+		b := phase.actorIndex[e.Id()]
 
-		phase.resolveActorActorCollision(a, b)
+		return phase.resolveActorActorCollision(a, b, collision)
 	}
+
+	return nil
 }
 
-func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
+func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
+	var collision coord.Collision
+
 	switch {
 	case a.pathAction == nil && b.pathAction != nil:
 		a, b = b, a
 		fallthrough
 	case a.pathAction != nil && b.pathAction == nil:
-		cellCollision := coord.NewCellCollision(*a.pathAction, b.Cell())
-
-		switch cellCollision.Type() {
-		case coord.CT_CELL_DEST:
-			a.revertMoveAction()
-		}
-
+		collision = coord.NewCellCollision(*a.pathAction, b.Cell())
 	case a.pathAction != nil && b.pathAction != nil:
 		pathCollision := coord.NewPathCollision(*a.pathAction, *b.pathAction)
 
@@ -146,63 +180,163 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 			a, b = b, a
 		}
 
-		switch pathCollision.Type() {
-		case coord.CT_NONE:
-			return
+		collision = pathCollision
+	case a.pathAction == nil && b.pathAction == nil:
+		return a, b, nil
 
-		case coord.CT_SWAP:
-			a.revertMoveAction()
-			b.revertMoveAction()
+	default:
+		panic(fmt.Sprintf("impossible collision between {%v} {%v}", a, b))
+	}
+	return a, b, collision
+}
 
-		case coord.CT_A_INTO_B_FROM_SIDE:
-			if a.pathAction.End() >= b.pathAction.End() {
-				return
+func (phase *narrowPhase) resolveActorActorCollision(a, b *actor, collision quad.Collision) []entity.Entity {
+	// When this functions returns the
+	// collision will have been solved
+	defer func() {
+		phase.resolved = append(phase.resolved, collision)
+	}()
+
+	var entities []entity.Entity
+
+attemptResolve:
+	a, b, coordCollision := newActorActorCollision(a, b)
+	if coordCollision == nil {
+		goto resolved
+	}
+
+	switch coordCollision.Type() {
+	case coord.CT_NONE:
+		// This may not be entirely accurate.
+		// We should walk through the collision index
+		// of our partner too see if they should resolve
+		// some of there collisions first. They may
+		// appear to be moving to us right now, but
+		// have a collision that will be resolved will
+		// render them motionless, thus we must become
+		// motionless as well.
+
+		// normalize a, b to collision.[A, B]
+		if a.Id() != collision.A.Id() {
+			a, b = b, a
+		}
+
+		var prioritizedEntity entity.Entity
+		var prioritizedActor *actor
+
+		switch {
+		case a.pathAction.Dest == b.Cell():
+			prioritizedEntity = collision.B
+			prioritizedActor = b
+
+		case b.pathAction.Dest == a.Cell():
+			prioritizedEntity = collision.A
+			prioritizedActor = a
+
+		default:
+			panic(fmt.Sprintf("unexpected %v between %v & %v", coordCollision.Type(), a, b))
+		}
+
+		// If b only has a single collision, it's with us
+		// and that means it has been resolved and both
+		// a and b's movement is allowed
+		if len(phase.collisionIndex[prioritizedEntity]) == 1 {
+			goto resolved
+		}
+
+		// recurse through the graph of collisions and solve all
+		// the collisions that depend on this collision
+	toNextCollision:
+		for _, c := range phase.collisionIndex[prioritizedEntity] {
+			// skip this collision, we'll solve it
+			// after we loop through all the other
+			// collisions we depend on.
+			if c.IsSameAs(collision) {
+				continue
 			}
 
-			fallthrough
-
-		case coord.CT_A_INTO_B:
-			a.revertMoveAction()
-
-		case coord.CT_HEAD_TO_HEAD:
-			fallthrough
-
-		case coord.CT_FROM_SIDE:
-			if a.pathAction.Start() < b.pathAction.Start() {
-				// A has already won the destination
-				b.revertMoveAction()
-				return
-			} else if a.pathAction.Start() > b.pathAction.Start() {
-				// B has already won the destination
-				a.revertMoveAction()
-				return
+			// avoid resolving a collision that's already been resolved.
+			for _, resolved := range phase.resolved {
+				if c.IsSameAs(resolved) {
+					continue toNextCollision
+				}
 			}
-			// Start values are equal
 
-			if a.pathAction.End() < b.pathAction.End() {
-				// A is moving faster and wins the destination
-				b.revertMoveAction()
-				return
-			} else if a.pathAction.End() > b.pathAction.End() {
-				// B is moving faster and wins the destination
-				a.revertMoveAction()
-				return
-			}
-			// End values are equal
-
-			// Movement direction priority goes in this order
-			// N -> E -> S -> W
-			if a.facing < b.facing {
-				// A's movement direction has a higher priority
-				b.revertMoveAction()
-				return
-			} else {
-				// B's movement direction has a higher priority
-				a.revertMoveAction()
-				return
+			// Deal with unknown quad.Collision[A, B] orientation
+			switch {
+			case prioritizedEntity.Id() != c.A.Id():
+				entities = append(entities, phase.resolveActorCollision(prioritizedActor, c.A, c)...)
+			case prioritizedEntity.Id() != c.B.Id():
+				entities = append(entities, phase.resolveActorCollision(prioritizedActor, c.B, c)...)
 			}
 		}
+
+		goto attemptResolve
+
+	case coord.CT_CELL_DEST:
+		a.revertMoveAction()
+		goto resolved
+
+	case coord.CT_SWAP:
+		a.revertMoveAction()
+		b.revertMoveAction()
+		goto resolved
+
+	case coord.CT_A_INTO_B_FROM_SIDE:
+		if a.pathAction.End() >= b.pathAction.End() {
+			goto resolved
+		}
+
+		fallthrough
+
+	case coord.CT_A_INTO_B:
+		a.revertMoveAction()
+		goto resolved
+
+	case coord.CT_HEAD_TO_HEAD:
+		fallthrough
+
+	case coord.CT_FROM_SIDE:
+		if a.pathAction.Start() < b.pathAction.Start() {
+			// A has already won the destination
+			b.revertMoveAction()
+			goto resolved
+
+		} else if a.pathAction.Start() > b.pathAction.Start() {
+			// B has already won the destination
+			a.revertMoveAction()
+			goto resolved
+		}
+		// Start values are equal
+
+		if a.pathAction.End() < b.pathAction.End() {
+			// A is moving faster and wins the destination
+			b.revertMoveAction()
+			goto resolved
+
+		} else if a.pathAction.End() > b.pathAction.End() {
+			// B is moving faster and wins the destination
+			a.revertMoveAction()
+			goto resolved
+		}
+		// End values are equal
+
+		// Movement direction priority goes in this order
+		// N -> E -> S -> W
+		if a.facing < b.facing {
+			// A's movement direction has a higher priority
+			b.revertMoveAction()
+			goto resolved
+
+		} else {
+			// B's movement direction has a higher priority
+			a.revertMoveAction()
+			goto resolved
+		}
 	}
+
+resolved:
+	return append(entities, a.Entity(), b.Entity())
 }
 
 type indexHandler struct {
@@ -327,7 +461,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 		UpdatePhaseHandler: updatePhase{actorIndex},
 		InputPhaseHandler:  inputPhase{actorIndex},
-		NarrowPhaseHandler: narrowPhase{actorIndex},
+		NarrowPhaseHandler: newNarrowPhase(actorIndex),
 	}
 
 	runningSim, err := simDef.Begin()

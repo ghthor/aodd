@@ -42,7 +42,7 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 	index[0].applyPathAction(&pa0)
 	index[1].applyPathAction(&pa1)
 
-	phase := narrowPhase{index}
+	phase := newNarrowPhase(index)
 	testCases := []struct {
 		spec string
 		cgrp quad.CollisionGroup
@@ -103,7 +103,7 @@ func (t spec_1move_1stand) runSpec(c gospec.Context) {
 
 	index[0].applyPathAction(&t.path)
 
-	phase := narrowPhase{index}
+	phase := newNarrowPhase(index)
 	testCases := []struct {
 		spec string
 		cgrp quad.CollisionGroup
@@ -124,6 +124,135 @@ func (t spec_1move_1stand) runSpec(c gospec.Context) {
 			c.Specify(testCase.spec, func() {
 				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
 				c.Assume(len(stillExisting), Equals, 2)
+				c.Assume(len(removed), Equals, 0)
+
+				t.expectations(t, index, c)
+			})
+		}
+	})
+}
+
+// NOTE This type is only suitable for a situation
+//      where the actor ids are dependent like
+//
+//          0 -> 1 -> 2, and id 2 is standing still
+//
+//      It only creates collisions for [0,1] & [1,2]
+//
+//      The following will NOT work as expected
+//
+//          0 -> 1 <- 2 id 1 is standing still
+//
+//      because it won't create the right number
+//      of collisions. This may require that in the
+//      future a more generic version of all these
+//      spec structures is created that programaticly
+//      generates the collisions that engine would have
+//      generated based on the bounding boxes.
+type spec_2move_1stand struct {
+	spec string
+
+	// entity 0-1
+	paths [2]coord.PathAction
+
+	// entity 2
+	cell   coord.Cell
+	facing coord.Direction
+
+	expectations func(spec_2move_1stand, actorIndex, gospec.Context)
+}
+
+func (t spec_2move_1stand) runSpec(c gospec.Context) {
+	index := actorIndex{
+		0: &actor{
+			actorEntity: actorEntity{
+				id:     0,
+				cell:   t.paths[0].Orig,
+				facing: t.paths[0].Direction(),
+			},
+		},
+
+		1: &actor{
+			actorEntity: actorEntity{
+				id:     1,
+				cell:   t.paths[1].Orig,
+				facing: t.paths[1].Direction(),
+			},
+		},
+
+		2: &actor{
+			actorEntity: actorEntity{
+				id:     2,
+				cell:   t.cell,
+				facing: t.facing,
+			},
+		},
+	}
+
+	index[0].applyPathAction(&t.paths[0])
+	index[1].applyPathAction(&t.paths[1])
+
+	var A, B, C int64 = 0, 1, 2
+
+	ABBC := quad.CollisionGroup{}
+	ABBC = ABBC.AddCollision(quad.Collision{
+		index[A].Entity(),
+		index[B].Entity(),
+	})
+	ABBC = ABBC.AddCollision(quad.Collision{
+		index[B].Entity(),
+		index[C].Entity(),
+	})
+
+	ABCB := quad.CollisionGroup{}
+	ABCB = ABCB.AddCollision(quad.Collision{
+		index[A].Entity(),
+		index[B].Entity(),
+	})
+	ABCB = ABCB.AddCollision(quad.Collision{
+		index[C].Entity(),
+		index[B].Entity(),
+	})
+
+	CBAB := quad.CollisionGroup{}
+	CBAB = CBAB.AddCollision(quad.Collision{
+		index[C].Entity(),
+		index[B].Entity(),
+	})
+	CBAB = CBAB.AddCollision(quad.Collision{
+		index[A].Entity(),
+		index[B].Entity(),
+	})
+
+	CBBA := quad.CollisionGroup{}
+	CBBA = CBAB.AddCollision(quad.Collision{
+		index[C].Entity(),
+		index[B].Entity(),
+	})
+	CBBA = CBAB.AddCollision(quad.Collision{
+		index[B].Entity(),
+		index[A].Entity(),
+	})
+
+	phase := newNarrowPhase(index)
+	testCases := []struct {
+		spec string
+		cgrp quad.CollisionGroup
+	}{{
+		"[0,1],[1,2]", ABBC,
+	}, {
+		"[0,1],[2,1]", ABCB,
+	}, {
+		"[2,1],[0,1]", CBAB,
+	}, {
+		"[2,1],[1,0]", CBBA,
+	}}
+
+	c.Specify(t.spec, func() {
+		for _, testCase := range testCases {
+			c.Specify(testCase.spec, func() {
+				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				c.Assume(len(stillExisting), Equals, 3)
 				c.Assume(len(removed), Equals, 0)
 
 				t.expectations(t, index, c)
@@ -414,6 +543,42 @@ func DescribeCollision(c gospec.Context) {
 
 					func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
 						c.Expect(index[0].pathAction, IsNil)
+					},
+				}}
+
+				for _, testCase := range testCases {
+					testCase.runSpec(c)
+				}
+			})
+		})
+
+		c.Specify("3 actors", func() {
+			c.Specify("where 2 are moving and 1 is standing still", func() {
+				testCases := []spec_2move_1stand{{
+					spec: "to the west",
+
+					paths: [...]coord.PathAction{
+						pa(0, 10, cell(0, 0), cell(-1, 0)),
+						pa(0, 10, cell(-1, 0), cell(-2, 0)),
+					},
+
+					cell:   cell(-2, 0),
+					facing: coord.West,
+
+					expectations: func(t spec_2move_1stand, index actorIndex, c gospec.Context) {
+						pa0 := t.paths[0]
+						pa1 := t.paths[1]
+
+						a0 := index[0]
+						a1 := index[1]
+						a2 := index[2]
+
+						c.Assume(pa0.Direction(), Equals, coord.West)
+						c.Assume(pa1.Direction(), Equals, coord.West)
+						c.Assume(a2.pathAction, IsNil)
+
+						c.Expect(a0.pathAction, IsNil)
+						c.Expect(a1.pathAction, IsNil)
 					},
 				}}
 
