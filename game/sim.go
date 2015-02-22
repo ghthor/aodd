@@ -139,6 +139,9 @@ func (phase narrowPhase) resolveActorActorCollision(a, b *actor) {
 		pathCollision := coord.NewPathCollision(*a.pathAction, *b.pathAction)
 
 		switch pathCollision.Type() {
+		case coord.CT_NONE:
+			return
+
 		case coord.CT_A_INTO_B_FROM_SIDE:
 			if *a.pathAction == pathCollision.B {
 				a, b = b, a
