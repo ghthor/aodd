@@ -144,7 +144,6 @@ func DescribeCollision(c gospec.Context) {
 
 	c.Specify("a collision between", func() {
 		c.Specify("2 actors", func() {
-
 			c.Specify("that are both moving", func() {
 				testCases := []spec_2moving{{
 					spec: "and attempting to swap positions",
