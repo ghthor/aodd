@@ -149,7 +149,7 @@ toNextCollision:
 	return remainingSlice(), nil
 }
 
-func (phase narrowPhase) resolveActorCollision(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
+func (phase *narrowPhase) resolveActorCollision(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
 	switch e := with.(type) {
 	case actorEntity:
 		b := phase.actorIndex[e.Id()]
@@ -225,13 +225,13 @@ attemptResolve:
 		var prioritizedActor *actor
 
 		switch {
-		case a.pathAction.Dest == b.Cell():
-			prioritizedEntity = collision.B
-			prioritizedActor = b
-
-		case b.pathAction.Dest == a.Cell():
+		case a.pathAction.Orig == b.pathAction.Dest:
 			prioritizedEntity = collision.A
 			prioritizedActor = a
+
+		case b.pathAction.Orig == a.pathAction.Dest:
+			prioritizedEntity = collision.B
+			prioritizedActor = b
 
 		default:
 			panic(fmt.Sprintf("unexpected %v between %v & %v", coordCollision.Type(), a, b))
@@ -266,12 +266,18 @@ attemptResolve:
 			switch {
 			case prioritizedEntity.Id() != c.A.Id():
 				entities = append(entities, phase.resolveActorCollision(prioritizedActor, c.A, c)...)
+				goto attemptResolve
+
 			case prioritizedEntity.Id() != c.B.Id():
 				entities = append(entities, phase.resolveActorCollision(prioritizedActor, c.B, c)...)
+				goto attemptResolve
+
+			default:
+				panic(fmt.Sprintf("unexpected graph state:\n%v\n%v\n%v\n", a, b, collision))
 			}
 		}
 
-		goto attemptResolve
+		goto resolved
 
 	case coord.CT_CELL_DEST:
 		a.revertMoveAction()

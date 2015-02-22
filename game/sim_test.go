@@ -261,6 +261,115 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	})
 }
 
+type spec_3move struct {
+	spec string
+
+	// entity 0-2
+	paths [3]coord.PathAction
+
+	expectations func(spec_3move, actorIndex, gospec.Context)
+}
+
+func (t spec_3move) runSpec(c gospec.Context) {
+	index := actorIndex{
+		0: &actor{
+			actorEntity: actorEntity{
+				id:     0,
+				cell:   t.paths[0].Orig,
+				facing: t.paths[0].Direction(),
+			},
+		},
+
+		1: &actor{
+			actorEntity: actorEntity{
+				id:     1,
+				cell:   t.paths[1].Orig,
+				facing: t.paths[1].Direction(),
+			},
+		},
+
+		2: &actor{
+			actorEntity: actorEntity{
+				id:     2,
+				cell:   t.paths[2].Orig,
+				facing: t.paths[2].Direction(),
+			},
+		},
+	}
+
+	index[0].applyPathAction(&t.paths[0])
+	index[1].applyPathAction(&t.paths[1])
+	index[2].applyPathAction(&t.paths[2])
+
+	var A, B, C int64 = 0, 1, 2
+
+	ABBC := quad.CollisionGroup{}
+	ABBC = ABBC.AddCollision(quad.Collision{
+		index[A].Entity(),
+		index[B].Entity(),
+	})
+	ABBC = ABBC.AddCollision(quad.Collision{
+		index[B].Entity(),
+		index[C].Entity(),
+	})
+
+	ABCB := quad.CollisionGroup{}
+	ABCB = ABCB.AddCollision(quad.Collision{
+		index[A].Entity(),
+		index[B].Entity(),
+	})
+	ABCB = ABCB.AddCollision(quad.Collision{
+		index[C].Entity(),
+		index[B].Entity(),
+	})
+
+	CBAB := quad.CollisionGroup{}
+	CBAB = CBAB.AddCollision(quad.Collision{
+		index[C].Entity(),
+		index[B].Entity(),
+	})
+	CBAB = CBAB.AddCollision(quad.Collision{
+		index[A].Entity(),
+		index[B].Entity(),
+	})
+
+	CBBA := quad.CollisionGroup{}
+	CBBA = CBAB.AddCollision(quad.Collision{
+		index[C].Entity(),
+		index[B].Entity(),
+	})
+	CBBA = CBAB.AddCollision(quad.Collision{
+		index[B].Entity(),
+		index[A].Entity(),
+	})
+
+	phase := newNarrowPhase(index)
+	testCases := []struct {
+		spec string
+		cgrp quad.CollisionGroup
+	}{{
+		"[0,1],[1,2]", ABBC,
+	}, {
+		"[0,1],[2,1]", ABCB,
+	}, {
+		"[2,1],[0,1]", CBAB,
+	}, {
+		"[2,1],[1,0]", CBBA,
+	}}
+
+	c.Specify(t.spec, func() {
+		for _, testCase := range testCases {
+			c.Specify(testCase.spec, func() {
+				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				c.Assume(len(stillExisting), Equals, 3)
+				c.Assume(len(removed), Equals, 0)
+
+				t.expectations(t, index, c)
+			})
+		}
+	})
+}
+
 func DescribeCollision(c gospec.Context) {
 	cell := func(x, y int) coord.Cell { return coord.Cell{x, y} }
 	pa := func(start, speed int64, origin, dest coord.Cell) coord.PathAction {
@@ -579,6 +688,40 @@ func DescribeCollision(c gospec.Context) {
 
 						c.Expect(a0.pathAction, IsNil)
 						c.Expect(a1.pathAction, IsNil)
+					},
+				}}
+
+				for _, testCase := range testCases {
+					testCase.runSpec(c)
+				}
+			})
+
+			c.Specify("where all are moving", func() {
+				testCases := []spec_3move{{
+					spec: "in a line to the west",
+
+					paths: [...]coord.PathAction{
+						pa(0, 10, cell(0, 0), cell(-1, 0)),
+						pa(0, 10, cell(-1, 0), cell(-2, 0)),
+						pa(0, 10, cell(-2, 0), cell(-3, 0)),
+					},
+
+					expectations: func(t spec_3move, index actorIndex, c gospec.Context) {
+						pa0 := t.paths[0]
+						pa1 := t.paths[1]
+						pa2 := t.paths[2]
+
+						a0 := index[0]
+						a1 := index[1]
+						a2 := index[2]
+
+						c.Assume(pa0.Direction(), Equals, coord.West)
+						c.Assume(pa1.Direction(), Equals, coord.West)
+						c.Assume(pa2.Direction(), Equals, coord.West)
+
+						c.Expect(*a0.pathAction, Equals, pa0)
+						c.Expect(*a1.pathAction, Equals, pa1)
+						c.Expect(*a2.pathAction, Equals, pa2)
 					},
 				}}
 
