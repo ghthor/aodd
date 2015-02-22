@@ -169,6 +169,16 @@ func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
 		fallthrough
 	case a.pathAction != nil && b.pathAction == nil:
 		collision = coord.NewCellCollision(*a.pathAction, b.Cell())
+
+		// A or B may have had a previous collision resolved that
+		// caused this collision to not be possible anymore.
+		// Returning nil here will short circut the switch
+		// in the resolveActorActorCollision method and
+		// avoid a typecast.
+		if collision.Type() == coord.CT_NONE {
+			return a, b, nil
+		}
+
 	case a.pathAction != nil && b.pathAction != nil:
 		pathCollision := coord.NewPathCollision(*a.pathAction, *b.pathAction)
 
