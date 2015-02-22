@@ -150,6 +150,7 @@ func (a *actor) applyPathAction(pa *coord.PathAction) {
 		a.pathAction = prevPathAction
 		a.facing = prevFacing
 		a.actorCmdRequest.moveRequest = prevMoveRequest
+		a.undoLastMoveAction = nil
 	}
 
 	a.pathAction = pa
@@ -166,6 +167,7 @@ func (a *actor) applyTurnAction(ta coord.TurnAction) {
 		a.lastMoveAction = prevAction
 		a.facing = prevFacing
 		a.actorCmdRequest.moveRequest = prevMoveRequest
+		a.undoLastMoveAction = nil
 	}
 
 	a.lastMoveAction = ta
