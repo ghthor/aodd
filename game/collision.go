@@ -23,6 +23,9 @@ func newNarrowPhase(actorIndex actorIndex) narrowPhase {
 	return narrowPhase{actorIndex, make([]quad.Collision, 0, 10), nil}
 }
 
+// Returns if the collision exists in the
+// slice of collisions that have been
+// solved during this narrow phase tick.
 func (phase narrowPhase) hasSolved(c quad.Collision) bool {
 	for _, solved := range phase.solved {
 		if c.IsSameAs(solved) {
@@ -33,6 +36,7 @@ func (phase narrowPhase) hasSolved(c quad.Collision) bool {
 	return false
 }
 
+// Implementation of the quad.NarrowPhaseHandler interface.
 func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
 	// Reset the resolved slice
 	phase.solved = phase.solved[:0]
@@ -102,9 +106,8 @@ func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
 
 		// A or B may have had a previous collision resolved that
 		// caused this collision to not be possible anymore.
-		// Returning nil here will short circut the switch
-		// in the resolveActorActorCollision method and
-		// avoid a typecast.
+		// It is more relevant to return nil here then a
+		// coord.Collision with type CT_NONE
 		if collision.Type() == coord.CT_NONE {
 			return a, b, nil
 		}
@@ -114,15 +117,16 @@ func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
 
 		// coord.NewPathCollision can flip the,
 		// A and B paths to simplify the number
-		// of cases. This normalizes our A and B
-		// with the path collision.
+		// of collision types. This normalizes
+		// actor A with pathCollision.A
 		if *a.pathAction != pathCollision.A {
 			a, b = b, a
 		}
 
 		collision = pathCollision
 	case a.pathAction == nil && b.pathAction == nil:
-		// This case handles actors being on the same square.
+		// This case handles actors being on the same square,
+		// but not moving at all.
 		// There isn't a coord.CollisionType for this case.
 		// Maybe there should be?
 		return a, b, nil
@@ -138,6 +142,8 @@ type node struct {
 	entity entity.Entity
 }
 
+// Move forward in the directed graph. This movement is based on
+// which entity is occupying the destination of the other's path action.
 func followGraph(a, b *actor, collision quad.Collision) node {
 	// normalize a, b to collision.[A, B]
 	if a.Id() != collision.A.Id() {
@@ -163,6 +169,8 @@ func followGraph(a, b *actor, collision quad.Collision) node {
 	return node{actor, entity}
 }
 
+// Used to figure out which actor is "A" if
+// the collision was CT_A_INTO_B instead of CT_NONE
 func currentNode(a, b *actor, collision quad.Collision) *actor {
 	switch {
 	case a.pathAction.Orig == b.pathAction.Dest:
@@ -176,6 +184,9 @@ func currentNode(a, b *actor, collision quad.Collision) *actor {
 	}
 }
 
+// Compare entity Id's with the entities in
+// a collision and return the one that isn't
+// the actor.
 func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 	var e entity.Entity
 
@@ -194,6 +205,9 @@ func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 	return e
 }
 
+// Store what actor's have been visited during
+// a recursive solve. Used to avoid infinite
+// recursion through a cycle in the graph.
 type solverActorActor struct {
 	visited []*actor
 }
@@ -355,6 +369,7 @@ resolved:
 var errNoDependencies = errors.New("no dependencies")
 var errCycleDetected = errors.New("cycle detected")
 
+// Error can be errNoDependencies, errCycleDetected or nil
 func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *actor, collision quad.Collision) ([]entity.Entity, error) {
 	node := followGraph(a, b, collision)
 
@@ -375,8 +390,7 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 	// Walk through the directed graph of collisions and solve
 	// all the collisions that the collision depends on.
 	for _, c := range phase.collisionIndex[node.entity] {
-		// Ignore the collision that caused us to
-		// recursively solve dependencies
+		// Ignore the collision that caused us to recurse
 		if c.IsSameAs(collision) {
 			continue
 		}
@@ -397,6 +411,7 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 				return nil, errCycleDetected
 			}
 
+			// Recurse
 			return phase.solveActorActor(solver, node.actor, actor, c), nil
 		}
 
