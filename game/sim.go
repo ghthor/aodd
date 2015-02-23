@@ -170,7 +170,13 @@ func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, colli
 	case actorEntity:
 		b := phase.actorIndex[e.Id()]
 
-		return phase.solveActorActor(a, b, collision)
+		s := solverActorActor{
+			startedFrom: collision,
+			a:           a, b: b,
+			collision: collision,
+		}
+
+		return phase.solveActorActor(s)
 	}
 
 	return nil
@@ -261,13 +267,22 @@ func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 		e = collision.B
 
 	default:
-		panic(fmt.Sprintf("unexpected graph state %v between %v & %v", collision, a))
+		panic(fmt.Sprintf("unexpected graph state %v actor %v", collision, a))
 	}
 
 	return e
 }
 
-func (phase *narrowPhase) solveActorActor(a, b *actor, collision quad.Collision) []entity.Entity {
+type solverActorActor struct {
+	startedFrom quad.Collision
+	a, b        *actor
+	collision   quad.Collision
+}
+
+func (phase *narrowPhase) solveActorActor(solver solverActorActor) []entity.Entity {
+	a, b := solver.a, solver.b
+	collision := solver.collision
+
 	// When this functions returns the
 	// collision will have been solved
 	defer func() {
@@ -292,7 +307,7 @@ attemptSolve:
 		// have a collision that when solved will
 		// render them motionless, thus we would become
 		// motionless as well.
-		e, err := phase.solveDependencies(a, b, collision)
+		e, err := phase.solveDependencies(solver)
 
 		if err != nil && err == ErrNoDependencies {
 			// If we ever hit this point it means we've
@@ -326,7 +341,7 @@ attemptSolve:
 		// have a collision that when solved will
 		// render them motionless, thus we would become
 		// motionless as well.
-		e, err := phase.solveDependencies(a, b, collision)
+		e, err := phase.solveDependencies(solver)
 
 		if err == nil {
 			if len(e) > 0 {
@@ -398,7 +413,10 @@ resolved:
 
 var ErrNoDependencies = errors.New("no dependencies")
 
-func (phase *narrowPhase) solveDependencies(a, b *actor, collision quad.Collision) ([]entity.Entity, error) {
+func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.Entity, error) {
+	a, b := solver.a, solver.b
+	collision := solver.collision
+
 	node := followGraph(a, b, collision)
 
 	// If the next node only has one collision
@@ -426,8 +444,13 @@ func (phase *narrowPhase) solveDependencies(a, b *actor, collision quad.Collisio
 
 		switch e := e.(type) {
 		case actorEntity:
-			a := phase.actorIndex[e.Id()]
-			return phase.solveActorActor(node.actor, a, c), nil
+			actor := phase.actorIndex[e.Id()]
+
+			solver.a = node.actor
+			solver.b = actor
+			solver.collision = c
+
+			return phase.solveActorActor(solver), nil
 		}
 
 	}
