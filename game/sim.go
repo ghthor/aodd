@@ -313,6 +313,9 @@ attemptSolve:
 			goto attemptSolve
 		}
 
+		// If we ever hit this point it means we've
+		// resolved all the collisions this one
+		// depends and therefor it can be resolved.
 		goto resolved
 
 	case coord.CT_CELL_DEST:
