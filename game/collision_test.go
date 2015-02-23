@@ -384,6 +384,28 @@ type testCase struct {
 	cgrp quad.CollisionGroup
 }
 
+func findCollisions(index actorIndex) []quad.Collision {
+	var collisions []quad.Collision
+
+	for id1 := 0; id1 < len(index); id1++ {
+		a1 := index[int64(id1)]
+		for id2 := 0; id2 < len(index); id2++ {
+			a2 := index[int64(id2)]
+
+			if a1.Id() == a2.Id() {
+				continue
+			}
+
+			if a1.Bounds().Overlaps(a2.Bounds()) {
+				collisions = append(collisions, quad.Collision{a1.Entity(), a2.Entity()})
+			}
+		}
+	}
+
+	return collisions
+}
+
+// NOTE Only generates a single case
 func generateCases(index actorIndex) []testCase {
 	testCases := make([]testCase, 0, len(index))
 
@@ -391,26 +413,18 @@ func generateCases(index actorIndex) []testCase {
 	// one in front of it and behind it.
 	var spec string
 	cg := quad.CollisionGroup{}
-	for i := int64(0); int(i) < len(index); i++ {
-		if int(i) == len(index)-1 {
-			cg = cg.AddCollision(quad.Collision{
-				index[i].Entity(),
-				index[0].Entity(),
-			})
 
-			spec = fmt.Sprintf("%s,[%d,%d]", spec, i, 0)
-			continue
-		}
+	collisions := findCollisions(index)
 
-		cg = cg.AddCollision(quad.Collision{
-			index[i].Entity(),
-			index[i+1].Entity(),
-		})
+	for _, c := range collisions {
+		cg = cg.AddCollision(c)
+	}
 
-		if spec == "" {
-			spec = fmt.Sprintf("[%d,%d]", i, i+1)
+	for i, c := range cg.Collisions {
+		if i == 0 {
+			spec = fmt.Sprintf("[%d, %d]", c.A.Id(), c.B.Id())
 		} else {
-			spec = fmt.Sprintf("%s,[%d,%d]", spec, i, i+1)
+			spec = fmt.Sprintf("%s,[%d, %d]", spec, c.A.Id(), c.B.Id())
 		}
 	}
 
