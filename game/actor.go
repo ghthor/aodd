@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -120,6 +121,10 @@ func (e actorEntity) ToState() entity.State {
 
 		PathAction: pathAction,
 	}
+}
+
+func (e actorEntity) String() string {
+	return fmt.Sprintf("{id %d, cell%v, %v, speed:%d, pathAction:%v}", e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 
 func (e actorEntityState) Id() int64            { return e.EntityId }
