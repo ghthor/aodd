@@ -255,6 +255,19 @@ func followGraph(a, b *actor, collision quad.Collision) node {
 	return node{actor, entity}
 }
 
+func currentNode(a, b *actor, collision quad.Collision) *actor {
+	switch {
+	case a.pathAction.Orig == b.pathAction.Dest:
+		return b
+
+	case b.pathAction.Orig == a.pathAction.Dest:
+		return a
+
+	default:
+		panic(fmt.Sprintf("unexpected graph state %v between %v & %v", collision, a, b))
+	}
+}
+
 func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 	var e entity.Entity
 
@@ -309,11 +322,18 @@ attemptSolve:
 		// motionless as well.
 		e, err := phase.solveDependencies(solver)
 
-		if err != nil && err == ErrNoDependencies {
-			// If we ever hit this point it means we've
-			// resolved all the collisions this one
-			// depends on and therefor it can be resolved.
+		switch err {
+		case ErrCycle:
+			// Detected a cycle, we can't move
+			currentNode(a, b, collision).revertMoveAction()
 			goto resolved
+
+		case ErrNoDependencies:
+			// All dependencies have been solved
+			// We can move
+			goto resolved
+
+		case nil:
 		}
 
 		if len(e) > 0 {

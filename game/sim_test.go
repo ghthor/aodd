@@ -429,6 +429,27 @@ func DescribeSomeActors(c gospec.Context) {
 					c.Expect(index[2].pathAction, IsNil)
 					c.Expect(index[3].pathAction, IsNil)
 				},
+			}, {
+				spec: "8 actors in a square with an empty center cell",
+
+				paths: []coord.PathAction{
+					pa(0, 10, cell(1, 0), cell(2, 0)),
+					pa(0, 10, cell(2, 0), cell(2, 1)),
+					pa(0, 10, cell(2, 1), cell(2, 2)),
+					pa(0, 10, cell(2, 2), cell(1, 2)),
+					pa(0, 10, cell(1, 2), cell(0, 2)),
+					pa(0, 10, cell(0, 2), cell(0, 1)),
+					pa(0, 10, cell(0, 1), cell(0, 0)),
+					pa(0, 10, cell(0, 0), cell(1, 0)),
+				},
+
+				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
+					c.Assume(coord.NewPathCollision(t.paths[7], t.paths[0]).Type(), Equals, coord.CT_NONE)
+
+					for i, _ := range t.paths {
+						c.Expect(index[int64(i)].pathAction, IsNil)
+					}
+				},
 			}}
 
 			for _, testCase := range testCases {
