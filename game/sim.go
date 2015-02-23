@@ -143,11 +143,19 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 
 		var entities []entity.Entity
 
+		// Resolve type of entity in collision.A
 		switch e := c.A.(type) {
 		case actorEntity:
+			// Resolve the type of entity in collision.B
 			entities = phase.resolveActorEntity(phase.actorIndex[e.Id()], c.B, c)
 		}
 
+		// As collisions are solved they return entities
+		// that have been created or modified and we store
+		// them in a map by their Id. Multiple collisions
+		// may modify and entity, therefor we only will
+		// one version of the entity back to engine when
+		// we return.
 		for _, e := range entities {
 			remaining[e.Id()] = e
 		}
