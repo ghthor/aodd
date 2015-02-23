@@ -267,7 +267,7 @@ func (phase *narrowPhase) resolveActorActorCollision(a, b *actor, collision quad
 
 	var entities []entity.Entity
 
-attemptResolve:
+attemptSolve:
 	a, b, coordCollision := newActorActorCollision(a, b)
 	if coordCollision == nil {
 		goto resolved
@@ -310,7 +310,7 @@ attemptResolve:
 			e := otherEntityIn(node.actor, c)
 
 			entities = append(entities, phase.resolveActorCollision(node.actor, e, c)...)
-			goto attemptResolve
+			goto attemptSolve
 		}
 
 		goto resolved
