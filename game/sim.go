@@ -145,7 +145,7 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 
 		switch e := c.A.(type) {
 		case actorEntity:
-			entities = phase.resolveActorCollision(phase.actorIndex[e.Id()], c.B, c)
+			entities = phase.resolveActorEntity(phase.actorIndex[e.Id()], c.B, c)
 		}
 
 		for _, e := range entities {
@@ -156,12 +156,12 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 	return remainingSlice(), nil
 }
 
-func (phase *narrowPhase) resolveActorCollision(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
+func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
 	switch e := with.(type) {
 	case actorEntity:
 		b := phase.actorIndex[e.Id()]
 
-		return phase.resolveActorActorCollision(a, b, collision)
+		return phase.solveActorActor(a, b, collision)
 	}
 
 	return nil
@@ -258,7 +258,7 @@ func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 	return e
 }
 
-func (phase *narrowPhase) resolveActorActorCollision(a, b *actor, collision quad.Collision) []entity.Entity {
+func (phase *narrowPhase) solveActorActor(a, b *actor, collision quad.Collision) []entity.Entity {
 	// When this functions returns the
 	// collision will have been solved
 	defer func() {
@@ -309,7 +309,8 @@ attemptSolve:
 
 			e := otherEntityIn(node.actor, c)
 
-			entities = append(entities, phase.resolveActorCollision(node.actor, e, c)...)
+			entities = append(entities, phase.resolveActorEntity(node.actor, e, c)...)
+
 			goto attemptSolve
 		}
 
