@@ -689,6 +689,35 @@ func DescribeCollision(c gospec.Context) {
 						c.Expect(a0.pathAction, IsNil)
 						c.Expect(a1.pathAction, IsNil)
 					},
+				}, {
+					spec: "to the south and to the west",
+
+					paths: [...]coord.PathAction{
+						pa(0, 10, cell(1, 1), cell(1, 0)),
+						pa(0, 10, cell(1, 0), cell(0, 0)),
+					},
+
+					cell:   cell(0, 0),
+					facing: coord.West,
+
+					expectations: func(t spec_2move_1stand, index actorIndex, c gospec.Context) {
+						pa0 := t.paths[0]
+						pa1 := t.paths[1]
+
+						a0 := index[0]
+						a1 := index[1]
+						a2 := index[2]
+
+						c.Assume(pa0.Direction(), Equals, coord.South)
+						c.Assume(pa1.Direction(), Equals, coord.West)
+						c.Assume(a2.pathAction, IsNil)
+
+						collision := coord.NewPathCollision(pa0, pa1)
+						c.Assume(collision.Type(), Equals, coord.CT_A_INTO_B_FROM_SIDE)
+
+						c.Expect(a0.pathAction, IsNil)
+						c.Expect(a1.pathAction, IsNil)
+					},
 				}}
 
 				for _, testCase := range testCases {

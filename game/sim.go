@@ -318,6 +318,28 @@ attemptSolve:
 		goto resolved
 
 	case coord.CT_A_INTO_B_FROM_SIDE:
+		// This may not be entirely accurate.
+		// We should walk through the collision index
+		// of our partner too see if they should resolve
+		// some of there collisions first. They may
+		// appear to be moving to us right now, but
+		// have a collision that when solved will
+		// render them motionless, thus we would become
+		// motionless as well.
+		e, err := phase.solveDependencies(a, b, collision)
+
+		if err == nil {
+			if len(e) > 0 {
+				entities = append(entities, e...)
+			}
+
+			// Try solving again
+			goto attemptSolve
+		}
+
+		// If we ever hit this point it means we've
+		// resolved all the collisions this one
+		// depends on and therefor it can be resolved.
 		if a.pathAction.End() >= b.pathAction.End() {
 			goto resolved
 		}
