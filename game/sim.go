@@ -26,7 +26,7 @@ type narrowPhase struct {
 	actorIndex actorIndex
 
 	// Reset at the beginning of every ResolveCollisions call
-	resolved []quad.Collision
+	solved []quad.Collision
 	// Generated at the beginning of every ResolveCollisions call
 	collisionIndex quad.CollisionIndex
 }
@@ -109,7 +109,7 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 }
 
 func (phase narrowPhase) hasSolved(c quad.Collision) bool {
-	for _, solved := range phase.resolved {
+	for _, solved := range phase.solved {
 		if c.IsSameAs(solved) {
 			return true
 		}
@@ -120,7 +120,7 @@ func (phase narrowPhase) hasSolved(c quad.Collision) bool {
 
 func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
 	// Reset the resolved slice
-	phase.resolved = phase.resolved[:0]
+	phase.solved = phase.solved[:0]
 
 	// Generate a collision index for the collision group
 	phase.collisionIndex = cg.CollisionIndex()
@@ -214,7 +214,7 @@ func (phase *narrowPhase) resolveActorActorCollision(a, b *actor, collision quad
 	// When this functions returns the
 	// collision will have been solved
 	defer func() {
-		phase.resolved = append(phase.resolved, collision)
+		phase.solved = append(phase.solved, collision)
 	}()
 
 	var entities []entity.Entity
