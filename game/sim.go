@@ -215,7 +215,7 @@ type node struct {
 	entity entity.Entity
 }
 
-func next(a, b *actor, collision quad.Collision) node {
+func followGraph(a, b *actor, collision quad.Collision) node {
 	// normalize a, b to collision.[A, B]
 	if a.Id() != collision.A.Id() {
 		a, b = b, a
@@ -283,7 +283,7 @@ attemptSolve:
 		// have a collision that will be resolved will
 		// render them motionless, thus we must become
 		// motionless as well.
-		node := next(a, b, collision)
+		node := followGraph(a, b, collision)
 
 		// If b only has a single collision, it's with us
 		// and that means it has been resolved and both
