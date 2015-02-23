@@ -184,7 +184,9 @@ func TestUnitSpecs(t *testing.T) {
 	r := gospec.NewRunner()
 
 	r.AddSpec(game.DescribeActorConn)
-	r.AddSpec(game.DescribeCollision)
+
+	r.AddSpec(game.Describe2Actors)
+	r.AddSpec(game.Describe3Actors)
 
 	var err error
 
