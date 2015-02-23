@@ -210,6 +210,54 @@ func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
 	return a, b, collision
 }
 
+type node struct {
+	actor  *actor
+	entity entity.Entity
+}
+
+func next(a, b *actor, collision quad.Collision) node {
+	// normalize a, b to collision.[A, B]
+	if a.Id() != collision.A.Id() {
+		a, b = b, a
+	}
+
+	var actor *actor
+	var entity entity.Entity
+
+	switch {
+	case a.pathAction.Orig == b.pathAction.Dest:
+		entity = collision.A
+		actor = a
+
+	case b.pathAction.Orig == a.pathAction.Dest:
+		entity = collision.B
+		actor = b
+
+	default:
+		panic(fmt.Sprintf("unexpected graph state %v between %v & %v", collision, a, b))
+	}
+
+	return node{actor, entity}
+}
+
+func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
+	var e entity.Entity
+
+	// figure out is prioritized actor is A or B in the collision
+	switch {
+	case a.Id() != collision.A.Id():
+		e = collision.A
+
+	case a.Id() != collision.B.Id():
+		e = collision.B
+
+	default:
+		panic(fmt.Sprintf("unexpected graph state %v between %v & %v", collision, a))
+	}
+
+	return e
+}
+
 func (phase *narrowPhase) resolveActorActorCollision(a, b *actor, collision quad.Collision) []entity.Entity {
 	// When this functions returns the
 	// collision will have been solved
@@ -235,38 +283,18 @@ attemptResolve:
 		// have a collision that will be resolved will
 		// render them motionless, thus we must become
 		// motionless as well.
-
-		// normalize a, b to collision.[A, B]
-		if a.Id() != collision.A.Id() {
-			a, b = b, a
-		}
-
-		var prioritizedEntity entity.Entity
-		var prioritizedActor *actor
-
-		switch {
-		case a.pathAction.Orig == b.pathAction.Dest:
-			prioritizedEntity = collision.A
-			prioritizedActor = a
-
-		case b.pathAction.Orig == a.pathAction.Dest:
-			prioritizedEntity = collision.B
-			prioritizedActor = b
-
-		default:
-			panic(fmt.Sprintf("unexpected %v between %v & %v", coordCollision.Type(), a, b))
-		}
+		node := next(a, b, collision)
 
 		// If b only has a single collision, it's with us
 		// and that means it has been resolved and both
 		// a and b's movement is allowed
-		if len(phase.collisionIndex[prioritizedEntity]) == 1 {
+		if len(phase.collisionIndex[node.entity]) == 1 {
 			goto resolved
 		}
 
-		// recurse through the graph of collisions and solve all
-		// the collisions that depend on this collision
-		for _, c := range phase.collisionIndex[prioritizedEntity] {
+		// Walk through the directed graph of collisions and solve
+		// all the collisions that this collision depends on.
+		for _, c := range phase.collisionIndex[node.entity] {
 			// skip this collision, we'll solve it
 			// after we loop through all the other
 			// collisions we depend on.
@@ -279,19 +307,10 @@ attemptResolve:
 				continue
 			}
 
-			// Deal with unknown quad.Collision[A, B] orientation
-			switch {
-			case prioritizedEntity.Id() != c.A.Id():
-				entities = append(entities, phase.resolveActorCollision(prioritizedActor, c.A, c)...)
-				goto attemptResolve
+			e := otherEntityIn(node.actor, c)
 
-			case prioritizedEntity.Id() != c.B.Id():
-				entities = append(entities, phase.resolveActorCollision(prioritizedActor, c.B, c)...)
-				goto attemptResolve
-
-			default:
-				panic(fmt.Sprintf("unexpected graph state:\n%v\n%v\n%v\n", a, b, collision))
-			}
+			entities = append(entities, phase.resolveActorCollision(node.actor, e, c)...)
+			goto attemptResolve
 		}
 
 		goto resolved
