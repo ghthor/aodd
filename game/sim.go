@@ -323,12 +323,12 @@ attemptSolve:
 		e, err := phase.solveDependencies(solver)
 
 		switch err {
-		case ErrCycle:
+		case errCycleDetected:
 			// Detected a cycle, we can't move
 			currentNode(a, b, collision).revertMoveAction()
 			goto resolved
 
-		case ErrNoDependencies:
+		case errNoDependencies:
 			// All dependencies have been solved
 			// We can move
 			goto resolved
@@ -372,11 +372,11 @@ attemptSolve:
 			// Try solving again
 			goto attemptSolve
 
-		case ErrCycle:
+		case errCycleDetected:
 			a.revertMoveAction()
 			goto resolved
 
-		case ErrNoDependencies:
+		case errNoDependencies:
 		}
 
 		// If we ever hit this point it means we've
@@ -438,8 +438,8 @@ resolved:
 	return append(entities, a.Entity(), b.Entity())
 }
 
-var ErrNoDependencies = errors.New("no dependencies")
-var ErrCycle = errors.New("cycle detected")
+var errNoDependencies = errors.New("no dependencies")
+var errCycleDetected = errors.New("cycle detected")
 
 func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.Entity, error) {
 	a, b := solver.a, solver.b
@@ -451,7 +451,7 @@ func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.E
 	// then there are no dependencies and the
 	// collision can be solved
 	if len(phase.collisionIndex[node.entity]) == 1 {
-		return nil, ErrNoDependencies
+		return nil, errNoDependencies
 	}
 
 	// Walk through the directed graph of collisions and solve
@@ -459,7 +459,7 @@ func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.E
 	for _, c := range phase.collisionIndex[node.entity] {
 		// Detect cycles
 		if c.IsSameAs(solver.startedFrom) && !c.IsSameAs(collision) {
-			return nil, ErrCycle
+			return nil, errCycleDetected
 		}
 
 		// Ignore the collision that caused us to
@@ -488,7 +488,7 @@ func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.E
 
 	}
 
-	return nil, ErrNoDependencies
+	return nil, errNoDependencies
 }
 
 type indexHandler struct {
