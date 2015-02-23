@@ -187,6 +187,7 @@ func TestUnitSpecs(t *testing.T) {
 
 	r.AddSpec(game.Describe2Actors)
 	r.AddSpec(game.Describe3Actors)
+	r.AddSpec(game.DescribeSomeActors)
 
 	var err error
 

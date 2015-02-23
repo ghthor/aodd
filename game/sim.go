@@ -343,13 +343,20 @@ attemptSolve:
 		// motionless as well.
 		e, err := phase.solveDependencies(solver)
 
-		if err == nil {
+		switch err {
+		case nil:
 			if len(e) > 0 {
 				entities = append(entities, e...)
 			}
 
 			// Try solving again
 			goto attemptSolve
+
+		case ErrCycle:
+			a.revertMoveAction()
+			goto resolved
+
+		case ErrNoDependencies:
 		}
 
 		// If we ever hit this point it means we've
@@ -412,6 +419,7 @@ resolved:
 }
 
 var ErrNoDependencies = errors.New("no dependencies")
+var ErrCycle = errors.New("cycle detected")
 
 func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.Entity, error) {
 	a, b := solver.a, solver.b
@@ -429,6 +437,11 @@ func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.E
 	// Walk through the directed graph of collisions and solve
 	// all the collisions that the collision depends on.
 	for _, c := range phase.collisionIndex[node.entity] {
+		// Detect cycles
+		if c.IsSameAs(solver.startedFrom) && !c.IsSameAs(collision) {
+			return nil, ErrCycle
+		}
+
 		// Ignore the collision that caused us to
 		// recursively solve dependencies
 		if c.IsSameAs(collision) {

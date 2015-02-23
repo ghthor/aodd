@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/quad"
 
@@ -361,6 +363,84 @@ func (t spec_3move) runSpec(c gospec.Context) {
 			c.Specify(testCase.spec, func() {
 				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
 				c.Assume(len(stillExisting), Equals, 3)
+				c.Assume(len(removed), Equals, 0)
+
+				t.expectations(t, index, c)
+			})
+		}
+	})
+}
+
+type spec_allMoving struct {
+	spec string
+
+	paths []coord.PathAction
+
+	expectations func(spec_allMoving, actorIndex, gospec.Context)
+}
+
+type testCase struct {
+	spec string
+	cgrp quad.CollisionGroup
+}
+
+func generateCases(index actorIndex) []testCase {
+	testCases := make([]testCase, 0, len(index))
+
+	// Assume that each index is only colliding with the
+	// one in front of it and behind it.
+	var spec string
+	cg := quad.CollisionGroup{}
+	for i := int64(0); int(i) < len(index); i++ {
+		if int(i) == len(index)-1 {
+			cg = cg.AddCollision(quad.Collision{
+				index[i].Entity(),
+				index[0].Entity(),
+			})
+
+			spec = fmt.Sprintf("%s,[%d,%d]", spec, i, 0)
+			continue
+		}
+
+		cg = cg.AddCollision(quad.Collision{
+			index[i].Entity(),
+			index[i+1].Entity(),
+		})
+
+		if spec == "" {
+			spec = fmt.Sprintf("[%d,%d]", i, i+1)
+		} else {
+			spec = fmt.Sprintf("%s,[%d,%d]", spec, i, i+1)
+		}
+	}
+
+	testCases = append(testCases, testCase{spec, cg})
+
+	return testCases
+}
+
+func (t spec_allMoving) runSpec(c gospec.Context) {
+	index := make(actorIndex, len(t.paths))
+	for i, p := range t.paths {
+		index[int64(i)] = &actor{
+			actorEntity: actorEntity{
+				id:     int64(i),
+				cell:   p.Orig,
+				facing: p.Direction(),
+			},
+		}
+
+		index[int64(i)].applyPathAction(&t.paths[i])
+	}
+
+	phase := newNarrowPhase(index)
+	testCases := generateCases(index)
+
+	c.Specify(t.spec, func() {
+		for _, testCase := range testCases {
+			c.Specify(testCase.spec, func() {
+				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				c.Assume(len(stillExisting), Equals, len(t.paths))
 				c.Assume(len(removed), Equals, 0)
 
 				t.expectations(t, index, c)

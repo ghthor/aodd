@@ -399,3 +399,41 @@ func Describe3Actors(c gospec.Context) {
 		})
 	})
 }
+
+func DescribeSomeActors(c gospec.Context) {
+	c.Specify("a collision between some actors", func() {
+		c.Specify("that cycles", func() {
+			testCases := []spec_allMoving{{
+				spec: "with 4 actors in a square",
+
+				paths: []coord.PathAction{
+					pa(0, 10, cell(0, 0), cell(1, 0)),
+					pa(0, 10, cell(1, 0), cell(1, 1)),
+					pa(0, 10, cell(1, 1), cell(0, 1)),
+					pa(0, 10, cell(0, 1), cell(0, 0)),
+				},
+
+				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
+					c.Assume(t.paths[0].Direction(), Equals, coord.East)
+					c.Assume(t.paths[1].Direction(), Equals, coord.North)
+					c.Assume(t.paths[2].Direction(), Equals, coord.West)
+					c.Assume(t.paths[3].Direction(), Equals, coord.South)
+
+					c.Assume(coord.NewPathCollision(t.paths[0], t.paths[1]).Type(), Equals, coord.CT_A_INTO_B_FROM_SIDE)
+					c.Assume(coord.NewPathCollision(t.paths[1], t.paths[2]).Type(), Equals, coord.CT_A_INTO_B_FROM_SIDE)
+					c.Assume(coord.NewPathCollision(t.paths[2], t.paths[3]).Type(), Equals, coord.CT_A_INTO_B_FROM_SIDE)
+					c.Assume(coord.NewPathCollision(t.paths[3], t.paths[0]).Type(), Equals, coord.CT_A_INTO_B_FROM_SIDE)
+
+					c.Expect(index[0].pathAction, IsNil)
+					c.Expect(index[1].pathAction, IsNil)
+					c.Expect(index[2].pathAction, IsNil)
+					c.Expect(index[3].pathAction, IsNil)
+				},
+			}}
+
+			for _, testCase := range testCases {
+				testCase.runSpec(c)
+			}
+		})
+	})
+}
