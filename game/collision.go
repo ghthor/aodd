@@ -251,6 +251,14 @@ attemptSolve:
 		e, err := phase.solveDependencies(solver, a, b, collision)
 
 		switch err {
+		case nil:
+			if len(e) > 0 {
+				entities = append(entities, e...)
+			}
+
+			// Try solving again
+			goto attemptSolve
+
 		case errCycleDetected:
 			// Detected a cycle, we can't move
 			currentNode(a, b, collision).revertMoveAction()
@@ -260,16 +268,7 @@ attemptSolve:
 			// All dependencies have been solved
 			// We can move
 			goto resolved
-
-		case nil:
 		}
-
-		if len(e) > 0 {
-			entities = append(entities, e...)
-		}
-
-		// Try solving again
-		goto attemptSolve
 
 	case coord.CT_CELL_DEST:
 		a.revertMoveAction()
@@ -305,16 +304,13 @@ attemptSolve:
 			goto resolved
 
 		case errNoDependencies:
-		}
+			if a.pathAction.End() >= b.pathAction.End() {
+				goto resolved
+			}
 
-		// If we ever hit this point it means we've
-		// resolved all the collisions this one
-		// depends on and therefor it can be resolved.
-		if a.pathAction.End() >= b.pathAction.End() {
+			a.revertMoveAction()
 			goto resolved
 		}
-
-		fallthrough
 
 	case coord.CT_A_INTO_B:
 		a.revertMoveAction()
