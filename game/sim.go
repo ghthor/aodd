@@ -108,6 +108,16 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	}
 }
 
+func (phase narrowPhase) hasSolved(c quad.Collision) bool {
+	for _, solved := range phase.resolved {
+		if c.IsSameAs(solved) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
 	// Reset the resolved slice
 	phase.resolved = phase.resolved[:0]
@@ -126,12 +136,9 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 		return s
 	}
 
-toNextCollision:
 	for _, c := range cg.Collisions {
-		for _, resolved := range phase.resolved {
-			if c.IsSameAs(resolved) {
-				continue toNextCollision
-			}
+		if phase.hasSolved(c) {
+			continue
 		}
 
 		var entities []entity.Entity
@@ -259,7 +266,6 @@ attemptResolve:
 
 		// recurse through the graph of collisions and solve all
 		// the collisions that depend on this collision
-	toNextCollision:
 		for _, c := range phase.collisionIndex[prioritizedEntity] {
 			// skip this collision, we'll solve it
 			// after we loop through all the other
@@ -269,10 +275,8 @@ attemptResolve:
 			}
 
 			// avoid resolving a collision that's already been resolved.
-			for _, resolved := range phase.resolved {
-				if c.IsSameAs(resolved) {
-					continue toNextCollision
-				}
+			if phase.hasSolved(c) {
+				continue
 			}
 
 			// Deal with unknown quad.Collision[A, B] orientation
