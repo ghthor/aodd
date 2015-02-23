@@ -9,6 +9,15 @@ import (
 	. "github.com/ghthor/gospec"
 )
 
+var cell = func(x, y int) coord.Cell { return coord.Cell{x, y} }
+var pa = func(start, speed int64, origin, dest coord.Cell) coord.PathAction {
+	return coord.PathAction{
+		Span: stime.NewSpan(stime.Time(start), stime.Time(start+speed)),
+		Orig: origin,
+		Dest: dest,
+	}
+}
+
 type spec_2moving struct {
 	spec         string
 	paths        []coord.PathAction
@@ -371,15 +380,6 @@ func (t spec_3move) runSpec(c gospec.Context) {
 }
 
 func DescribeCollision(c gospec.Context) {
-	cell := func(x, y int) coord.Cell { return coord.Cell{x, y} }
-	pa := func(start, speed int64, origin, dest coord.Cell) coord.PathAction {
-		return coord.PathAction{
-			Span: stime.NewSpan(stime.Time(start), stime.Time(start+speed)),
-			Orig: origin,
-			Dest: dest,
-		}
-	}
-
 	c.Specify("a collision between", func() {
 		c.Specify("2 actors", func() {
 			c.Specify("that are both moving", func() {
