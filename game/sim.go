@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"text/template"
@@ -288,42 +289,24 @@ attemptSolve:
 		// of our partner too see if they should resolve
 		// some of there collisions first. They may
 		// appear to be moving to us right now, but
-		// have a collision that will be resolved will
-		// render them motionless, thus we must become
+		// have a collision that when solved will
+		// render them motionless, thus we would become
 		// motionless as well.
-		node := followGraph(a, b, collision)
+		e, err := phase.solveDependencies(a, b, collision)
 
-		// If b only has a single collision, it's with us
-		// and that means it has been resolved and both
-		// a and b's movement is allowed
-		if len(phase.collisionIndex[node.entity]) == 1 {
+		if err != nil && err == ErrNoDependencies {
+			// If we ever hit this point it means we've
+			// resolved all the collisions this one
+			// depends on and therefor it can be resolved.
 			goto resolved
 		}
 
-		// Walk through the directed graph of collisions and solve
-		// all the collisions that this collision depends on.
-		for _, c := range phase.collisionIndex[node.entity] {
-			// Ignore the collision that caused this recursive solving
-			if c.IsSameAs(collision) {
-				continue
-			}
-
-			// avoid resolving a collision that's already been resolved.
-			if phase.hasSolved(c) {
-				continue
-			}
-
-			e := otherEntityIn(node.actor, c)
-
-			entities = append(entities, phase.resolveActorEntity(node.actor, e, c)...)
-
-			goto attemptSolve
+		if len(e) > 0 {
+			entities = append(entities, e...)
 		}
 
-		// If we ever hit this point it means we've
-		// resolved all the collisions this one
-		// depends and therefor it can be resolved.
-		goto resolved
+		// Try solving again
+		goto attemptSolve
 
 	case coord.CT_CELL_DEST:
 		a.revertMoveAction()
@@ -389,6 +372,40 @@ attemptSolve:
 
 resolved:
 	return append(entities, a.Entity(), b.Entity())
+}
+
+var ErrNoDependencies = errors.New("no dependencies")
+
+func (phase *narrowPhase) solveDependencies(a, b *actor, collision quad.Collision) ([]entity.Entity, error) {
+	node := followGraph(a, b, collision)
+
+	// If the next node only has one collision
+	// then there are no dependencies and the
+	// collision can be solved
+	if len(phase.collisionIndex[node.entity]) == 1 {
+		return nil, ErrNoDependencies
+	}
+
+	// Walk through the directed graph of collisions and solve
+	// all the collisions that the collision depends on.
+	for _, c := range phase.collisionIndex[node.entity] {
+		// Ignore the collision that caused us to
+		// recursively solve dependencies
+		if c.IsSameAs(collision) {
+			continue
+		}
+
+		// Avoid solving a collision that's already been solving.
+		if phase.hasSolved(c) {
+			continue
+		}
+
+		e := otherEntityIn(node.actor, c)
+
+		return phase.resolveActorEntity(node.actor, e, c), nil
+	}
+
+	return nil, ErrNoDependencies
 }
 
 type indexHandler struct {
