@@ -295,9 +295,7 @@ attemptSolve:
 		// Walk through the directed graph of collisions and solve
 		// all the collisions that this collision depends on.
 		for _, c := range phase.collisionIndex[node.entity] {
-			// skip this collision, we'll solve it
-			// after we loop through all the other
-			// collisions we depend on.
+			// Ignore the collision that caused this recursive solving
 			if c.IsSameAs(collision) {
 				continue
 			}
