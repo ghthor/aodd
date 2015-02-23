@@ -424,7 +424,12 @@ func (phase *narrowPhase) solveDependencies(a, b *actor, collision quad.Collisio
 
 		e := otherEntityIn(node.actor, c)
 
-		return phase.resolveActorEntity(node.actor, e, c), nil
+		switch e := e.(type) {
+		case actorEntity:
+			a := phase.actorIndex[e.Id()]
+			return phase.solveActorActor(node.actor, a, c), nil
+		}
+
 	}
 
 	return nil, ErrNoDependencies
