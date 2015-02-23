@@ -450,6 +450,23 @@ func DescribeSomeActors(c gospec.Context) {
 						c.Expect(index[int64(i)].pathAction, IsNil)
 					}
 				},
+			}, {
+				spec: "with 4 actors in a square w/ one trailing outside of the square",
+
+				paths: []coord.PathAction{
+					pa(0, 10, cell(-2, 0), cell(-1, 0)),
+					pa(0, 10, cell(0, 0), cell(1, 0)),
+					pa(0, 10, cell(-1, 0), cell(0, 0)),
+					pa(0, 10, cell(1, 0), cell(1, 1)),
+					pa(0, 10, cell(1, 1), cell(0, 1)),
+					pa(0, 10, cell(0, 1), cell(0, 0)),
+				},
+
+				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
+					for i, _ := range t.paths {
+						c.Expect(index[int64(i)].pathAction, IsNil)
+					}
+				},
 			}}
 
 			for _, testCase := range testCases {

@@ -170,13 +170,10 @@ func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, colli
 	case actorEntity:
 		b := phase.actorIndex[e.Id()]
 
-		s := solverActorActor{
-			startedFrom: collision,
-			a:           a, b: b,
+		return phase.solveActorActor(&solverActorActor{
+			a: a, b: b,
 			collision: collision,
-		}
-
-		return phase.solveActorActor(s)
+		})
 	}
 
 	return nil
@@ -287,12 +284,22 @@ func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 }
 
 type solverActorActor struct {
-	startedFrom quad.Collision
-	a, b        *actor
-	collision   quad.Collision
+	visited   []*actor
+	a, b      *actor
+	collision quad.Collision
 }
 
-func (phase *narrowPhase) solveActorActor(solver solverActorActor) []entity.Entity {
+func (s solverActorActor) hasVisited(actor *actor) bool {
+	for _, a := range s.visited {
+		if actor == a {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (phase *narrowPhase) solveActorActor(solver *solverActorActor) []entity.Entity {
 	a, b := solver.a, solver.b
 	collision := solver.collision
 
@@ -441,11 +448,18 @@ resolved:
 var errNoDependencies = errors.New("no dependencies")
 var errCycleDetected = errors.New("cycle detected")
 
-func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.Entity, error) {
+func (phase *narrowPhase) solveDependencies(solver *solverActorActor) ([]entity.Entity, error) {
 	a, b := solver.a, solver.b
 	collision := solver.collision
 
 	node := followGraph(a, b, collision)
+
+	// Mark what actors have been visited
+	if a != node.actor {
+		solver.visited = append(solver.visited, a)
+	} else {
+		solver.visited = append(solver.visited, b)
+	}
 
 	// If the next node only has one collision
 	// then there are no dependencies and the
@@ -457,11 +471,6 @@ func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.E
 	// Walk through the directed graph of collisions and solve
 	// all the collisions that the collision depends on.
 	for _, c := range phase.collisionIndex[node.entity] {
-		// Detect cycles
-		if c.IsSameAs(solver.startedFrom) && !c.IsSameAs(collision) {
-			return nil, errCycleDetected
-		}
-
 		// Ignore the collision that caused us to
 		// recursively solve dependencies
 		if c.IsSameAs(collision) {
@@ -478,6 +487,11 @@ func (phase *narrowPhase) solveDependencies(solver solverActorActor) ([]entity.E
 		switch e := e.(type) {
 		case actorEntity:
 			actor := phase.actorIndex[e.Id()]
+
+			// Detect cycles
+			if solver.hasVisited(actor) {
+				return nil, errCycleDetected
+			}
 
 			solver.a = node.actor
 			solver.b = actor
