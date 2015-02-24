@@ -230,7 +230,6 @@ func (c *conn) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
 func (c *conn) loginActor(dsactor datastore.Actor) {
 	// Create an actorEntity for this object
 	c.actor = &actor{
-		actorCmdRequest: actorCmdRequest{},
 		actorEntity: actorEntity{
 			id: dsactor.Id,
 

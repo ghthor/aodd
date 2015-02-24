@@ -39,17 +39,12 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	switch e := e.(type) {
 	case actorEntity:
 		actor := phase.index[e.Id()]
-		cmdReq := actor.ReadCmdRequest()
+		moveCmd := actor.ReadMoveCmd()
 
-		if cmdReq.moveRequest == nil {
+		if moveCmd == nil {
 			// The client has canceled all move requests
-			actor.actorCmdRequest.moveRequest = nil
 			return []entity.Entity{actor.Entity()}
 		}
-
-		// The client has a standing move request
-		moveRequest := cmdReq.moveRequest
-		actor.actorCmdRequest.moveRequest = moveRequest
 
 		// Actor is already moving so the moveRequest won't be
 		// consumed until the path action has been completed
@@ -61,7 +56,7 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		pathAction := &coord.PathAction{
 			Span: stime.NewSpan(now, now+stime.Time(actor.speed)),
 			Orig: actor.Cell(),
-			Dest: actor.Cell().Neighbor(moveRequest.Direction),
+			Dest: actor.Cell().Neighbor(moveCmd.Direction),
 		}
 
 		if pathAction.CanHappenAfter(actor.lastMoveAction) {
@@ -70,10 +65,10 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		}
 
 		// Actor must change facing
-		if actor.facing != moveRequest.Direction {
+		if actor.facing != moveCmd.Direction {
 			turnAction := coord.TurnAction{
 				From: actor.facing,
-				To:   moveRequest.Direction,
+				To:   moveCmd.Direction,
 				Time: now,
 			}
 

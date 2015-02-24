@@ -13,27 +13,43 @@ import (
 	"github.com/ghthor/engine/sim/stime"
 )
 
-type actorCmd struct {
-	timeIssued stime.Time
-	cmd        string
-	params     string
-}
+type moveRequestType int
+
+const (
+	MR_ERROR moveRequestType = iota
+	MR_MOVE
+	MR_MOVE_CANCEL
+)
 
 type moveRequest struct {
+	moveRequestType
 	stime.Time
 	coord.Direction
 }
 
-type actorCmdRequest struct {
-	*moveRequest
+type moveCmd struct {
+	stime.Time
+	coord.Direction
+}
+
+func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (moveRequest, error) {
+	d, err := coord.NewDirectionWithString(params)
+	if err != nil {
+		return moveRequest{}, err
+	}
+
+	return moveRequest{
+		t,
+		timeIssued,
+		d,
+	}, nil
 }
 
 type actorConn struct {
-	// Comm interface to muxer used by WriteInput() method
-	submitCmd chan<- actorCmd
+	// Comm interface to muxer used by SubmitCmd() method
+	submitMoveRequest chan<- moveRequest
 
-	// Comm interface to muxer used by getEntity() method
-	readCmdReq <-chan actorCmdRequest
+	readMoveCmd <-chan *moveCmd
 
 	// Comm interface to muxer used by SendState() method
 	sendState chan<- *rpg2d.WorldState
@@ -90,7 +106,6 @@ type actorEntityState struct {
 }
 
 type actor struct {
-	actorCmdRequest
 	actorEntity
 	undoLastMoveAction func()
 
@@ -176,35 +191,29 @@ func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 func (a *actor) applyPathAction(pa *coord.PathAction) {
 	prevPathAction := a.pathAction
 	prevFacing := a.facing
-	prevMoveRequest := a.actorCmdRequest.moveRequest
 
 	a.undoLastMoveAction = func() {
 		a.pathAction = prevPathAction
 		a.facing = prevFacing
-		a.actorCmdRequest.moveRequest = prevMoveRequest
 		a.undoLastMoveAction = nil
 	}
 
 	a.pathAction = pa
 	a.facing = pa.Direction()
-	a.actorCmdRequest.moveRequest = nil
 }
 
 func (a *actor) applyTurnAction(ta coord.TurnAction) {
 	prevAction := a.lastMoveAction
 	prevFacing := a.facing
-	prevMoveRequest := a.actorCmdRequest.moveRequest
 
 	a.undoLastMoveAction = func() {
 		a.lastMoveAction = prevAction
 		a.facing = prevFacing
-		a.actorCmdRequest.moveRequest = prevMoveRequest
 		a.undoLastMoveAction = nil
 	}
 
 	a.lastMoveAction = ta
 	a.facing = ta.To
-	a.actorCmdRequest.moveRequest = nil
 }
 
 func (a *actor) revertMoveAction() {
@@ -215,51 +224,54 @@ func (a *actor) revertMoveAction() {
 
 func (a *actorConn) startIO() {
 	// Setup communication channels
-	cmdCh := make(chan actorCmd)
-	cmdReqCh := make(chan actorCmdRequest)
+	moveReqCh := make(chan moveRequest)
+
+	moveCmdCh := make(chan *moveCmd)
+
 	outputCh := make(chan *rpg2d.WorldState)
 	stopCh := make(chan chan<- struct{})
 
 	// Set the channels accessible to the outside world
-	a.submitCmd = cmdCh
-	a.readCmdReq = cmdReqCh
+	a.submitMoveRequest = moveReqCh
+
+	a.readMoveCmd = moveCmdCh
+
 	a.sendState = outputCh
 	a.stop = stopCh
 
 	// Establish the channel endpoints used inside the go routine
-	var newCmd <-chan actorCmd
-	var sendCmdReq chan<- actorCmdRequest
+	var newMoveRequest <-chan moveRequest
+
+	var sendMoveCmd chan<- *moveCmd
+
 	var newState <-chan *rpg2d.WorldState
 	var stopReq <-chan chan<- struct{}
 
-	newCmd = cmdCh
-	sendCmdReq = cmdReqCh
+	newMoveRequest = moveReqCh
+
+	sendMoveCmd = moveCmdCh
+
 	newState = outputCh
 	stopReq = stopCh
 
 	go func() {
 		var hasStopped chan<- struct{}
 
-		// Buffer of 1 used to store the most recently
-		// received actor cmd from the network.
-		var cmdReq actorCmdRequest
+		cmd := struct {
+			moveCmd *moveCmd
+		}{}
 
-		updateCmdReqWith := func(c actorCmd) {
-			switch c.cmd {
-			case "move":
-				// TODO This is a shit place to be having an error to deal with
-				// TODO It needs to be dealt with at the packet handler level
-				d, _ := coord.NewDirectionWithString(c.params)
-
-				cmdReq.moveRequest = &moveRequest{
-					Time:      stime.Time(c.timeIssued),
-					Direction: d,
+		updateMoveCmdWith := func(r moveRequest) {
+			switch r.moveRequestType {
+			case MR_MOVE:
+				cmd.moveCmd = &moveCmd{
+					Time:      r.Time,
+					Direction: r.Direction,
 				}
-			case "moveCancel":
-				d, _ := coord.NewDirectionWithString(c.params)
-				if cmdReq.moveRequest != nil {
-					if cmdReq.moveRequest.Direction == d {
-						cmdReq.moveRequest = nil
+			case MR_MOVE_CANCEL:
+				if cmd.moveCmd != nil {
+					if cmd.moveCmd.Direction == r.Direction {
+						cmd.moveCmd = nil
 					}
 				}
 			}
@@ -268,10 +280,10 @@ func (a *actorConn) startIO() {
 	unlocked:
 		// # This select prioritizes the following events.
 		// ## 2 potential events to respond to
-		// 1. ReadCmdRequest() method requests the actor command request
+		// 1. ReadMoveCmd() method requests the actor command request
 		// 2. stopIO() method has been called
 		select {
-		case sendCmdReq <- cmdReq:
+		case sendMoveCmd <- cmd.moveCmd:
 			// Transition: unlocked -> locked
 			goto locked
 
@@ -283,16 +295,16 @@ func (a *actorConn) startIO() {
 
 		// ## 3 potential events to respond to
 		// 1. SubmitInput() method has been called with a new command
-		// 2. ReadCmdRequest() method requests the actor command request
+		// 2. ReadMoveCmd() method requests the actor command request
 		// 3. stopIO() method has been called
 		select {
-		case c := <-newCmd:
-			updateCmdReqWith(c)
+		case r := <-newMoveRequest:
+			updateMoveCmdWith(r)
 
 			// Transition: unlocked -> unlocked
 			goto unlocked
 
-		case sendCmdReq <- cmdReq:
+		case sendMoveCmd <- cmd.moveCmd:
 			// Transition: unlocked -> locked
 			goto locked
 
@@ -308,7 +320,7 @@ func (a *actorConn) startIO() {
 
 		// ## 3 potential events to respond to
 		// 1. WriteState() method has been called with a new world state
-		// 2. ReadCmdRequest() method requests the actor command request.. again!
+		// 2. ReadMoveCmd() method requests the actor command request.. again!
 		// 3. stopIO() method has been called
 		select {
 		case state := <-newState:
@@ -319,7 +331,7 @@ func (a *actorConn) startIO() {
 			// Transition: locked -> unlocked
 			goto unlocked
 
-		case sendCmdReq <- cmdReq:
+		case sendMoveCmd <- cmd.moveCmd:
 			// Transition: locked -> locked
 			goto locked
 
@@ -338,7 +350,7 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 	parts := strings.Split(cmd, "=")
 
 	if len(parts) != 2 {
-		return errors.New("invalid command")
+		return errors.New("invalid command syntax")
 	}
 
 	timeIssued, err := strconv.ParseInt(parts[1], 10, 64)
@@ -346,17 +358,32 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 		return err
 	}
 
-	c.submitCmd <- actorCmd{
-		timeIssued: stime.Time(timeIssued),
-		cmd:        parts[0],
-		params:     params,
-	}
+	switch parts[0] {
+	case "move":
+		r, err := newMoveRequest(MR_MOVE, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		c.submitMoveRequest <- r
+		return nil
+
+	case "moveCancel":
+		r, err := newMoveRequest(MR_MOVE_CANCEL, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitMoveRequest <- r
+		return nil
+
+	default:
+		return fmt.Errorf("unknown command: %s", parts[0])
+	}
 }
 
-func (c actorConn) ReadCmdRequest() actorCmdRequest {
-	return <-c.readCmdReq
+func (c actorConn) ReadMoveCmd() *moveCmd {
+	return <-c.readMoveCmd
 }
 
 // Culls the world state to the actor's viewport.
