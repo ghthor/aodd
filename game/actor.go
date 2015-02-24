@@ -57,12 +57,17 @@ type actorEntity struct {
 
 	name string
 
+	// Movement and position
 	cell   coord.Cell
 	facing coord.Direction
 	speed  int
 
 	pathAction     *coord.PathAction
 	lastMoveAction coord.MoveAction
+
+	// Health and Mana
+	hp, hpMax,
+	mp, mpMax int
 }
 
 type actorEntityState struct {
@@ -70,11 +75,18 @@ type actorEntityState struct {
 
 	Name string `json:"name"`
 
+	// Movement and position
 	Facing string     `json:"facing"`
 	Cell   coord.Cell `json:"cell"`
 	bounds coord.Bounds
 
 	PathAction *coord.PathActionJson `json:"pathAction"`
+
+	// Health and Mana
+	Hp    int `json:"hp"`
+	HpMax int `json:"hpMax"`
+	Mp    int `json:"mp"`
+	MpMax int `json:"mpMax"`
 }
 
 type actor struct {
@@ -120,6 +132,11 @@ func (e actorEntity) ToState() entity.State {
 		bounds: e.Bounds(),
 
 		PathAction: pathAction,
+
+		Hp:    e.hp,
+		HpMax: e.hpMax,
+		Mp:    e.mp,
+		MpMax: e.mpMax,
 	}
 }
 
@@ -133,13 +150,23 @@ func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 	o := other.(actorEntityState)
 
 	switch {
+	case e.Name != o.Name:
+		return true
+
 	case e.Facing != o.Facing:
 		return true
 	case e.PathAction != nil && o.PathAction != nil:
 		if *e.PathAction != *o.PathAction {
 			return true
 		}
+	case e.Cell != o.Cell:
+		return true
 	case e.bounds != o.bounds:
+		return true
+
+	case e.Hp != o.Hp || e.HpMax != o.HpMax:
+		return true
+	case e.Mp != o.Mp || e.MpMax != o.MpMax:
 		return true
 	}
 

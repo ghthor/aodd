@@ -185,6 +185,8 @@ func TestUnitSpecs(t *testing.T) {
 
 	r.AddSpec(game.DescribeActorConn)
 
+	r.AddSpec(game.DescribeActorState)
+
 	r.AddSpec(game.Describe2Actors)
 	r.AddSpec(game.Describe3Actors)
 	r.AddSpec(game.DescribeSomeActors)
