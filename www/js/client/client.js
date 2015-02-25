@@ -73,6 +73,9 @@ define(["client/packet",
             $(document).on("keydown", function(e) {
                 var char = String.fromCharCode(e.keyCode);
                 switch (char) {
+                case "1":
+                    inputState.assailDown();
+                    break;
                 case "W":
                     inputState.movementDown("north");
                     break;
@@ -91,6 +94,9 @@ define(["client/packet",
             }).on("keyup", function(e) {
                 var char = String.fromCharCode(e.keyCode);
                 switch (char) {
+                case "1":
+                    inputState.assailUp();
+                    break;
                 case "W":
                     inputState.movementUp("north");
                     break;
