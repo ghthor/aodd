@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 )
 
@@ -11,7 +12,7 @@ type Actor struct {
 	Name, password string
 
 	// Actor's Unique ID
-	Id int64
+	Id rpg2d.ActorId
 
 	// Location in the world
 	Loc coord.Cell
@@ -26,7 +27,7 @@ func (a Actor) Authenticate(name, password string) bool {
 }
 
 type actorPool struct {
-	nextId int64
+	nextId rpg2d.ActorId
 	store  map[string]Actor
 	lock   sync.Mutex
 }

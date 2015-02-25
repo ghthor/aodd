@@ -19,7 +19,7 @@ type inputPhase struct {
 func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 	switch e := e.(type) {
 	case actorEntity:
-		actor := phase.index[e.Id()]
+		actor := phase.index[e.ActorId()]
 
 		// Remove any movement actions that have completed
 		if actor.pathAction != nil && actor.pathAction.End() <= now {
@@ -38,7 +38,7 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
 	switch e := e.(type) {
 	case actorEntity:
-		actor := phase.index[e.Id()]
+		actor := phase.index[e.ActorId()]
 		actor.processMoveCmd(now)
 
 		return []entity.Entity{actor.Entity()}

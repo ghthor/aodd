@@ -69,7 +69,8 @@ func newActorConn(conn protocol.Conn) actorConn {
 
 // Object stored in the quad tree
 type actorEntity struct {
-	id int64
+	id      entity.Id
+	actorId rpg2d.ActorId
 
 	name string
 
@@ -87,7 +88,7 @@ type actorEntity struct {
 }
 
 type actorEntityState struct {
-	EntityId int64 `json:"id"`
+	EntityId entity.Id `json:"id"`
 
 	Name string `json:"name"`
 
@@ -106,14 +107,20 @@ type actorEntityState struct {
 }
 
 type actor struct {
+	id rpg2d.ActorId
+
 	actorEntity
 	undoLastMoveAction func()
 
 	actorConn
 }
 
+func (a actor) Id() rpg2d.ActorId      { return a.id }
 func (a *actor) Entity() entity.Entity { return a.actorEntity }
-func (e actorEntity) Id() int64        { return e.id }
+
+func (e actorEntity) ActorId() rpg2d.ActorId { return e.actorId }
+
+func (e actorEntity) Id() entity.Id    { return e.id }
 func (e actorEntity) Cell() coord.Cell { return e.cell }
 func (e actorEntity) Bounds() coord.Bounds {
 	bounds := coord.Bounds{
@@ -159,7 +166,7 @@ func (e actorEntity) String() string {
 	return fmt.Sprintf("{id %d, cell%v, %v, speed:%d, pathAction:%v}", e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 
-func (e actorEntityState) Id() int64            { return e.EntityId }
+func (e actorEntityState) Id() entity.Id        { return e.EntityId }
 func (e actorEntityState) Bounds() coord.Bounds { return e.bounds }
 func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 	o := other.(actorEntityState)

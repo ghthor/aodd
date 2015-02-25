@@ -3,7 +3,9 @@ package game
 import (
 	"fmt"
 
+	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/rpg2d/quad"
 
 	"github.com/ghthor/gospec"
@@ -22,8 +24,10 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 
 	index := actorIndex{
 		0: &actor{
+			id: 0,
 			actorEntity: actorEntity{
-				id: 0,
+				id:      0,
+				actorId: 0,
 
 				cell:   pa0.Orig,
 				facing: pa0.Direction(),
@@ -31,8 +35,10 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 		},
 
 		1: &actor{
+			id: 1,
 			actorEntity: actorEntity{
-				id: 1,
+				id:      1,
+				actorId: 1,
 
 				cell:   pa1.Orig,
 				facing: pa1.Direction(),
@@ -86,18 +92,22 @@ type spec_1move_1stand struct {
 func (t spec_1move_1stand) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
+			id: 0,
 			actorEntity: actorEntity{
-				id:     0,
-				cell:   t.path.Orig,
-				facing: t.path.Direction(),
+				id:      0,
+				actorId: 0,
+				cell:    t.path.Orig,
+				facing:  t.path.Direction(),
 			},
 		},
 
 		1: &actor{
+			id: 1,
 			actorEntity: actorEntity{
-				id:     1,
-				cell:   t.cell,
-				facing: t.facing,
+				id:      1,
+				actorId: 1,
+				cell:    t.cell,
+				facing:  t.facing,
 			},
 		},
 	}
@@ -166,26 +176,32 @@ type spec_2move_1stand struct {
 func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
+			id: 0,
 			actorEntity: actorEntity{
-				id:     0,
-				cell:   t.paths[0].Orig,
-				facing: t.paths[0].Direction(),
+				id:      0,
+				actorId: 0,
+				cell:    t.paths[0].Orig,
+				facing:  t.paths[0].Direction(),
 			},
 		},
 
 		1: &actor{
+			id: 1,
 			actorEntity: actorEntity{
-				id:     1,
-				cell:   t.paths[1].Orig,
-				facing: t.paths[1].Direction(),
+				id:      1,
+				actorId: 1,
+				cell:    t.paths[1].Orig,
+				facing:  t.paths[1].Direction(),
 			},
 		},
 
 		2: &actor{
+			id: 2,
 			actorEntity: actorEntity{
-				id:     2,
-				cell:   t.cell,
-				facing: t.facing,
+				id:      2,
+				actorId: 2,
+				cell:    t.cell,
+				facing:  t.facing,
 			},
 		},
 	}
@@ -193,7 +209,7 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	index[0].applyPathAction(&t.paths[0])
 	index[1].applyPathAction(&t.paths[1])
 
-	var A, B, C int64 = 0, 1, 2
+	var A, B, C rpg2d.ActorId = 0, 1, 2
 
 	ABBC := quad.CollisionGroup{}
 	ABBC = ABBC.AddCollision(quad.Collision{
@@ -274,26 +290,32 @@ type spec_3move struct {
 func (t spec_3move) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
+			id: 0,
 			actorEntity: actorEntity{
-				id:     0,
-				cell:   t.paths[0].Orig,
-				facing: t.paths[0].Direction(),
+				id:      0,
+				actorId: 0,
+				cell:    t.paths[0].Orig,
+				facing:  t.paths[0].Direction(),
 			},
 		},
 
 		1: &actor{
+			id: 1,
 			actorEntity: actorEntity{
-				id:     1,
-				cell:   t.paths[1].Orig,
-				facing: t.paths[1].Direction(),
+				id:      1,
+				actorId: 1,
+				cell:    t.paths[1].Orig,
+				facing:  t.paths[1].Direction(),
 			},
 		},
 
 		2: &actor{
+			id: 2,
 			actorEntity: actorEntity{
-				id:     2,
-				cell:   t.paths[2].Orig,
-				facing: t.paths[2].Direction(),
+				id:      2,
+				actorId: 2,
+				cell:    t.paths[2].Orig,
+				facing:  t.paths[2].Direction(),
 			},
 		},
 	}
@@ -302,7 +324,7 @@ func (t spec_3move) runSpec(c gospec.Context) {
 	index[1].applyPathAction(&t.paths[1])
 	index[2].applyPathAction(&t.paths[2])
 
-	var A, B, C int64 = 0, 1, 2
+	var A, B, C rpg2d.ActorId = 0, 1, 2
 
 	ABBC := quad.CollisionGroup{}
 	ABBC = ABBC.AddCollision(quad.Collision{
@@ -388,9 +410,9 @@ func findCollisions(index actorIndex) []quad.Collision {
 	var collisions []quad.Collision
 
 	for id1 := 0; id1 < len(index); id1++ {
-		a1 := index[int64(id1)]
+		a1 := index[rpg2d.ActorId(id1)]
 		for id2 := 0; id2 < len(index); id2++ {
-			a2 := index[int64(id2)]
+			a2 := index[rpg2d.ActorId(id2)]
 
 			if a1.Id() == a2.Id() {
 				continue
@@ -436,15 +458,18 @@ func generateCases(index actorIndex) []testCase {
 func (t spec_allMoving) runSpec(c gospec.Context) {
 	index := make(actorIndex, len(t.paths))
 	for i, p := range t.paths {
-		index[int64(i)] = &actor{
+		index[rpg2d.ActorId(i)] = &actor{
+			id: rpg2d.ActorId(i),
+
 			actorEntity: actorEntity{
-				id:     int64(i),
-				cell:   p.Orig,
-				facing: p.Direction(),
+				id:      entity.Id(i),
+				actorId: rpg2d.ActorId(i),
+				cell:    p.Orig,
+				facing:  p.Direction(),
 			},
 		}
 
-		index[int64(i)].applyPathAction(&t.paths[i])
+		index[rpg2d.ActorId(i)].applyPathAction(&t.paths[i])
 	}
 
 	phase := newNarrowPhase(index)

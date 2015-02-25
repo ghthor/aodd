@@ -45,7 +45,7 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 	phase.collisionIndex = cg.CollisionIndex()
 
 	// A map to store entities that still remain in the world
-	remaining := make(map[int64]entity.Entity, len(cg.Entities))
+	remaining := make(map[entity.Id]entity.Entity, len(cg.Entities))
 	remainingSlice := func() []entity.Entity {
 		// Build a slice from the `remaining` map
 		s := make([]entity.Entity, 0, len(remaining))
@@ -66,7 +66,7 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 		switch e := c.A.(type) {
 		case actorEntity:
 			// Resolve the type of entity in collision.B
-			entities = phase.resolveActorEntity(phase.actorIndex[e.Id()], c.B, c)
+			entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c)
 		}
 
 		// As collisions are solved they return entities
@@ -86,7 +86,7 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
 	switch e := with.(type) {
 	case actorEntity:
-		b := phase.actorIndex[e.Id()]
+		b := phase.actorIndex[e.ActorId()]
 
 		return phase.solveActorActor(&solverActorActor{}, a, b, collision)
 	}
@@ -146,7 +146,7 @@ type node struct {
 // which entity is occupying the destination of the other's path action.
 func followGraph(a, b *actor, collision quad.Collision) node {
 	// normalize a, b to collision.[A, B]
-	if a.Id() != collision.A.Id() {
+	if a.actorEntity.Id() != collision.A.Id() {
 		a, b = b, a
 	}
 
@@ -192,10 +192,10 @@ func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 
 	// figure out is prioritized actor is A or B in the collision
 	switch {
-	case a.Id() != collision.A.Id():
+	case a.actorEntity.Id() != collision.A.Id():
 		e = collision.A
 
-	case a.Id() != collision.B.Id():
+	case a.actorEntity.Id() != collision.B.Id():
 		e = collision.B
 
 	default:
@@ -400,7 +400,7 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 
 		switch e := e.(type) {
 		case actorEntity:
-			actor := phase.actorIndex[e.Id()]
+			actor := phase.actorIndex[e.ActorId()]
 
 			// Detect cycles
 			if solver.hasVisited(actor) {

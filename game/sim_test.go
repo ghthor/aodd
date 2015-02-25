@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/sim/stime"
 
@@ -447,7 +448,7 @@ func DescribeSomeActors(c gospec.Context) {
 					c.Assume(coord.NewPathCollision(t.paths[7], t.paths[0]).Type(), Equals, coord.CT_NONE)
 
 					for i, _ := range t.paths {
-						c.Expect(index[int64(i)].pathAction, IsNil)
+						c.Expect(index[rpg2d.ActorId(i)].pathAction, IsNil)
 					}
 				},
 			}, {
@@ -464,7 +465,7 @@ func DescribeSomeActors(c gospec.Context) {
 
 				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
 					for i, _ := range t.paths {
-						c.Expect(index[int64(i)].pathAction, IsNil)
+						c.Expect(index[rpg2d.ActorId(i)].pathAction, IsNil)
 					}
 				},
 			}}

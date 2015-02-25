@@ -8,12 +8,23 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/rpg2d/quad"
 	"github.com/ghthor/engine/sim/stime"
 )
 
 // Store actor's indexed by id
-type actorIndex map[int64]*actor
+type actorIndex map[rpg2d.ActorId]*actor
+
+// TODO avoid using a global like this
+//      to dole out entity id's
+var nextId = func() func() entity.Id {
+	nextId := entity.Id(0)
+	return func() entity.Id {
+		defer func() { nextId++ }()
+		return nextId
+	}
+}()
 
 // Type used to wrap a running simulation interface
 // and start and stop the actor's IO muxer.
