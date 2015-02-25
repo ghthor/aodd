@@ -1,11 +1,12 @@
 // TODO This module is 100% unspecified
 define(["underscore",
        "client/player",
+       "client/bar",
        "client/terrainMap",
        "client/sprite/human",
        "jquery",
        "CAAT"
-], function(_, Player, TerrainMap, Human, $) {
+], function(_, Player, Bar, TerrainMap, Human, $) {
 
     var World = function(director, scene, playerEntity) {
         var world = this;
@@ -80,12 +81,14 @@ define(["underscore",
                 setText(entity.name);
             actor.addChild(name);
 
-            var health = new CAAT.ShapeActor().
-                setShape(CAAT.ShapeActor.SHAPE_RECTANGLE).
-                setSize(grid, grid/4).
-                setPositionAnchored(grid/2, -grid/2+4, 0.5, 0.5).
-                setFillStyle("red");
-            actor.addChild(health);
+            var healthBar = new Bar(grid, grid/4, "red");
+            healthBar.actor.
+                setPositionAnchored(grid/2, -grid/2+4, 0.5, 0.5);
+            actor.addChild(healthBar.actor);
+
+            actor.setHealthPercentage = function(percent) {
+                healthBar.setPercent(percent);
+            };
 
             actor.setAnimation = function(entity) { animation.setAnimation(entity); };
             return actor;
@@ -166,6 +169,9 @@ define(["underscore",
                 
                 // Update animation
                 actor.setAnimation(entity);
+
+                // update health display
+                actor.setHealthPercentage(entity.hp/entity.hpMax);
             });
 
             // Remove entities that don't exist anymore

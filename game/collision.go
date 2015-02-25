@@ -410,7 +410,6 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 			// Recurse
 			return phase.solveActorActor(solver, node.actor, actor, c), nil
 		}
-
 	}
 
 	return nil, errNoDependencies

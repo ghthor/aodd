@@ -80,6 +80,8 @@ define(["client/player",
                     };
                     spyOn(player, "createActor").andCallThrough();
 
+                    player.setHealthPercentage = function(){};
+
                     player.update(0, playerEntity);
                     expect(player.createActor).toHaveBeenCalled();
                     expect(world.scene.addChild).toHaveBeenCalled();
@@ -96,6 +98,8 @@ define(["client/player",
                     player.createActor = function() {
                         return { setAnimation: jasmine.createSpy("setAnimation") };
                     };
+
+                    player.setHealthPercentage = function(){};
 
                     playerEntity.pathAction = {
                         orig: playerEntity.cell,

@@ -1,8 +1,9 @@
 // TODO This module is 100% unspecified
 define(["underscore",
+       "client/bar",
        "client/sprite/human",
        "CAAT"
-], function(_, Human) {
+], function(_, Bar, Human) {
 
     var Player = function(director, world, entity) {
         var player = this;
@@ -25,12 +26,14 @@ define(["underscore",
                 setText(name);
             actor.addChild(nameActor);
 
-            var health = new CAAT.ShapeActor().
-                setShape(CAAT.ShapeActor.SHAPE_RECTANGLE).
-                setSize(width, height/4).
-                setPositionAnchored(width/2, -height/2+4, 0.5, 0.5).
-                setFillStyle("red");
-            actor.addChild(health);
+            var healthBar = new Bar(width, height/4, "red");
+            healthBar.actor.
+                setPositionAnchored(width/2, -height/2+4, 0.5, 0.5);
+            actor.addChild(healthBar.actor);
+
+            player.setHealthPercentage = function(percent) {
+                healthBar.setPercent(percent);
+            };
 
             actor.setAnimation = function(entity) { animation.setAnimation(entity); };
             return actor;
@@ -58,6 +61,9 @@ define(["underscore",
                 }
                 player.entity = update;
                 actor.setAnimation(update);
+
+                // update health display
+                player.setHealthPercentage(update.hp/update.hpMax);
             };
             player.update(time, update);
         };
