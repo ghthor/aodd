@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
@@ -66,12 +67,12 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 		switch e := c.A.(type) {
 		case actorEntity:
 			// Resolve the type of entity in collision.B
-			entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c)
+			entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c, now)
 		default:
 			switch e := c.B.(type) {
 			case actorEntity:
 				// Resolve the type of entity in collision.B
-				entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.A, c)
+				entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.A, c, now)
 			}
 		}
 
@@ -89,15 +90,46 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 	return remainingSlice(), nil
 }
 
-func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision) []entity.Entity {
+func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision, now stime.Time) []entity.Entity {
 	switch e := with.(type) {
 	case actorEntity:
 		b := phase.actorIndex[e.ActorId()]
 
 		return phase.solveActorActor(&solverActorActor{}, a, b, collision)
+	case assailEntity:
+		return phase.solveActorAssail(a, e, collision, now)
 	}
 
 	return nil
+}
+
+func (phase *narrowPhase) solveActorAssail(a *actor, assail assailEntity, collision quad.Collision, now stime.Time) []entity.Entity {
+	// Don't damage yourself
+	if assail.spawnedBy == a.actorEntity.Id() {
+		return []entity.Entity{a.Entity()}
+	}
+
+	var percentDamage float64
+
+	switch a.pathAction {
+	case nil:
+		if a.Cell() == assail.Cell() {
+			percentDamage = 1.0
+		}
+	default:
+		coordCollision := coord.NewCellCollision(*a.pathAction, assail.Cell())
+		percentDamage = coordCollision.OverlapAt(now)
+	}
+
+	damage := int(math.Floor(float64(assail.damage) * percentDamage))
+
+	a.hp -= damage
+
+	if a.hp <= 0 {
+		a.hp = 100
+	}
+
+	return []entity.Entity{a.Entity()}
 }
 
 func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
