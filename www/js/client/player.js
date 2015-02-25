@@ -25,6 +25,13 @@ define(["underscore",
                 setText(name);
             actor.addChild(nameActor);
 
+            var health = new CAAT.ShapeActor().
+                setShape(CAAT.ShapeActor.SHAPE_RECTANGLE).
+                setSize(width, height/4).
+                setPositionAnchored(width/2, -height/2+4, 0.5, 0.5).
+                setFillStyle("red");
+            actor.addChild(health);
+
             actor.setAnimation = function(entity) { animation.setAnimation(entity); };
             return actor;
         };

@@ -78,8 +78,14 @@ define(["underscore",
                 setBounds(0, -grid, grid, grid).
                 setTextAlign("center").
                 setText(entity.name);
-
             actor.addChild(name);
+
+            var health = new CAAT.ShapeActor().
+                setShape(CAAT.ShapeActor.SHAPE_RECTANGLE).
+                setSize(grid, grid/4).
+                setPositionAnchored(grid/2, -grid/2+4, 0.5, 0.5).
+                setFillStyle("red");
+            actor.addChild(health);
 
             actor.setAnimation = function(entity) { animation.setAnimation(entity); };
             return actor;
