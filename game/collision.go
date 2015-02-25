@@ -67,6 +67,12 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 		case actorEntity:
 			// Resolve the type of entity in collision.B
 			entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c)
+		default:
+			switch e := c.B.(type) {
+			case actorEntity:
+				// Resolve the type of entity in collision.B
+				entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.A, c)
+			}
 		}
 
 		// As collisions are solved they return entities
