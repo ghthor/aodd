@@ -287,36 +287,30 @@ func (a *actorConn) startIO() {
 	unlocked:
 		// # This select prioritizes the following events.
 		// ## 2 potential events to respond to
-		// 1. ReadMoveCmd() method requests the actor command request
+		// 1. ReadMoveCmd() method requests the actor's movement cmd
 		// 2. stopIO() method has been called
 		select {
 		case sendMoveCmd <- cmd.moveCmd:
-			// Transition: unlocked -> locked
 			goto locked
 
 		case hasStopped = <-stopReq:
-			// Transition: unlocked -> exit
 			goto exit
 		default:
 		}
 
 		// ## 3 potential events to respond to
-		// 1. SubmitInput() method has been called with a new command
-		// 2. ReadMoveCmd() method requests the actor command request
+		// 1. SubmitCmd() method has been called with a new move request
+		// 2. ReadMoveCmd() method requests the actor's movement cmd
 		// 3. stopIO() method has been called
 		select {
 		case r := <-newMoveRequest:
 			updateMoveCmdWith(r)
-
-			// Transition: unlocked -> unlocked
 			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
-			// Transition: unlocked -> locked
 			goto locked
 
 		case hasStopped = <-stopReq:
-			// Transition: unlocked -> exit
 			goto exit
 		}
 
@@ -327,23 +321,19 @@ func (a *actorConn) startIO() {
 
 		// ## 3 potential events to respond to
 		// 1. WriteState() method has been called with a new world state
-		// 2. ReadMoveCmd() method requests the actor command request.. again!
+		// 2. ReadMoveCmd() method requests the actor's move command
 		// 3. stopIO() method has been called
 		select {
 		case state := <-newState:
 			if state != nil {
 				a.SendJson("update", state)
 			}
-
-			// Transition: locked -> unlocked
 			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
-			// Transition: locked -> locked
 			goto locked
 
 		case hasStopped = <-stopReq:
-			// Transition: locked -> exit
 			goto exit
 		}
 
@@ -353,6 +343,10 @@ func (a *actorConn) startIO() {
 	}()
 }
 
+// If the cmd and params are a valid combination
+// a request will be made and passed into the
+// IO muxer. SubmitCmd() will return an error
+// if the submitted cmd and params are invalid.
 func (c actorConn) SubmitCmd(cmd, params string) error {
 	parts := strings.Split(cmd, "=")
 
