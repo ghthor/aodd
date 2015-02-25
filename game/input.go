@@ -31,6 +31,10 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 
 		return actor.Entity()
 
+	case assailEntity:
+		// Destroy all assail entities
+		return nil
+
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
 	}
@@ -93,14 +97,76 @@ func (phase inputPhase) processMoveCmd(a *actor, now stime.Time) {
 	}
 }
 
+type assailEntity struct {
+	id entity.Id
+
+	spawnedBy entity.Id
+	spawnedAt stime.Time
+
+	cell coord.Cell
+
+	damage int
+}
+
+type assailEntityState struct {
+	Type string `json:"type"`
+
+	EntityId entity.Id `json:"id"`
+
+	SpawnedBy entity.Id  `json:"spawnedBy"`
+	SpawnedAt stime.Time `json:"spawnedAt"`
+
+	Cell coord.Cell `json:"cell"`
+}
+
+func (e assailEntity) Id() entity.Id    { return e.id }
+func (e assailEntity) Cell() coord.Cell { return e.cell }
+func (e assailEntity) Bounds() coord.Bounds {
+	return coord.Bounds{e.cell, e.cell}
+}
+
+func (e assailEntity) ToState() entity.State {
+	return assailEntityState{
+		Type: "assail",
+
+		EntityId: e.id,
+
+		SpawnedBy: e.spawnedBy,
+		SpawnedAt: e.spawnedAt,
+
+		Cell: e.cell,
+	}
+}
+
+func (e assailEntityState) Id() entity.Id { return e.EntityId }
+func (e assailEntityState) Bounds() coord.Bounds {
+	return coord.Bounds{e.Cell, e.Cell}
+}
+
+func (e assailEntityState) IsDifferentFrom(entity.State) bool {
+	return true
+}
+
 func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity {
 	cmd := a.ReadUseCmd()
 	if cmd == nil {
 		return nil
 	}
 
+	// TODO Only allow when stationary
+	// TODO Trigger a cooldown
 	switch cmd.skill {
-	default:
+	case "assail":
+		return []entity.Entity{assailEntity{
+			id: phase.nextId(),
+
+			spawnedBy: a.actorEntity.Id(),
+			spawnedAt: now,
+
+			cell: a.Cell().Neighbor(a.facing),
+
+			damage: 25,
+		}}
 	}
 	return nil
 }

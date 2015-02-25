@@ -66,6 +66,8 @@ func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (mo
 
 func newUseRequest(t useRequestType, timeIssued stime.Time, params string) (useRequest, error) {
 	switch params {
+	case "assail":
+		return useRequest{t, timeIssued, params}, nil
 	default:
 		return useRequest{}, fmt.Errorf("unknown skill: %s", params)
 	}
