@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 
 	"golang.org/x/net/websocket"
 
@@ -111,16 +110,14 @@ func inputHandler(c *conn) (packetHandler, error) {
 
 	switch packet.Type {
 	case encoding.PT_MESSAGE:
-		if strings.Contains(packet.Msg, "move") {
-			err := c.actor.SubmitCmd(packet.Msg, packet.Payload)
-			if err != nil {
-				serr := c.SendError("invalidActorCommand", err.Error())
-				if serr != nil {
-					return nil, serr
-				}
+		err := c.actor.SubmitCmd(packet.Msg, packet.Payload)
+		if err != nil {
+			serr := c.SendError("invalidActorCommand", err.Error())
+			if serr != nil {
+				return nil, serr
 			}
-			return inputHandler, nil
 		}
+		return inputHandler, nil
 	default:
 	}
 
