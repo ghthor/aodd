@@ -32,6 +32,25 @@ type moveCmd struct {
 	coord.Direction
 }
 
+type useRequestType int
+
+const (
+	UR_ERROR useRequestType = iota
+	UR_USE
+	UR_USE_CANCEL
+)
+
+type useRequest struct {
+	useRequestType
+	stime.Time
+	skill string
+}
+
+type useCmd struct {
+	stime.Time
+	skill string
+}
+
 func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (moveRequest, error) {
 	d, err := coord.NewDirectionWithString(params)
 	if err != nil {
@@ -45,11 +64,20 @@ func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (mo
 	}, nil
 }
 
+func newUseRequest(t useRequestType, timeIssued stime.Time, params string) (useRequest, error) {
+	switch params {
+	default:
+		return useRequest{}, fmt.Errorf("unknown skill: %s", params)
+	}
+}
+
 type actorConn struct {
 	// Comm interface to muxer used by SubmitCmd() method
 	submitMoveRequest chan<- moveRequest
+	submitUseRequest  chan<- useRequest
 
 	readMoveCmd <-chan *moveCmd
+	readUseCmd  <-chan *useCmd
 
 	// Comm interface to muxer used by SendState() method
 	sendState chan<- *rpg2d.WorldState
@@ -232,31 +260,39 @@ func (a *actor) revertMoveAction() {
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	moveReqCh := make(chan moveRequest)
+	useReqCh := make(chan useRequest)
 
 	moveCmdCh := make(chan *moveCmd)
+	useCmdCh := make(chan *useCmd)
 
 	outputCh := make(chan *rpg2d.WorldState)
 	stopCh := make(chan chan<- struct{})
 
 	// Set the channels accessible to the outside world
 	a.submitMoveRequest = moveReqCh
+	a.submitUseRequest = useReqCh
 
 	a.readMoveCmd = moveCmdCh
+	a.readUseCmd = useCmdCh
 
 	a.sendState = outputCh
 	a.stop = stopCh
 
 	// Establish the channel endpoints used inside the go routine
 	var newMoveRequest <-chan moveRequest
+	var newUseRequest <-chan useRequest
 
 	var sendMoveCmd chan<- *moveCmd
+	var sendUseCmd chan<- *useCmd
 
 	var newState <-chan *rpg2d.WorldState
 	var stopReq <-chan chan<- struct{}
 
 	newMoveRequest = moveReqCh
+	newUseRequest = useReqCh
 
 	sendMoveCmd = moveCmdCh
+	sendUseCmd = useCmdCh
 
 	newState = outputCh
 	stopReq = stopCh
@@ -266,6 +302,7 @@ func (a *actorConn) startIO() {
 
 		cmd := struct {
 			moveCmd *moveCmd
+			useCmd  *useCmd
 		}{}
 
 		updateMoveCmdWith := func(r moveRequest) {
@@ -284,13 +321,33 @@ func (a *actorConn) startIO() {
 			}
 		}
 
+		updateUseCmdWith := func(r useRequest) {
+			switch r.useRequestType {
+			case UR_USE:
+				cmd.useCmd = &useCmd{
+					Time:  r.Time,
+					skill: r.skill,
+				}
+
+			case UR_USE_CANCEL:
+				if cmd.useCmd != nil {
+					if cmd.useCmd.skill == r.skill {
+						cmd.useCmd = nil
+					}
+				}
+			}
+		}
+
 	unlocked:
 		// # This select prioritizes the following events.
 		// ## 2 potential events to respond to
 		// 1. ReadMoveCmd() method requests the actor's movement cmd
-		// 2. stopIO() method has been called
+		// 2. ReadUseCmd() method requests the actor's use cmd
+		// 3. stopIO() method has been called
 		select {
 		case sendMoveCmd <- cmd.moveCmd:
+			goto locked
+		case sendUseCmd <- cmd.useCmd:
 			goto locked
 
 		case hasStopped = <-stopReq:
@@ -299,15 +356,21 @@ func (a *actorConn) startIO() {
 		}
 
 		// ## 3 potential events to respond to
-		// 1. SubmitCmd() method has been called with a new move request
+		// 1. SubmitCmd() method has been called with a new move/use request
 		// 2. ReadMoveCmd() method requests the actor's movement cmd
-		// 3. stopIO() method has been called
+		// 3. ReadUseCmd() method requests the actor's use cmd
+		// 4. stopIO() method has been called
 		select {
 		case r := <-newMoveRequest:
 			updateMoveCmdWith(r)
 			goto unlocked
+		case r := <-newUseRequest:
+			updateUseCmdWith(r)
+			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
+			goto locked
+		case sendUseCmd <- cmd.useCmd:
 			goto locked
 
 		case hasStopped = <-stopReq:
@@ -322,7 +385,8 @@ func (a *actorConn) startIO() {
 		// ## 3 potential events to respond to
 		// 1. WriteState() method has been called with a new world state
 		// 2. ReadMoveCmd() method requests the actor's move command
-		// 3. stopIO() method has been called
+		// 3. ReadUseCmd() method requests the actor's use command
+		// 4. stopIO() method has been called
 		select {
 		case state := <-newState:
 			if state != nil {
@@ -331,6 +395,8 @@ func (a *actorConn) startIO() {
 			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
+			goto locked
+		case sendUseCmd <- cmd.useCmd:
 			goto locked
 
 		case hasStopped = <-stopReq:
@@ -368,7 +434,6 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 		}
 
 		c.submitMoveRequest <- r
-		return nil
 
 	case "moveCancel":
 		r, err := newMoveRequest(MR_MOVE_CANCEL, stime.Time(timeIssued), params)
@@ -377,15 +442,36 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 		}
 
 		c.submitMoveRequest <- r
-		return nil
+
+	case "use":
+		r, err := newUseRequest(UR_USE, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitUseRequest <- r
+
+	case "useCancel":
+		r, err := newUseRequest(UR_USE_CANCEL, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitUseRequest <- r
 
 	default:
 		return fmt.Errorf("unknown command: %s", parts[0])
 	}
+
+	return nil
 }
 
 func (c actorConn) ReadMoveCmd() *moveCmd {
 	return <-c.readMoveCmd
+}
+
+func (c actorConn) ReadUseCmd() *useCmd {
+	return <-c.readUseCmd
 }
 
 // Culls the world state to the actor's viewport.
