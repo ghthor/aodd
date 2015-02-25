@@ -3,6 +3,7 @@ define(["underscore"], function(_) {
     var InputState = function(socket) {
         var inputState = this;
         inputState.movement = [];
+        inputState.assail = null;
         inputState.time = 0;
 
         var sendMovement = function(time, direction) {
@@ -11,6 +12,14 @@ define(["underscore"], function(_) {
 
         var sendMovementCancel = function(time, direction) {
             socket.send("3::moveCancel=" + time + ":" + direction);
+        };
+
+        var sendAssail = function(time) {
+            socket.send("3::use=" + time + ":" + "assail");
+        };
+
+        var sendAssailCancel = function(time) {
+            socket.send("3::useCancel=" + time + ":" + "assail");
         };
 
         inputState.movementDown = function(direction) {
@@ -36,10 +45,25 @@ define(["underscore"], function(_) {
             }
         };
 
+        inputState.assailDown = function() {
+            inputState.assail = "assail";
+            sendAssail(inputState.time);
+        };
+
+        inputState.assailUp = function() {
+            inputState.assail = null;
+            sendAssailCancel(inputState.time);
+        };
+
         inputState.update = function(time) {
             if (inputState.movement.length > 0) {
                 sendMovement(time, _.last(inputState.movement));
             }
+
+            if (!_.isNull(inputState.assail)) {
+                sendAssail(time);
+            }
+
             inputState.time = time;
         };
 
