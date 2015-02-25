@@ -135,7 +135,7 @@ define(["underscore",
 
                 if (!_.isUndefined(entity.type)) {
                     if (entity.type === "assail") {
-                        console.log(entity);
+                        (new Audio("asset/audio/assail.wav")).play();
                         return; //continue
                     }
                 }
@@ -178,7 +178,6 @@ define(["underscore",
             _.each(update.removed, function(entity) {
                 if (!_.isUndefined(entity.type)) {
                     if (entity.type === "assail") {
-                        console.log("destroyed: ", entity);
                         return; //continue
                     }
                 }
