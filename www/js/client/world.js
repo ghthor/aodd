@@ -124,6 +124,13 @@ define(["underscore",
                     return; //continue
                 }
 
+                if (!_.isUndefined(entity.type)) {
+                    if (entity.type === "assail") {
+                        console.log(entity);
+                        return; //continue
+                    }
+                }
+
                 // Get a handle to the Actor
                 var actor;
                 if (_.isUndefined(entities[entity.id])) {
@@ -157,6 +164,13 @@ define(["underscore",
 
             // Remove entities that don't exist anymore
             _.each(update.removed, function(entity) {
+                if (!_.isUndefined(entity.type)) {
+                    if (entity.type === "assail") {
+                        console.log("destroyed: ", entity);
+                        return; //continue
+                    }
+                }
+
                 var actor = world.actors[entity.id];
                 actor.destroy();
 
