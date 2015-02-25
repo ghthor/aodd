@@ -97,6 +97,9 @@ func (phase inputPhase) processMoveCmd(a *actor, now stime.Time) {
 	}
 }
 
+// In frames
+const assailCooldown = 40
+
 type assailEntity struct {
 	id entity.Id
 
@@ -157,7 +160,12 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 	// TODO Trigger a cooldown
 	switch cmd.skill {
 	case "assail":
-		return []entity.Entity{assailEntity{
+		// Implement a cooldown
+		if a.lastAssail.spawnedAt+assailCooldown > now {
+			return nil
+		}
+
+		e := assailEntity{
 			id: phase.nextId(),
 
 			spawnedBy: a.actorEntity.Id(),
@@ -166,7 +174,11 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 			cell: a.Cell().Neighbor(a.facing),
 
 			damage: 25,
-		}}
+		}
+
+		a.lastAssail = e
+
+		return []entity.Entity{e}
 	}
 	return nil
 }

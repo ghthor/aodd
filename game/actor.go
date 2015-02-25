@@ -142,6 +142,9 @@ type actor struct {
 	actorEntity
 	undoLastMoveAction func()
 
+	// Store the last assail me made
+	lastAssail assailEntity
+
 	actorConn
 }
 
