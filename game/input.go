@@ -39,10 +39,15 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
 	switch e := e.(type) {
 	case actorEntity:
+		var entities []entity.Entity
 		actor := phase.index[e.ActorId()]
-		phase.processMoveCmd(actor, now)
 
-		return []entity.Entity{actor.Entity()}
+		phase.processMoveCmd(actor, now)
+		entities = append(entities,
+			phase.processUseCmd(actor, now)...,
+		)
+
+		return append(entities, actor.Entity())
 
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
@@ -86,4 +91,16 @@ func (phase inputPhase) processMoveCmd(a *actor, now stime.Time) {
 			a.applyTurnAction(turnAction)
 		}
 	}
+}
+
+func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity {
+	cmd := a.ReadUseCmd()
+	if cmd == nil {
+		return nil
+	}
+
+	switch cmd.skill {
+	default:
+	}
+	return nil
 }
