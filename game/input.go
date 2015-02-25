@@ -1,7 +1,10 @@
 package game
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
@@ -55,6 +58,160 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
+	}
+}
+
+type moveRequestType int
+
+const (
+	MR_ERROR moveRequestType = iota
+	MR_MOVE
+	MR_MOVE_CANCEL
+)
+
+type moveRequest struct {
+	moveRequestType
+	stime.Time
+	coord.Direction
+}
+
+type moveCmd struct {
+	stime.Time
+	coord.Direction
+}
+
+type useRequestType int
+
+const (
+	UR_ERROR useRequestType = iota
+	UR_USE
+	UR_USE_CANCEL
+)
+
+type useRequest struct {
+	useRequestType
+	stime.Time
+	skill string
+}
+
+type useCmd struct {
+	stime.Time
+	skill string
+}
+
+func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (moveRequest, error) {
+	d, err := coord.NewDirectionWithString(params)
+	if err != nil {
+		return moveRequest{}, err
+	}
+
+	return moveRequest{
+		t,
+		timeIssued,
+		d,
+	}, nil
+}
+
+func newUseRequest(t useRequestType, timeIssued stime.Time, params string) (useRequest, error) {
+	switch params {
+	case "assail":
+		return useRequest{t, timeIssued, params}, nil
+	default:
+		return useRequest{}, fmt.Errorf("unknown skill: %s", params)
+	}
+}
+
+// If the cmd and params are a valid combination
+// a request will be made and passed into the
+// IO muxer. SubmitCmd() will return an error
+// if the submitted cmd and params are invalid.
+func (c actorConn) SubmitCmd(cmd, params string) error {
+	parts := strings.Split(cmd, "=")
+
+	if len(parts) != 2 {
+		return errors.New("invalid command syntax")
+	}
+
+	timeIssued, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	switch parts[0] {
+	case "move":
+		r, err := newMoveRequest(MR_MOVE, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitMoveRequest <- r
+
+	case "moveCancel":
+		r, err := newMoveRequest(MR_MOVE_CANCEL, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitMoveRequest <- r
+
+	case "use":
+		r, err := newUseRequest(UR_USE, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitUseRequest <- r
+
+	case "useCancel":
+		r, err := newUseRequest(UR_USE_CANCEL, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitUseRequest <- r
+
+	default:
+		return fmt.Errorf("unknown command: %s", parts[0])
+	}
+
+	return nil
+}
+
+func (c actorConn) ReadMoveCmd() *moveCmd {
+	return <-c.readMoveCmd
+}
+
+func (a *actor) applyPathAction(pa *coord.PathAction) {
+	prevPathAction := a.pathAction
+	prevFacing := a.facing
+
+	a.undoLastMoveAction = func() {
+		a.pathAction = prevPathAction
+		a.facing = prevFacing
+		a.undoLastMoveAction = nil
+	}
+
+	a.pathAction = pa
+	a.facing = pa.Direction()
+}
+
+func (a *actor) applyTurnAction(ta coord.TurnAction) {
+	prevAction := a.lastMoveAction
+	prevFacing := a.facing
+
+	a.undoLastMoveAction = func() {
+		a.lastMoveAction = prevAction
+		a.facing = prevFacing
+		a.undoLastMoveAction = nil
+	}
+
+	a.lastMoveAction = ta
+	a.facing = ta.To
+}
+
+func (a *actor) revertMoveAction() {
+	if a.undoLastMoveAction != nil {
+		a.undoLastMoveAction()
 	}
 }
 
@@ -148,6 +305,10 @@ func (e assailEntityState) Bounds() coord.Bounds {
 
 func (e assailEntityState) IsDifferentFrom(entity.State) bool {
 	return true
+}
+
+func (c actorConn) ReadUseCmd() *useCmd {
+	return <-c.readUseCmd
 }
 
 func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity {
