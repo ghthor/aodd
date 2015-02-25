@@ -39,7 +39,7 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	switch e := e.(type) {
 	case actorEntity:
 		actor := phase.index[e.ActorId()]
-		actor.processMoveCmd(now)
+		phase.processMoveCmd(actor, now)
 
 		return []entity.Entity{actor.Entity()}
 
@@ -48,7 +48,7 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	}
 }
 
-func (a *actor) processMoveCmd(now stime.Time) {
+func (phase inputPhase) processMoveCmd(a *actor, now stime.Time) {
 	cmd := a.ReadMoveCmd()
 	if cmd == nil {
 		// The client has canceled all move requests
