@@ -71,23 +71,24 @@ define(["client/inputState",
             });
 
             it("when the client recieves an update from the server", function() {
-                spyOn(inputState, "sendMovement").andCallThrough();
-
                 var time = 0;
                 inputState.movement = ["north"];
 
                 time++;
                 inputState.update(time);
 
-                expect(inputState.sendMovement).toHaveBeenCalled();
+                expect(mockSocket.send.calls.length).toBe(1);
                 expect(mockSocket.send.calls[0].args[0]).toBe("3::move=1:north");
 
                 inputState.movementUp("north");
 
+                expect(mockSocket.send.calls.length).toBe(2);
+                expect(mockSocket.send.calls[1].args[0]).toBe("3::moveCancel=1:north");
+
                 time++;
                 inputState.update(time);
 
-                expect(inputState.sendMovement.calls.length).toBe(1);
+                expect(mockSocket.send.calls.length).toBe(2);
             });
 
             describe("when movement keys are released", function() {
@@ -100,20 +101,13 @@ define(["client/inputState",
                 });
 
                 it("a move event is sent if there is a remaining movement key pressed", function() {
-                    spyOn(inputState, "sendMovementCancel");
-                    spyOn(inputState, "sendMovement");
                     inputState.movement = ["south", "north"];
                     inputState.movementUp("north");
 
-                    expect(inputState.sendMovementCancel).toHaveBeenCalled();
-                    _.each([0, "north"], function(arg, i) {
-                        expect(inputState.sendMovementCancel.calls[0].args[i]).toBe(arg);
-                    });
-
-                    expect(inputState.sendMovement).toHaveBeenCalled();
-                    _.each([0, "south"], function(arg, i) {
-                        expect(inputState.sendMovement.calls[0].args[i]).toBe(arg);
-                    });
+                    expect(mockSocket.send).toHaveBeenCalled();
+                    expect(mockSocket.send.calls.length).toBe(2);
+                    expect(mockSocket.send.calls[0].args[0]).toBe("3::moveCancel=0:north");
+                    expect(mockSocket.send.calls[1].args[0]).toBe("3::move=0:south");
                 });
             });
         });

@@ -5,18 +5,18 @@ define(["underscore"], function(_) {
         inputState.movement = [];
         inputState.time = 0;
 
-        inputState.sendMovement = function(time, direction) {
+        var sendMovement = function(time, direction) {
             socket.send("3::move=" + time + ":" + direction);
         };
 
-        inputState.sendMovementCancel = function(time, direction) {
+        var sendMovementCancel = function(time, direction) {
             socket.send("3::moveCancel=" + time + ":" + direction);
         };
 
         inputState.movementDown = function(direction) {
             if (!_.include(inputState.movement, direction)) {
                 inputState.movement.push(direction);
-                inputState.sendMovement(inputState.time, direction);
+                sendMovement(inputState.time, direction);
             }
         };
 
@@ -26,19 +26,19 @@ define(["underscore"], function(_) {
             }
             if (_.indexOf(inputState.movement, direction) === (inputState.movement.length - 1)) {
                 inputState.movement.pop();
-                inputState.sendMovementCancel(inputState.time, direction);
+                sendMovementCancel(inputState.time, direction);
             } else {
                 inputState.movement = _.reject(inputState.movement, function(directionDown) { return directionDown === direction; });
             }
 
             if (inputState.movement.length > 0) {
-                inputState.sendMovement(inputState.time, _.last(inputState.movement));
+                sendMovement(inputState.time, _.last(inputState.movement));
             }
         };
 
         inputState.update = function(time) {
             if (inputState.movement.length > 0) {
-                inputState.sendMovement(time, _.last(inputState.movement));
+                sendMovement(time, _.last(inputState.movement));
             }
             inputState.time = time;
         };
