@@ -244,6 +244,9 @@ func (c *conn) loginActor(dsactor datastore.Actor) {
 				From: dsactor.Facing,
 				To:   dsactor.Facing,
 			},
+
+			hp:    100,
+			hpMax: 100,
 		},
 
 		actorConn: newActorConn(c),
