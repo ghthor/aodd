@@ -239,6 +239,7 @@ func (c *conn) loginActor(dsactor datastore.Actor) {
 			facing: dsactor.Facing,
 			speed:  15,
 
+			pathAction: nil,
 			lastMoveAction: coord.TurnAction{
 				From: dsactor.Facing,
 				To:   dsactor.Facing,
