@@ -147,7 +147,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		TerrainMap: terrainMap,
 
 		UpdatePhaseHandler: updatePhase{actorIndex},
-		InputPhaseHandler:  inputPhase{actorIndex},
+		InputPhaseHandler:  inputPhase{actorIndex, nextId},
 		NarrowPhaseHandler: newNarrowPhase(actorIndex),
 	}
 

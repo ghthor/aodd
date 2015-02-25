@@ -13,7 +13,8 @@ type updatePhase struct {
 }
 
 type inputPhase struct {
-	index actorIndex
+	index  actorIndex
+	nextId func() entity.Id
 }
 
 func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
