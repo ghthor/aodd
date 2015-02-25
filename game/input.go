@@ -39,47 +39,50 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	switch e := e.(type) {
 	case actorEntity:
 		actor := phase.index[e.Id()]
-		moveCmd := actor.ReadMoveCmd()
-
-		if moveCmd == nil {
-			// The client has canceled all move requests
-			return []entity.Entity{actor.Entity()}
-		}
-
-		// Actor is already moving so the moveRequest won't be
-		// consumed until the path action has been completed
-		if actor.pathAction != nil {
-			return []entity.Entity{actor.Entity()}
-		}
-
-		// Actor may be able to move
-		pathAction := &coord.PathAction{
-			Span: stime.NewSpan(now, now+stime.Time(actor.speed)),
-			Orig: actor.Cell(),
-			Dest: actor.Cell().Neighbor(moveCmd.Direction),
-		}
-
-		if pathAction.CanHappenAfter(actor.lastMoveAction) {
-			actor.applyPathAction(pathAction)
-			return []entity.Entity{actor.Entity()}
-		}
-
-		// Actor must change facing
-		if actor.facing != moveCmd.Direction {
-			turnAction := coord.TurnAction{
-				From: actor.facing,
-				To:   moveCmd.Direction,
-				Time: now,
-			}
-
-			if turnAction.CanHappenAfter(actor.lastMoveAction) {
-				actor.applyTurnAction(turnAction)
-			}
-		}
+		actor.processMoveCmd(now)
 
 		return []entity.Entity{actor.Entity()}
 
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
+	}
+}
+
+func (a *actor) processMoveCmd(now stime.Time) {
+	cmd := a.ReadMoveCmd()
+	if cmd == nil {
+		// The client has canceled all move requests
+		return
+	}
+
+	// Actor is already moving so the moveRequest won't be
+	// consumed until the path action has been completed
+	if a.pathAction != nil {
+		return
+	}
+
+	// Actor may be able to move
+	pathAction := &coord.PathAction{
+		Span: stime.NewSpan(now, now+stime.Time(a.speed)),
+		Orig: a.Cell(),
+		Dest: a.Cell().Neighbor(cmd.Direction),
+	}
+
+	if pathAction.CanHappenAfter(a.lastMoveAction) {
+		a.applyPathAction(pathAction)
+		return
+	}
+
+	// Actor must change facing
+	if a.facing != cmd.Direction {
+		turnAction := coord.TurnAction{
+			From: a.facing,
+			To:   cmd.Direction,
+			Time: now,
+		}
+
+		if turnAction.CanHappenAfter(a.lastMoveAction) {
+			a.applyTurnAction(turnAction)
+		}
 	}
 }
