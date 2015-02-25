@@ -338,6 +338,7 @@ func (a *actorConn) startIO() {
 		}
 
 		panic("unclosed case in locked state select")
+
 	exit:
 		hasStopped <- struct{}{}
 	}()
