@@ -73,9 +73,6 @@ define(["client/packet",
             $(document).on("keydown", function(e) {
                 var char = String.fromCharCode(e.keyCode);
                 switch (char) {
-                case "1":
-                    inputState.assailDown();
-                    break;
                 case "W":
                     inputState.movementDown("north");
                     break;
@@ -91,12 +88,16 @@ define(["client/packet",
                 default:
                 }
 
+                switch (e.keyCode) {
+                case 32: // space in chromium
+                    inputState.assailDown();
+                    break;
+                default:
+                }
+
             }).on("keyup", function(e) {
                 var char = String.fromCharCode(e.keyCode);
                 switch (char) {
-                case "1":
-                    inputState.assailUp();
-                    break;
                 case "W":
                     inputState.movementUp("north");
                     break;
@@ -108,6 +109,13 @@ define(["client/packet",
                     break;
                 case "A":
                     inputState.movementUp("west");
+                    break;
+                default:
+                }
+
+                switch (e.keyCode) {
+                case 32: // space in chromium
+                    inputState.assailUp();
                     break;
                 default:
                 }
