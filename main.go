@@ -37,7 +37,7 @@ func main() {
 		IsHTTPS: true,
 
 		JsDir:    "www/js",
-		AssetDir: "www/img",
+		AssetDir: "www/asset",
 		CssDir:   "www/css",
 
 		JsMain: "js/loginUI",

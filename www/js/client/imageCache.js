@@ -26,8 +26,8 @@ define(["lib/minpubsub",
     ImageCache.prototype = {
         loadDefault: function() {
             var spriteSheets = [
-                {id: "female",        url: "img/pokemon-female.png"},
-                {id: "terrain_tiles", url: "img/terrain-tiles-16x16x8.png"}
+                {id: "female",        url: "asset/img/pokemon-female.png"},
+                {id: "terrain_tiles", url: "asset/img/terrain-tiles-16x16x8.png"}
             ];
             this.load(spriteSheets);
         }

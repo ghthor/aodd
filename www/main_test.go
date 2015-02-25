@@ -108,7 +108,7 @@ func DescribeConsoleReport(c gospec.Context) {
 		IsHTTPS: false,
 
 		JsDir:    "js/",
-		AssetDir: "img/",
+		AssetDir: "asset/",
 		CssDir:   "css/",
 
 		JsMain: "js/specs_console_report",
@@ -183,7 +183,7 @@ func DescribeHtmlReport(c gospec.Context) {
 		IsHTTPS: false,
 
 		JsDir:    "js/",
-		AssetDir: "img/",
+		AssetDir: "asset/",
 		CssDir:   "css/",
 
 		JsMain: "js/specs_html_report",

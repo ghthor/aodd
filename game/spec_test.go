@@ -153,7 +153,7 @@ func DescribeLiveWebTesting(c gospec.Context) {
 		IsHTTPS: false,
 
 		JsDir:    "../www/js/",
-		AssetDir: "../www/img/",
+		AssetDir: "../www/asset/",
 		CssDir:   "../www/css/",
 
 		JsMain: "test_env",
