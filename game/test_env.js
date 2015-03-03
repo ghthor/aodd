@@ -21,9 +21,9 @@ require([
         "jquery",
         "react",
         "client/loginConn",
-        "client/client",
         "client/settings",
-], function($, react, LoginConn, Client, settings) {
+        "clientUI",
+], function($, react, LoginConn, settings, clientUI) {
     var conn = new LoginConn(new WebSocket(settings.websocketURL));
 
     conn.on("connected", function() {
@@ -38,13 +38,8 @@ require([
     });
 
     var loginSuccess = function(actor, socket) {
-        var client = new Client(socket, actor);
-
-        // Wait for the CAAT director to prepare the canvas
-        client.on("canvasReady", function(canvas) {
-            react.render(react.DOM.div({id: "clientCanvas"}), document.body);
-            $("#clientCanvas").append(canvas);
-        });
+        window.socket = socket;
+        clientUI.takeoverDOM(socket, actor);
     };
 
     conn.on("loginSuccess", loginSuccess);

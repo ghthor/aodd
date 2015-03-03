@@ -21,9 +21,9 @@ require([
         "jquery",
         "react",
         "client/loginConn",
-        "client/client",
+        "clientUI",
         "client/settings",
-], function($, react, LoginConn, Client, settings) {
+], function($, react, LoginConn, clientUI, settings) {
     var conn = new LoginConn(new WebSocket(settings.websocketURL));
 
     var LoginForm = react.createFactory(react.createClass({
@@ -206,13 +206,7 @@ require([
     });
 
     var loginSuccess = function(actor, socket) {
-        var client = new Client(socket, actor);
-
-        // Wait for the CAAT director to prepare the canvas
-        client.on("canvasReady", function(canvas) {
-            react.render(react.DOM.div({id: "clientCanvas"}), document.body);
-            $("#clientCanvas").append(canvas);
-        });
+        clientUI.takeoverDOM(socket, actor);
     };
 
     conn.on("loginSuccess", loginSuccess);
