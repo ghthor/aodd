@@ -13,13 +13,13 @@ define([
                     },
 
                     render: function() {
-                        return react.DOM.div({id:"client"});
+                        return react.DOM.div();
                     },
         }));
 
         // Wait for the CAAT director to prepare the canvas
         client.on("ready", function(canvas) {
-            react.render(new UI({canvas: canvas}), document.body);
+            react.render(new UI({canvas: canvas}), document.getElementById("client"));
         });
     };
 

@@ -179,10 +179,12 @@ require([
                 }
     }));
 
+    var container = document.getElementById("client");
+
     conn.on("connected", function() {
         console.log("connected to " + settings.websocketURL);
 
-        react.render(new LoginForm({conn: conn, disabled: false}), document.body);
+        react.render(new LoginForm({conn: conn, disabled: false}), container);
     });
 
     conn.on("authFailed", function(name) {
@@ -190,7 +192,7 @@ require([
         react.render(new LoginForm({
                     conn:     conn,
                     disabled: false
-        }), document.body).setState({name: name});
+        }), container).setState({name: name});
     });
 
     conn.on("actorDoesntExist", function(name, password) {
@@ -202,7 +204,7 @@ require([
                         password: password
                     },
                     disabled: false
-        }), document.body).setState({password: ""});
+        }), container).setState({password: ""});
     });
 
     var loginSuccess = function(actor, socket) {
