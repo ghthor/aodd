@@ -64,7 +64,7 @@ define(["client/packet",
             // Setup keybinds
             setupKeybinds(inputState);
 
-            client.emit("canvasReady", [director.canvas]);
+            client.emit("ready", [director.canvas]);
 
             CAAT.loop();
         };

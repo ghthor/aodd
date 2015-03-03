@@ -7,7 +7,7 @@ define([
         var client = new Client(socket, actor);
 
         // Wait for the CAAT director to prepare the canvas
-        client.on("canvasReady", function(canvas) {
+        client.on("ready", function(canvas) {
             react.render(react.DOM.div({id: "clientCanvas"}), document.body);
             $("#clientCanvas").append(canvas);
         });
