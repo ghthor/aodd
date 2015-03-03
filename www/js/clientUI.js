@@ -6,10 +6,20 @@ define([
     var takeoverDOM = function(socket, actor) {
         var client = new Client(socket, actor);
 
+        var UI = react.createFactory(react.createClass({
+                    componentDidMount: function() {
+                        var div = this.getDOMNode();
+                        $(div).prepend(this.props.canvas);
+                    },
+
+                    render: function() {
+                        return react.DOM.div({id:"client"});
+                    },
+        }));
+
         // Wait for the CAAT director to prepare the canvas
         client.on("ready", function(canvas) {
-            react.render(react.DOM.div({id: "clientCanvas"}), document.body);
-            $("#clientCanvas").append(canvas);
+            react.render(new UI({canvas: canvas}), document.body);
         });
     };
 
