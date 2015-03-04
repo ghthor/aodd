@@ -115,6 +115,11 @@ type ShardConfig struct {
 	// A mux that http server will use. Is provided so the
 	// user can extend the server with additional routes.
 	Mux *http.ServeMux
+
+	// A handler that will be used instead of the Mux
+	// when setting the Handler field of the *http.Server.
+	// If Handler is nil, the Mux will be used instead.
+	Handler http.Handler
 }
 
 func NewSimShard(c ShardConfig) (*http.Server, error) {
@@ -191,8 +196,13 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		runningSim,
 	}, datastore))
 
+	defaultHandler := c.Handler
+	if defaultHandler == nil {
+		defaultHandler = mux
+	}
+
 	return &http.Server{
 		Addr:    c.LAddr,
-		Handler: mux,
+		Handler: defaultHandler,
 	}, nil
 }
