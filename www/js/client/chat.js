@@ -2,7 +2,11 @@ define(["underscore"], function(_) {
     var Chat = function(socket, pub, entityResolver) {
         var chat = this;
 
+        var time = 0;
+
         chat.update = function(update) {
+            time = update.time;
+
             _.each(update.entities, function(entity) {
                 if (!_.isUndefined(entity.type)) {
                     if (entity.type === "say") {
@@ -15,6 +19,10 @@ define(["underscore"], function(_) {
                     }
                 }
             });
+        };
+
+        chat.sendSay= function(msg) {
+            socket.send("3::say=" + time + ":" + msg);
         };
     };
 
