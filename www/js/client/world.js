@@ -62,7 +62,7 @@ define(["underscore",
 
         world.player = new Player(director, world, playerEntity);
 
-        world.createEntityActor = function(entity) {
+        var createEntityActor = function(entity) {
             var cell = cellToLocal(entity.cell);
             var actor = new CAAT.ActorContainer().
                 setSize(grid, grid).
@@ -152,7 +152,7 @@ define(["underscore",
                 var actor;
                 if (_.isUndefined(entities[entity.id])) {
                     // Create a new Actor
-                    actor = world.createEntityActor(entity);
+                    actor = createEntityActor(entity);
 
                     world.container.addChild(actor);
 
