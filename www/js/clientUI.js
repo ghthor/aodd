@@ -12,9 +12,11 @@ define([
                         }, react.DOM.span({
                                 className: "chat-message-said-by",
                         }, this.props.saidBy),
+                        " says, \"",
                         react.DOM.span({
                                 className: "chat-message-text",
-                        }, this.props.text));
+                        }, this.props.text),
+                        "\"");
                     },
         }));
 
