@@ -121,6 +121,14 @@ define(["underscore",
         world.entities = {};
         world.actors = {};
 
+        world.entityForId = function(id) {
+            if (world.player.entity.id === id) {
+                return world.player.entity;
+            }
+
+            return world.entities[id];
+        };
+
         world.update = function(update) {
             world.time = update.time;
 
