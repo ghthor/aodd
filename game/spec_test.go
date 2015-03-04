@@ -39,6 +39,15 @@ func (s triggerStartHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "server is running")
 }
 
+type disableCache struct {
+	*http.ServeMux
+}
+
+func (m disableCache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Cache-Control", "no-cache")
+	m.ServeMux.ServeHTTP(w, r)
+}
+
 // Starts an http game server and verifies that is
 // can respond to http requests before returning it.
 func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
@@ -47,6 +56,7 @@ func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
 	// Set a route that can be used
 	// to trigger starting the webserver
 	shardConfig.Mux.Handle("/start", triggerStartHandler{hasStarted})
+	shardConfig.Handler = disableCache{shardConfig.Mux}
 
 	s, err := game.NewSimShard(shardConfig)
 	if err != nil {
