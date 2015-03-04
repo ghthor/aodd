@@ -70,6 +70,7 @@ define([
 
                         react.DOM.input({
                                 ref: "input",
+                                className: "chat-input",
 
                                 type: "text",
                                 value: this.state.message,
