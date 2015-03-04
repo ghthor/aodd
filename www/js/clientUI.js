@@ -10,7 +10,7 @@ define([
                         return react.DOM.li({
                                 className: "chat-message",
                         }, react.DOM.span({
-                                claseName: "chat-message-said-by",
+                                className: "chat-message-said-by",
                         }, this.props.saidBy),
                         react.DOM.span({
                                 className: "chat-message-text",
