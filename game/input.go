@@ -38,6 +38,10 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 		// Destroy all assail entities
 		return nil
 
+	case sayEntity:
+		// Destroy all say entities
+		return nil
+
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
 	}
@@ -52,6 +56,10 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		phase.processMoveCmd(actor, now)
 		entities = append(entities,
 			phase.processUseCmd(actor, now)...,
+		)
+
+		entities = append(entities,
+			phase.processChatCmd(actor, now)...,
 		)
 
 		return append(entities, actor.Entity())
@@ -99,6 +107,25 @@ type useCmd struct {
 	skill string
 }
 
+type chatType int
+
+const (
+	CR_ERROR chatType = iota
+	CR_SAY
+)
+
+type chatRequest struct {
+	chatType
+	stime.Time
+	msg string
+}
+
+type chatCmd struct {
+	chatType
+	stime.Time
+	msg string
+}
+
 func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (moveRequest, error) {
 	d, err := coord.NewDirectionWithString(params)
 	if err != nil {
@@ -119,6 +146,18 @@ func newUseRequest(t useRequestType, timeIssued stime.Time, params string) (useR
 	default:
 		return useRequest{}, fmt.Errorf("unknown skill: %s", params)
 	}
+}
+
+func newChatRequest(t chatType, timeIssued stime.Time, params string) (chatRequest, error) {
+	if len(params) > 120 {
+		return chatRequest{}, errors.New("chat message exceeded 120 char limit")
+	}
+
+	return chatRequest{
+		chatType: t,
+		Time:     timeIssued,
+		msg:      params,
+	}, nil
 }
 
 // If the cmd and params are a valid combination
@@ -169,6 +208,14 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 		}
 
 		c.submitUseRequest <- r
+
+	case "say":
+		r, err := newChatRequest(CR_SAY, stime.Time(timeIssued), params)
+		if err != nil {
+			return err
+		}
+
+		c.submitChatRequest <- r
 
 	default:
 		return fmt.Errorf("unknown command: %s", parts[0])
@@ -341,5 +388,85 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 
 		return []entity.Entity{e}
 	}
+	return nil
+}
+
+type sayEntity struct {
+	id entity.Id
+
+	saidBy entity.Id
+	saidAt stime.Time
+
+	cell coord.Cell
+
+	msg string
+}
+
+type sayEntityState struct {
+	Type string `json:"type"`
+
+	EntityId entity.Id `json:"id"`
+
+	SaidBy entity.Id  `json:"saidBy"`
+	SaidAt stime.Time `json:"saidAt"`
+
+	Cell coord.Cell `json:"cell"`
+
+	Msg string `json:"msg"`
+}
+
+func (e sayEntity) Id() entity.Id    { return e.id }
+func (e sayEntity) Cell() coord.Cell { return e.cell }
+func (e sayEntity) Bounds() coord.Bounds {
+	return coord.Bounds{e.cell, e.cell}
+}
+
+func (e sayEntity) ToState() entity.State {
+	return sayEntityState{
+		Type: "say",
+
+		EntityId: e.id,
+
+		SaidBy: e.saidBy,
+		SaidAt: e.saidAt,
+
+		Cell: e.cell,
+
+		Msg: e.msg,
+	}
+}
+
+func (e sayEntityState) Id() entity.Id { return e.EntityId }
+func (e sayEntityState) Bounds() coord.Bounds {
+	return coord.Bounds{e.Cell, e.Cell}
+}
+func (e sayEntityState) IsDifferentFrom(other entity.State) bool {
+	return true
+}
+
+func (a *actor) ReadChatCmd() *chatCmd {
+	return <-a.readChatCmd
+}
+
+func (phase inputPhase) processChatCmd(a *actor, now stime.Time) []entity.Entity {
+	cmd := a.ReadChatCmd()
+	if cmd == nil {
+		return nil
+	}
+
+	switch cmd.chatType {
+	case CR_SAY:
+		return []entity.Entity{sayEntity{
+			id: phase.nextId(),
+
+			saidBy: a.actorEntity.Id(),
+			saidAt: now,
+
+			cell: a.Cell(),
+
+			msg: cmd.msg,
+		}}
+	}
+
 	return nil
 }
