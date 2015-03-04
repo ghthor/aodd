@@ -144,8 +144,9 @@ define(["underscore",
                 if (!_.isUndefined(entity.type)) {
                     if (entity.type === "assail") {
                         (new Audio("asset/audio/assail.wav")).play();
-                        return; //continue
                     }
+
+                    return; //continue
                 }
 
                 // Get a handle to the Actor
@@ -185,9 +186,7 @@ define(["underscore",
             // Remove entities that don't exist anymore
             _.each(update.removed, function(entity) {
                 if (!_.isUndefined(entity.type)) {
-                    if (entity.type === "assail") {
-                        return; //continue
-                    }
+                    return; //continue
                 }
 
                 var actor = world.actors[entity.id];
