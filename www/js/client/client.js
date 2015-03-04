@@ -3,11 +3,12 @@ define(["client/packet",
        "client/imageCache",
        "client/world",
        "client/inputState",
+       "client/chat",
        "client/updateBuffer",
        "lib/minpubsub",
        "jquery",
        "CAAT"
-], function(Packet, ImageCache, World, InputState, UpdateBuffer, pubSub, $) {
+], function(Packet, ImageCache, World, InputState, Chat, UpdateBuffer, pubSub, $) {
     var Client = function(socket, actorEntity) {
         var client = this;
 
@@ -50,12 +51,20 @@ define(["client/packet",
             // Create a new input state manager
             var inputState = new InputState(socket);
 
+            var chat = (function() {
+                var eventPublisher = client;
+                return new Chat(socket, eventPublisher, function(entityId) {
+                    return world.entityForId(entityId);
+                });
+            }());
+
             // Set the new packet handler
             onmessage = function(packet) {
                 if (packet.msg === "update") {
                     var worldState = JSON.parse(packet.payload);
                     world.update(worldState);
                     inputState.update(worldState.time);
+                    chat.update(worldState);
                 } else {
                     console.log(packet);
                 }
@@ -64,7 +73,7 @@ define(["client/packet",
             // Setup keybinds
             setupKeybinds(inputState);
 
-            client.emit("ready", [director.canvas]);
+            client.emit("ready", [director.canvas, chat]);
 
             CAAT.loop();
         };
