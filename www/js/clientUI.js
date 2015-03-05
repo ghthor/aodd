@@ -197,11 +197,15 @@ define([
 
 
                     $(document).on("keydown", function(e) {
-                        gameDown(e);
+                        if (!chatDisplayed) {
+                            gameDown(e);
+                        }
                     });
 
                     $(document).on("keyup", function(e) {
-                        gameUp(e);
+                        if (!chatDisplayed) {
+                            gameUp(e);
+                        }
                     });
                 };
 
