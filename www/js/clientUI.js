@@ -98,7 +98,7 @@ define([
 
                         react.DOM.input({
                                 type: "submit",
-                                value: "send",
+                                value: "say",
                         }));
                     },
         }));
