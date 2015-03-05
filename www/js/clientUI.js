@@ -55,6 +55,7 @@ define([
                         }
 
                         this.refs.input.getDOMNode().value = "";
+                        this.setState({message: ""});
 
                         this.props.chat.sendSay(msg);
                     },
