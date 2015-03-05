@@ -58,6 +58,8 @@ define([
                         this.setState({message: ""});
 
                         this.props.chat.sendSay(msg);
+
+                        $(this.refs.input.getDOMNode()).blur();
                     },
 
                     handleChange: function(event) {
