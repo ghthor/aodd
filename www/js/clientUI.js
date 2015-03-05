@@ -66,9 +66,24 @@ define([
                         this.setState({message: event.target.value});
                     },
 
+                    componentDidUpdate: function() {
+                        if (this.props.display) {
+                            $(this.refs.input.getDOMNode()).focus();
+                        }
+                    },
+
                     render: function() {
+                        var style = {
+                            visibility: "hidden",
+                        };
+
+                        if (this.props.display) {
+                            delete style.visibility;
+                        }
+
                         return react.DOM.form({
                                 onSubmit: this.handleSubmit,
+                                style: style,
                         },
 
                         react.DOM.input({
@@ -98,7 +113,8 @@ define([
                     }, new MessageList({
                             messages: messages,
                     }), new Input({
-                            chat: this.props.chat,
+                            chat:        this.props.chat,
+                            display:     this.props.chatDisplayed,
                     }));
                 },
         }));
@@ -120,6 +136,7 @@ define([
             // Wait for the CAAT director to prepare the canvas
             client.on("ready", function(canvas, inputState, chat) {
                 var messages = [];
+                var chatDisplayed = false;
 
                 var setupKeybinds = function(inputState) {
                     var gameDown = function(e) {
@@ -141,6 +158,10 @@ define([
                         }
 
                         switch (e.keyCode) {
+                        case 13: // enter in chromium
+                            chatDisplayed = true;
+                            render();
+                            break;
                         case 32: // space in chromium
                             inputState.assailDown();
                             break;
@@ -188,6 +209,7 @@ define([
                     return react.render(new UI({
                         canvas:        canvas,
                         chat:          chat,
+                        chatDisplayed: chatDisplayed,
                         messages:      messages,
                     }), document.getElementById("client"));
                 };
