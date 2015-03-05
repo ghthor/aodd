@@ -114,33 +114,101 @@ define([
             },
         }));
 
-        var client = new Client(socket, actor);
+        (function() {
+            var client = new Client(socket, actor);
 
-        // Wait for the CAAT director to prepare the canvas
-        client.on("ready", function(canvas, chat) {
-            var messages = [];
+            // Wait for the CAAT director to prepare the canvas
+            client.on("ready", function(canvas, inputState, chat) {
+                var messages = [];
 
-            react.render(new UI({
-                canvas: canvas,
-                chat: chat,
-                messages: messages,
-            }), document.getElementById("client"));
+                var setupKeybinds = function(inputState) {
+                    var gameDown = function(e) {
+                        var char = String.fromCharCode(e.keyCode);
+                        switch (char) {
+                        case "W":
+                            inputState.movementDown("north");
+                            break;
+                        case "D":
+                            inputState.movementDown("east");
+                            break;
+                        case "S":
+                            inputState.movementDown("south");
+                            break;
+                        case "A":
+                            inputState.movementDown("west");
+                            break;
+                        default:
+                        }
 
-            client.on("chat/say", function(id, saidBy, msg, saidAt) {
-                messages.push({
-                    key: id,
-                    saidBy: saidBy,
-                    text: msg,
-                    saidAt: saidAt,
+                        switch (e.keyCode) {
+                        case 32: // space in chromium
+                            inputState.assailDown();
+                            break;
+                        default:
+                        }
+
+                    };
+
+                    var gameUp = function(e) {
+                        var char = String.fromCharCode(e.keyCode);
+                        switch (char) {
+                        case "W":
+                            inputState.movementUp("north");
+                            break;
+                        case "D":
+                            inputState.movementUp("east");
+                            break;
+                        case "S":
+                            inputState.movementUp("south");
+                            break;
+                        case "A":
+                            inputState.movementUp("west");
+                            break;
+                        }
+
+                        switch (e.keyCode) {
+                        case 32: // space in chromium
+                            inputState.assailUp();
+                            break;
+                        default:
+                        }
+                    };
+
+
+                    $(document).on("keydown", function(e) {
+                        gameDown(e);
+                    });
+
+                    $(document).on("keyup", function(e) {
+                        gameUp(e);
+                    });
+                };
+
+                var render = function() {
+                    return react.render(new UI({
+                        canvas:        canvas,
+                        chat:          chat,
+                        messages:      messages,
+                    }), document.getElementById("client"));
+                };
+
+                // Setup keybinds
+                setupKeybinds(inputState);
+
+                client.on("chat/say", function(id, saidBy, msg, saidAt) {
+                    messages.push({
+                        key:    id,
+                        saidBy: saidBy,
+                        text:   msg,
+                        saidAt: saidAt,
+                    });
+
+                    render();
                 });
 
-                react.render(new UI({
-                    canvas: canvas,
-                    chat: chat,
-                    messages: messages,
-                }), document.getElementById("client"));
+                render();
             });
-        });
+        }());
     };
 
     var clientUI = {

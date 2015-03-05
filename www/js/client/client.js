@@ -6,9 +6,8 @@ define(["client/packet",
        "client/chat",
        "client/updateBuffer",
        "lib/minpubsub",
-       "jquery",
        "CAAT"
-], function(Packet, ImageCache, World, InputState, Chat, UpdateBuffer, pubSub, $) {
+], function(Packet, ImageCache, World, InputState, Chat, UpdateBuffer, pubSub) {
     var Client = function(socket, actorEntity) {
         var client = this;
 
@@ -70,66 +69,9 @@ define(["client/packet",
                 }
             };
 
-            // Setup keybinds
-            setupKeybinds(inputState);
-
-            client.emit("ready", [director.canvas, chat]);
+            client.emit("ready", [director.canvas, inputState, chat]);
 
             CAAT.loop();
-        };
-
-        var setupKeybinds = function(inputState) {
-            $(document).on("keydown", function(e) {
-                var char = String.fromCharCode(e.keyCode);
-                switch (char) {
-                case "W":
-                    inputState.movementDown("north");
-                    break;
-                case "D":
-                    inputState.movementDown("east");
-                    break;
-                case "S":
-                    inputState.movementDown("south");
-                    break;
-                case "A":
-                    inputState.movementDown("west");
-                    break;
-                default:
-                }
-
-                switch (e.keyCode) {
-                case 32: // space in chromium
-                    inputState.assailDown();
-                    break;
-                default:
-                }
-
-            }).on("keyup", function(e) {
-                var char = String.fromCharCode(e.keyCode);
-                switch (char) {
-                case "W":
-                    inputState.movementUp("north");
-                    break;
-                case "D":
-                    inputState.movementUp("east");
-                    break;
-                case "S":
-                    inputState.movementUp("south");
-                    break;
-                case "A":
-                    inputState.movementUp("west");
-                    break;
-                default:
-                }
-
-                switch (e.keyCode) {
-                case 32: // space in chromium
-                    inputState.assailUp();
-                    break;
-                default:
-                }
-
-            });
         };
 
         // Create an image cache of all the game assests
