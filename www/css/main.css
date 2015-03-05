@@ -1,0 +1,51 @@
+body {
+    background-image: url(img/dark_geometric.png);
+}
+
+#client {
+    display: flex;
+}
+
+#client canvas {
+    width: 800px;
+    height: 600px;
+}
+
+
+.chat-box {
+    display: flex;
+    flex-direction: column;
+
+    width: 800px;
+    height: 200px;
+}
+
+.chat-message-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow-y: scroll;
+
+    margin: 0;
+    padding: 10px;
+    list-style: none;
+
+    background-color: black;
+    color: white;
+}
+
+.chat-message-list li {
+    display: block;
+
+    min-height: 20px;
+}
+
+.chat-box form {
+    display: flex;
+    flex-direction: row;
+}
+
+.chat-box form input.chat-input {
+    display: flex;
+    flex: 1;
+}
