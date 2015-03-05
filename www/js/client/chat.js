@@ -23,6 +23,7 @@ define(["underscore"], function(_) {
 
         chat.sendSay= function(msg) {
             socket.send("3::say=" + time + ":" + msg);
+            pub.emit("chat/sent/say");
         };
     };
 

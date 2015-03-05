@@ -232,6 +232,11 @@ define([
                     render();
                 });
 
+                client.on("chat/sent/say", function() {
+                    chatDisplayed = false;
+                    render();
+                });
+
                 render();
             });
         }());
