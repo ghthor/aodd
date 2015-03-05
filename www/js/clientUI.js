@@ -58,8 +58,6 @@ define([
                         this.setState({message: ""});
 
                         this.props.chat.sendSay(msg);
-
-                        $(this.refs.input.getDOMNode()).blur();
                     },
 
                     handleChange: function(event) {
@@ -69,6 +67,8 @@ define([
                     componentDidUpdate: function() {
                         if (this.props.display) {
                             $(this.refs.input.getDOMNode()).focus();
+                        } else {
+                            $(this.refs.input.getDOMNode()).blur();
                         }
                     },
 
