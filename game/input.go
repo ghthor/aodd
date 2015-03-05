@@ -39,8 +39,13 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 		return nil
 
 	case sayEntity:
-		// Destroy all say entities
-		return nil
+		// TODO parametize server fps
+		if e.saidAt+(sayEntityDuration*40) <= now {
+			// Destroy all say entities
+			return nil
+		}
+
+		return e
 
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
@@ -63,6 +68,9 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		)
 
 		return append(entities, actor.Entity())
+
+	case sayEntity:
+		return []entity.Entity{e}
 
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
@@ -391,6 +399,9 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 	return nil
 }
 
+// In seconds
+const sayEntityDuration = 3
+
 type sayEntity struct {
 	id entity.Id
 
@@ -441,7 +452,7 @@ func (e sayEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }
 func (e sayEntityState) IsDifferentFrom(other entity.State) bool {
-	return true
+	return false
 }
 
 func (a *actor) ReadChatCmd() *chatCmd {
