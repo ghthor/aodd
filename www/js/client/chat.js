@@ -10,7 +10,7 @@ define(["underscore"], function(_) {
             _.each(update.entities, function(entity) {
                 if (!_.isUndefined(entity.type)) {
                     if (entity.type === "say") {
-                        pub.emit("chat/say", [
+                        pub.emit("chat/recv/say", [
                                 entity.id,
                                 entityResolver(entity.saidBy).name,
                                 entity.msg,

@@ -221,7 +221,7 @@ define([
                 // Setup keybinds
                 setupKeybinds(inputState);
 
-                client.on("chat/say", function(id, saidBy, msg, saidAt) {
+                client.on("chat/recv/say", function(id, saidBy, msg, saidAt) {
                     messages.push({
                         key:    id,
                         saidBy: saidBy,
