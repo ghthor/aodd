@@ -2,11 +2,12 @@
 define(["underscore",
        "client/player",
        "client/bar",
+       "client/chat_bubble",
        "client/terrainMap",
        "client/sprite/human",
        "jquery",
        "CAAT"
-], function(_, Player, Bar, TerrainMap, Human, $) {
+], function(_, Player, Bar, Bubble, TerrainMap, Human, $) {
 
     var World = function(director, scene, playerEntity) {
         var world = this;
@@ -90,6 +91,17 @@ define(["underscore",
                 healthBar.setPercent(percent);
             };
 
+            var bubble = new Bubble(150, 80);
+            bubble.actor.setPositionAnchored(grid/2, -10, 0.5, 1);
+            actor.addChild(bubble.actor);
+
+            actor.setSayMsg = function(id, msg) {
+                bubble.setMsg(id, msg);
+            };
+            actor.clearSayMsg = function(id) {
+                bubble.clearMsg(id);
+            };
+
             actor.setAnimation = function(entity) { animation.setAnimation(entity); };
             return actor;
         };
@@ -146,6 +158,14 @@ define(["underscore",
                         (new Audio("asset/audio/assail.wav")).play();
                     }
 
+                    if (entity.type === "say") {
+                        if (entity.saidBy === world.player.entity.id) {
+                            world.player.setSayMsg(entity.id, entity.msg);
+                        } else {
+                            world.actors[entity.saidBy].setSayMsg(entity.id, entity.msg);
+                        }
+                    }
+
                     return; //continue
                 }
 
@@ -186,6 +206,13 @@ define(["underscore",
             // Remove entities that don't exist anymore
             _.each(update.removed, function(entity) {
                 if (!_.isUndefined(entity.type)) {
+                    if (entity.type === "say") {
+                        if (entity.saidBy === world.player.entity.id) {
+                            world.player.clearSayMsg(entity.id);
+                        } else {
+                            world.actors[entity.saidBy].clearSayMsg(entity.id);
+                        }
+                    }
                     return; //continue
                 }
 

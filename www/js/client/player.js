@@ -1,9 +1,10 @@
 // TODO This module is 100% unspecified
 define(["underscore",
        "client/bar",
+       "client/chat_bubble",
        "client/sprite/human",
        "CAAT"
-], function(_, Bar, Human) {
+], function(_, Bar, Bubble, Human) {
 
     var Player = function(director, world, entity) {
         var player = this;
@@ -34,6 +35,18 @@ define(["underscore",
             player.setHealthPercentage = function(percent) {
                 healthBar.setPercent(percent);
             };
+
+            var bubble = new Bubble(150, 80);
+            bubble.actor.setPositionAnchored(width/2, -10, 0.5, 1);
+            actor.addChild(bubble.actor);
+
+            player.setSayMsg = function(id, msg) {
+                bubble.setMsg(id, msg);
+            };
+            player.clearSayMsg = function(id) {
+                bubble.clearMsg(id);
+            };
+
 
             actor.setAnimation = function(entity) { animation.setAnimation(entity); };
             return actor;
