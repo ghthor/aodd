@@ -4,9 +4,9 @@ package main
 
 import "fmt"
 
-const _event_name = "EV_TICK"
+const _event_name = "EV_CONNECTED"
 
-var _event_index = [...]uint8{0, 7}
+var _event_index = [...]uint8{0, 12}
 
 func (i event) String() string {
 	if i < 0 || i+1 >= event(len(_event_index)) {

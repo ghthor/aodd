@@ -23,23 +23,13 @@ requirejs.config({
 
 require([
    "app",
-   "lib/minpubsub",
-], function(app, pubsub) {
+   "ui/login",
+], function(app, LoginUI) {
 
-    // An object that will respond to events published
-    // to it. This enables it to handle everything that
-    // likes to live a JS only world, like react and the
-    // rendering library.
-    var UI = function() {
-        var ui = this;
-
-        // Respond to an event
-        ui.on(app.EV_TICK, function(e) {
-            console.log(e.time);
-        });
+    var loginConn = {
+        attemptLogin: app.attemptLogin,
+        createActor: app.createActor,
     };
 
-    pubsub(UI.prototype);
-
-    app.setTickerUI(new UI());
+    app.setTickerUI(new LoginUI(loginConn));
 });
