@@ -32,7 +32,6 @@ define(["underscore",
             setPositionAnchored(scene.width/2, scene.height/2, 0.5, 0.5);
 
         scene.addChild(container);
-        world.container = container;
 
         TerrainMap.initialize(director);
 
@@ -48,7 +47,7 @@ define(["underscore",
             };
 
             // TODO remove the 40fps hardcoded server fps
-            world.container.emptyBehaviorList().
+            container.emptyBehaviorList().
                 addBehavior(new CAAT.PathBehavior().
                     setPath(new CAAT.LinearPath().
                         setInitialPosition(orig.x, orig.y).
@@ -57,7 +56,7 @@ define(["underscore",
         };
 
         world.destroy = function() {
-            world.container.destroy();
+            container.destroy();
         };
 
         world.player = new Player(director, world, playerEntity);
@@ -174,7 +173,7 @@ define(["underscore",
                     // Create a new Actor
                     actor = createEntityActor(entity);
 
-                    world.container.addChild(actor);
+                    container.addChild(actor);
 
                     world.actors[entity.id] = actor;
                 } else {
