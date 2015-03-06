@@ -24,7 +24,6 @@ define(["underscore",
             };
         };
 
-        world.director = director;
         world.scene = scene;
 
         // This container includes all the entities
