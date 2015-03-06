@@ -26,6 +26,15 @@ define([
                     this.setState({name: event.target.value});
                 },
 
+                componentDidMount: function() {
+                    if (this.state.name === "") {
+                        $(this.refs.name.getDOMNode()).focus();
+                    } else {
+                        $(this.refs.password.getDOMNode()).focus();
+                    }
+
+                },
+
                 render: function() {
                     var disabled = this.props.disabled;
 
@@ -100,6 +109,10 @@ define([
 
                 handlePasswordChange: function(event) {
                     this.setState({password: event.target.value});
+                },
+
+                componentDidMount: function() {
+                    $(this.refs.password.getDOMNode()).focus();
                 },
 
                 render: function() {
