@@ -63,7 +63,7 @@ define(["underscore",
             container.destroy();
         };
 
-        world.player = new Player(director, world, playerEntity);
+        var player = new Player(director, world, playerEntity);
 
         var createEntityActor = function(entity) {
             var cell = cellToLocal(entity.cell);
@@ -133,8 +133,8 @@ define(["underscore",
         };
 
         world.entityForId = function(id) {
-            if (world.player.entity.id === id) {
-                return world.player.entity;
+            if (player.entity.id === id) {
+                return player.entity;
             }
 
             return entities[id];
@@ -145,8 +145,8 @@ define(["underscore",
 
             // Update all entities
             _.each(update.entities, function(entity) {
-                if (entity.id === world.player.entity.id) {
-                    world.player.update(world.time, entity);
+                if (entity.id === player.entity.id) {
+                    player.update(world.time, entity);
                     return; //continue
                 }
 
@@ -156,8 +156,8 @@ define(["underscore",
                     }
 
                     if (entity.type === "say") {
-                        if (entity.saidBy === world.player.entity.id) {
-                            world.player.setSayMsg(entity.id, entity.msg);
+                        if (entity.saidBy === player.entity.id) {
+                            player.setSayMsg(entity.id, entity.msg);
                         } else {
                             actors[entity.saidBy].setSayMsg(entity.id, entity.msg);
                         }
@@ -204,8 +204,8 @@ define(["underscore",
             _.each(update.removed, function(entity) {
                 if (!_.isUndefined(entity.type)) {
                     if (entity.type === "say") {
-                        if (entity.saidBy === world.player.entity.id) {
-                            world.player.clearSayMsg(entity.id);
+                        if (entity.saidBy === player.entity.id) {
+                            player.clearSayMsg(entity.id);
                         } else {
                             actors[entity.saidBy].clearSayMsg(entity.id);
                         }
