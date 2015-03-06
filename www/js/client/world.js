@@ -35,6 +35,9 @@ define(["underscore",
 
         TerrainMap.initialize(director);
 
+        // Index of all entities currently being displayed
+        var entities = {};
+
         world.move = function(orig, dest, duration) {
             orig = {
                x: -orig.x * grid + scene.width/2,
@@ -128,7 +131,6 @@ define(["underscore",
             actor.setPositionAnchored(cell.x, cell.y, 0.5, 0.5);
         };
 
-        world.entities = {};
         world.actors = {};
 
         world.entityForId = function(id) {
@@ -136,13 +138,11 @@ define(["underscore",
                 return world.player.entity;
             }
 
-            return world.entities[id];
+            return entities[id];
         };
 
         world.update = function(update) {
             world.time = update.time;
-
-            var entities = world.entities;
 
             // Update all entities
             _.each(update.entities, function(entity) {
@@ -180,7 +180,7 @@ define(["underscore",
                     actor = world.actors[entity.id];
                 }
 
-                world.entities[entity.id] = entity;
+                entities[entity.id] = entity;
 
                 // Check if the entity is moving
                 if (!_.isNull(entity.pathAction)) {
@@ -217,7 +217,7 @@ define(["underscore",
                 var actor = world.actors[entity.id];
                 actor.destroy();
 
-                delete world.entities[entity.id];
+                delete entities[entity.id];
                 delete world.actors[entity.id];
 
                 console.log(entity);
