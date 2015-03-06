@@ -62,6 +62,25 @@ func (e ErrUnexpectedPacket) Error() string {
 	return e.String()
 }
 
+//go:generate stringer -type=RequestMsg
+type RequestMsg int
+
+const (
+	REQ_LOGIN RequestMsg = iota
+	REQ_CREATE
+)
+
+//go:generate stringer -type=ResponseMsg
+type ResponseMsg int
+
+const (
+	RESP_AUTH_FAILED ResponseMsg = iota
+	RESP_ACTOR_DOESNT_EXIST
+
+	RESP_LOGIN_SUCCESS
+	RESP_CREATE_SUCCESS
+)
+
 // An implementation of packetHandler which
 // will handle an actor logging in.
 func loginHandler(c *conn) (packetHandler, error) {
@@ -77,10 +96,13 @@ func loginHandler(c *conn) (packetHandler, error) {
 	switch packet.Type {
 	case encoding.PT_JSON:
 		switch packet.Msg {
-		case "login":
+
+		case REQ_LOGIN.String():
 			return c.respondToLoginReq(packet)
-		case "create":
+
+		case REQ_CREATE.String():
 			return c.respondToCreateReq(packet)
+
 		default:
 		}
 	default:
@@ -151,7 +173,7 @@ func (c *conn) respondToLoginReq(p encoding.Packet) (packetHandler, error) {
 
 	actor, exists := c.datastore.ActorExists(r.Name)
 	if !exists {
-		serr := c.SendJson("actorDoesntExist", r)
+		serr := c.SendJson(RESP_ACTOR_DOESNT_EXIST.String(), r)
 		if serr != nil {
 			return nil, serr
 		}
@@ -160,7 +182,7 @@ func (c *conn) respondToLoginReq(p encoding.Packet) (packetHandler, error) {
 	}
 
 	if !actor.Authenticate(r.Name, r.Password) {
-		serr := c.SendMessage("authFailed", r.Name)
+		serr := c.SendMessage(RESP_AUTH_FAILED.String(), r.Name)
 		if serr != nil {
 			return nil, serr
 		}
@@ -170,7 +192,7 @@ func (c *conn) respondToLoginReq(p encoding.Packet) (packetHandler, error) {
 
 	c.loginActor(actor)
 
-	serr := c.SendJson("loginSuccess", c.actor.ToState())
+	serr := c.SendJson(RESP_LOGIN_SUCCESS.String(), c.actor.ToState())
 	if serr != nil {
 		return nil, serr
 	}
@@ -214,7 +236,7 @@ func (c *conn) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
 
 	c.loginActor(actor)
 
-	serr := c.SendJson("createSuccess", c.actor.ToState())
+	serr := c.SendJson(RESP_CREATE_SUCCESS.String(), c.actor.ToState())
 	if serr != nil {
 		return nil, serr
 	}
