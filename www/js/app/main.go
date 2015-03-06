@@ -47,10 +47,17 @@ func main() {
 	})
 }
 
+// This function will be called once by requirejs
+// from the shim configuration. The object that is
+// returned here is what will be available as the
+// require("app") module.
 func initialize(settings *js.Object) jsObject {
 	return jsObject{
 		"moduleKey": moduleKey,
 
+		// Provide a function to dial the server.
+		// pub should be an object that has been
+		// extended with minpubsub.
 		"dial": func(pub *js.Object) {
 			if pub.Get("emit").String() == undefined {
 				log.Println("invalid publisher: missing emit() function")
