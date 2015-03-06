@@ -161,7 +161,11 @@ define([
         var ui = this;
 
         ui.on(app.EV_CONNECTED, function(conn) {
-            ui.on("authFailed", function(name) {
+            ui.on(app.EV_PACKET, function(packet) {
+                console.log(packet);
+            });
+
+            ui.on(app.EV_AUTH_FAILED, function(name) {
                 console.log("auth failed for", name);
                 react.render(new LoginForm({
                             conn:     conn,
@@ -169,7 +173,7 @@ define([
                 }), container).setState({name: name});
             });
 
-            ui.on("actorDoesntExist", function(name, password) {
+            ui.on(app.EV_ACTOR_DOESNT_EXIST, function(name, password) {
                 console.log("actor doesn't exist");
                 react.render(new CreateActorForm({
                             conn:     conn,
@@ -181,12 +185,12 @@ define([
                 }), container).setState({password: ""});
             });
 
-            var loginSuccess = function(actor, socket) {
-                console.log("login sucess", actor, socket);
+            var loginSuccess = function(actor) {
+                console.log("login sucess", actor);
             };
 
-            ui.on("loginSuccess", loginSuccess);
-            ui.on("createSuccess", loginSuccess);
+            ui.on(app.EV_LOGIN_SUCCESS, loginSuccess);
+            ui.on(app.EV_CREATE_SUCCESS, loginSuccess);
 
             react.render(new LoginForm({conn: conn, disabled: false}), container);
         });
