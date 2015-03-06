@@ -38,6 +38,8 @@ const (
 // window.gopherjsApplication
 const moduleKey = "gopherjsApplication"
 
+const undefined = "undefined"
+
 func main() {
 	js.Global.Set(moduleKey, jsObject{
 		"moduleKey":  moduleKey,
@@ -50,6 +52,11 @@ func initialize(settings *js.Object) jsObject {
 		"moduleKey": moduleKey,
 
 		"dial": func(pub *js.Object) {
+			if pub.Get("emit").String() == undefined {
+				log.Println("invalid publisher: missing emit() function")
+				return
+			}
+
 			go func() {
 				wsUrl := settings.Get("websocketURL").String()
 
