@@ -29,7 +29,6 @@ define(["client/player",
         this.scene = scene;
         this.grid = stage.grid;
     };
-    MockWorld.prototype.move = function() {};
 
     var describeActors = function(ready) {
         // Async Setup
@@ -61,8 +60,17 @@ define(["client/player",
                         pathAction: null,
                         cell:        {x: 0, y: 0}
                     };
+
                     world = new MockWorld(scene);
-                    player = new Player(null, world, playerEntity);
+
+                    player = new Player({
+                            director: null,
+                            scene:    scene,
+                            gridSz:   world.grid,
+
+                            entity:     playerEntity,
+                            movePlayer: function() {},
+                    });
                 });
 
                 afterEach(function() {
@@ -92,27 +100,6 @@ define(["client/player",
                     // Positioning
                     expect(args[1]).toBe(stage.width/2);
                     expect(args[2]).toBe(stage.height/2);
-                });
-
-                it("must move the world container when the player recieves an update with a new pathAction", function() {
-                    player.createActor = function() {
-                        return { setAnimation: jasmine.createSpy("setAnimation") };
-                    };
-
-                    player.setHealthPercentage = function(){};
-
-                    playerEntity.pathAction = {
-                        orig: playerEntity.cell,
-                        dest: {x: 0, y: 1},
-                        start: 0,
-                        end: 10
-                    };
-
-                    spyOn(world, "move");
-                    player.update(0, playerEntity);
-
-                    expect(world.move).toHaveBeenCalled();
-                    expect(world.move.calls.length).toBe(1);
                 });
             });
 

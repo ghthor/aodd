@@ -33,13 +33,17 @@ define(["underscore",
 
         scene.addChild(container);
 
+        world.destroy = function() {
+            container.destroy();
+        };
+
         TerrainMap.initialize(director);
 
         // Index of all entities currently being displayed
         var entities = {};
         var actors = {};
 
-        world.move = function(orig, dest, duration) {
+        var movePlayer = function(orig, dest, duration) {
             orig = {
                x: -orig.x * grid + scene.width/2,
                y:  orig.y * grid + scene.height/2
@@ -59,11 +63,14 @@ define(["underscore",
                     setDelayTime(0, duration * 1000.0/40.0));
         };
 
-        world.destroy = function() {
-            container.destroy();
-        };
+        var player = new Player({
+                director: director,
+                scene:    scene,
+                gridSz:   grid,
 
-        var player = new Player(director, world, playerEntity);
+                entity:     playerEntity,
+                movePlayer: movePlayer,
+        });
 
         var createEntityActor = function(entity) {
             var cell = cellToLocal(entity.cell);
