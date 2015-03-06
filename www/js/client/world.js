@@ -37,6 +37,7 @@ define(["underscore",
 
         // Index of all entities currently being displayed
         var entities = {};
+        var actors = {};
 
         world.move = function(orig, dest, duration) {
             orig = {
@@ -118,20 +119,18 @@ define(["underscore",
                 setPath(path).
                 setDelayTime(0, duration * 1000/40);
 
-            var actor = world.actors[entity.id];
+            var actor = actors[entity.id];
             actor.emptyBehaviorList();
             actor.addBehavior(behavior);
         };
 
         var actorUpdatePosition = function(entity) {
             var cell = cellToLocal(entity.cell);
-            var actor = world.actors[entity.id];
+            var actor = actors[entity.id];
             actor.emptyBehaviorList();
             // TODO put this behind a comparision
             actor.setPositionAnchored(cell.x, cell.y, 0.5, 0.5);
         };
-
-        world.actors = {};
 
         world.entityForId = function(id) {
             if (world.player.entity.id === id) {
@@ -160,7 +159,7 @@ define(["underscore",
                         if (entity.saidBy === world.player.entity.id) {
                             world.player.setSayMsg(entity.id, entity.msg);
                         } else {
-                            world.actors[entity.saidBy].setSayMsg(entity.id, entity.msg);
+                            actors[entity.saidBy].setSayMsg(entity.id, entity.msg);
                         }
                     }
 
@@ -175,9 +174,9 @@ define(["underscore",
 
                     container.addChild(actor);
 
-                    world.actors[entity.id] = actor;
+                    actors[entity.id] = actor;
                 } else {
-                    actor = world.actors[entity.id];
+                    actor = actors[entity.id];
                 }
 
                 entities[entity.id] = entity;
@@ -208,17 +207,17 @@ define(["underscore",
                         if (entity.saidBy === world.player.entity.id) {
                             world.player.clearSayMsg(entity.id);
                         } else {
-                            world.actors[entity.saidBy].clearSayMsg(entity.id);
+                            actors[entity.saidBy].clearSayMsg(entity.id);
                         }
                     }
                     return; //continue
                 }
 
-                var actor = world.actors[entity.id];
+                var actor = actors[entity.id];
                 actor.destroy();
 
                 delete entities[entity.id];
-                delete world.actors[entity.id];
+                delete actors[entity.id];
 
                 console.log(entity);
             });
