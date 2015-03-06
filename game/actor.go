@@ -9,7 +9,7 @@ import (
 )
 
 // Object stored in the quad tree
-type actorEntity struct {
+type ActorEntity struct {
 	id      entity.Id
 	actorId rpg2d.ActorId
 
@@ -50,7 +50,7 @@ type actorEntityState struct {
 type actor struct {
 	id rpg2d.ActorId
 
-	actorEntity
+	ActorEntity
 	undoLastMoveAction func()
 
 	// Store the last assail me made
@@ -60,13 +60,13 @@ type actor struct {
 }
 
 func (a actor) Id() rpg2d.ActorId      { return a.id }
-func (a *actor) Entity() entity.Entity { return a.actorEntity }
+func (a *actor) Entity() entity.Entity { return a.ActorEntity }
 
-func (e actorEntity) ActorId() rpg2d.ActorId { return e.actorId }
+func (e ActorEntity) ActorId() rpg2d.ActorId { return e.actorId }
 
-func (e actorEntity) Id() entity.Id    { return e.id }
-func (e actorEntity) Cell() coord.Cell { return e.cell }
-func (e actorEntity) Bounds() coord.Bounds {
+func (e ActorEntity) Id() entity.Id    { return e.id }
+func (e ActorEntity) Cell() coord.Cell { return e.cell }
+func (e ActorEntity) Bounds() coord.Bounds {
 	bounds := coord.Bounds{
 		e.cell,
 		e.cell,
@@ -79,7 +79,7 @@ func (e actorEntity) Bounds() coord.Bounds {
 	return bounds
 }
 
-func (e actorEntity) ToState() entity.State {
+func (e ActorEntity) ToState() entity.State {
 	var pathAction *coord.PathActionJson
 
 	if e.pathAction != nil {
@@ -106,7 +106,7 @@ func (e actorEntity) ToState() entity.State {
 	}
 }
 
-func (e actorEntity) String() string {
+func (e ActorEntity) String() string {
 	return fmt.Sprintf("{id %d, cell%v, %v, speed:%d, pathAction:%v}", e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 

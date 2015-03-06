@@ -229,7 +229,7 @@ func (c *conn) loginActor(dsactor datastore.Actor) {
 	c.actor = &actor{
 		id: dsactor.Id,
 
-		actorEntity: actorEntity{
+		ActorEntity: ActorEntity{
 			id:      nextId(),
 			actorId: dsactor.Id,
 
