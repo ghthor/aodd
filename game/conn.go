@@ -274,7 +274,7 @@ func (c conn) Actor() datastore.Actor {
 func newWebsocketHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		c := conn{
-			Conn: protocol.NewWebsocketConn(ws),
+			Conn: protocol.NewConn(ws),
 
 			sim:       sim,
 			datastore: datastore,

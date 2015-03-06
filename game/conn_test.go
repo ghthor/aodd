@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 
@@ -94,13 +95,13 @@ func DescribeActorConn(c gospec.Context) {
 	ds.AddActor("actor", "password")
 
 	conn := &conn{
-		Conn: protocol.NewWebsocketConn(wsServer),
+		Conn: protocol.NewConn(wsServer),
 
 		sim:       mockSimulation{},
 		datastore: ds,
 	}
 
-	client := protocol.NewWebsocketConn(ws)
+	client := protocol.NewConn(ws)
 
 	var packet encoding.Packet
 
@@ -158,10 +159,7 @@ func DescribeActorConn(c gospec.Context) {
 			}()
 
 			err := conn.startPacketHandler()
-			c.Assume(err, Not(IsNil))
-
-			_, isAnDisconnectionError := err.(*protocol.DisconnectionError)
-			c.Expect(isAnDisconnectionError, IsTrue)
+			c.Expect(err, Equals, io.EOF)
 		})
 
 		c.Specify("when the connection is lost after the actor logs in", func() {
@@ -172,10 +170,7 @@ func DescribeActorConn(c gospec.Context) {
 			}()
 
 			err := conn.startPacketHandler()
-			c.Assume(err, Not(IsNil))
-
-			_, isAnDisconnectionError := err.(*protocol.DisconnectionError)
-			c.Expect(isAnDisconnectionError, IsTrue)
+			c.Expect(err, Equals, io.EOF)
 		})
 	})
 
