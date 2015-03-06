@@ -60,6 +60,9 @@ func initialize(settings *js.Object) jsObject {
 
 				conn := client.NewConn(ws)
 
+				// Emit a connected event and a object the
+				// login form can use to send messages to the
+				// server.
 				eventPublisher{pub}.Emit(EV_CONNECTED, jsObject{
 					"attemptLogin": conn.AttemptLogin,
 					"createActor":  conn.CreateActor,
