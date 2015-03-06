@@ -157,41 +157,39 @@ define([
                 }
     }));
 
-    var container = document.getElementById("client");
-
-    var LoginUI = function(conn) {
+    var LoginUI = function(container) {
         var ui = this;
 
-        ui.on(app.EV_CONNECTED, function() {
+        ui.on(app.EV_CONNECTED, function(conn) {
+            ui.on("authFailed", function(name) {
+                console.log("auth failed for", name);
+                react.render(new LoginForm({
+                            conn:     conn,
+                            disabled: false
+                }), container).setState({name: name});
+            });
+
+            ui.on("actorDoesntExist", function(name, password) {
+                console.log("actor doesn't exist");
+                react.render(new CreateActorForm({
+                            conn:     conn,
+                            actor: {
+                                name:     name,
+                                password: password
+                            },
+                            disabled: false
+                }), container).setState({password: ""});
+            });
+
+            var loginSuccess = function(actor, socket) {
+                console.log("login sucess", actor, socket);
+            };
+
+            ui.on("loginSuccess", loginSuccess);
+            ui.on("createSuccess", loginSuccess);
+
             react.render(new LoginForm({conn: conn, disabled: false}), container);
         });
-
-        ui.on("authFailed", function(name) {
-            console.log("auth failed for", name);
-            react.render(new LoginForm({
-                        conn:     conn,
-                        disabled: false
-            }), container).setState({name: name});
-        });
-
-        ui.on("actorDoesntExist", function(name, password) {
-            console.log("actor doesn't exist");
-            react.render(new CreateActorForm({
-                        conn:     conn,
-                        actor: {
-                            name:     name,
-                            password: password
-                        },
-                        disabled: false
-            }), container).setState({password: ""});
-        });
-
-        var loginSuccess = function(actor, socket) {
-            console.log("login sucess", actor, socket);
-        };
-
-        ui.on("loginSuccess", loginSuccess);
-        ui.on("createSuccess", loginSuccess);
     };
 
     pubsub(LoginUI.prototype);

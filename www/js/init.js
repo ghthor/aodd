@@ -15,7 +15,11 @@ requirejs.config({
         },
         
         "app": {
+            deps: ["client/settings"],
             exports: "gopherjsApplication",
+            init: function(settings) {
+                return this.gopherjsApplication.initialize(settings);
+            },
         },
     },
     priority: ["jquery"],
@@ -25,11 +29,7 @@ require([
    "app",
    "ui/login",
 ], function(app, LoginUI) {
+    var container = document.getElementById("client");
 
-    var loginConn = {
-        attemptLogin: app.attemptLogin,
-        createActor: app.createActor,
-    };
-
-    app.setTickerUI(new LoginUI(loginConn));
+    app.dial(new LoginUI(container));
 });
