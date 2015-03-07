@@ -112,7 +112,7 @@ func (c *Conn) handleLogin() (stateFn, error) {
 // and send the relevant data out through a
 // channel. This method is intended invoked as
 // a go routine.
-func (c *Conn) PacketHandler() {
+func (c *Conn) StartHandling() {
 	var err error
 
 	f := c.handleLogin

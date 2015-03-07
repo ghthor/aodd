@@ -121,7 +121,7 @@ func initialize(settings *js.Object) jsObject {
 				}()
 
 				// Start the packet handlering concurrently
-				go conn.PacketHandler()
+				go conn.StartHandling()
 
 				// Emit a connected event and a object the
 				// login form can use to send messages to the
