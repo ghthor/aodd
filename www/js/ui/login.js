@@ -61,6 +61,10 @@ define([
                                 required: true,
                                 value:    name,
                                 onChange: this.handleNameChange,
+
+                                style: {
+                                    marginBottom: "15px",
+                                },
                                 disabled: disabled
                         })
                     ),
@@ -76,6 +80,10 @@ define([
 
                                 type: "password",
                                 required: true,
+
+                                style: {
+                                    marginBottom: "15px",
+                                },
                                 disabled: disabled
                         })
                     ),
@@ -152,7 +160,10 @@ define([
 
                                     onChange: this.handlePasswordChange,
 
-                                    style: { color: color },
+                                    style: {
+                                        color: color,
+                                        marginBottom: "15px",
+                                    },
                                     value: password
                             })
                         ),
