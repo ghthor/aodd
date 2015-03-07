@@ -110,8 +110,8 @@ func (c *Conn) handleLogin() (stateFn, error) {
 // This method blocks in an infinite loop
 // that will read packets off the protocol.Conn
 // and send the relevant data out through a
-// channel. This method is intended invoked as
-// a go routine.
+// channel. This method is intended
+// to be invoked as a go routine.
 func (c *Conn) StartHandling() {
 	var err error
 
