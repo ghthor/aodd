@@ -323,7 +323,7 @@ type assailEntity struct {
 	damage int
 }
 
-type assailEntityState struct {
+type AssailEntityState struct {
 	Type string `json:"type"`
 
 	EntityId entity.Id `json:"id"`
@@ -341,7 +341,7 @@ func (e assailEntity) Bounds() coord.Bounds {
 }
 
 func (e assailEntity) ToState() entity.State {
-	return assailEntityState{
+	return AssailEntityState{
 		Type: "assail",
 
 		EntityId: e.id,
@@ -353,12 +353,12 @@ func (e assailEntity) ToState() entity.State {
 	}
 }
 
-func (e assailEntityState) Id() entity.Id { return e.EntityId }
-func (e assailEntityState) Bounds() coord.Bounds {
+func (e AssailEntityState) Id() entity.Id { return e.EntityId }
+func (e AssailEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }
 
-func (e assailEntityState) IsDifferentFrom(entity.State) bool {
+func (e AssailEntityState) IsDifferentFrom(entity.State) bool {
 	return true
 }
 
@@ -413,7 +413,7 @@ type sayEntity struct {
 	msg string
 }
 
-type sayEntityState struct {
+type SayEntityState struct {
 	Type string `json:"type"`
 
 	EntityId entity.Id `json:"id"`
@@ -433,7 +433,7 @@ func (e sayEntity) Bounds() coord.Bounds {
 }
 
 func (e sayEntity) ToState() entity.State {
-	return sayEntityState{
+	return SayEntityState{
 		Type: "say",
 
 		EntityId: e.id,
@@ -447,11 +447,11 @@ func (e sayEntity) ToState() entity.State {
 	}
 }
 
-func (e sayEntityState) Id() entity.Id { return e.EntityId }
-func (e sayEntityState) Bounds() coord.Bounds {
+func (e SayEntityState) Id() entity.Id { return e.EntityId }
+func (e SayEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }
-func (e sayEntityState) IsDifferentFrom(other entity.State) bool {
+func (e SayEntityState) IsDifferentFrom(other entity.State) bool {
 	return false
 }
 
