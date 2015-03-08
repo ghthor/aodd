@@ -65,12 +65,12 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 
 		// Resolve type of entity in collision.A
 		switch e := c.A.(type) {
-		case ActorEntity:
+		case actorEntity:
 			// Resolve the type of entity in collision.B
 			entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c, now)
 		default:
 			switch e := c.B.(type) {
-			case ActorEntity:
+			case actorEntity:
 				// Resolve the type of entity in collision.B
 				entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.A, c, now)
 			}
@@ -92,7 +92,7 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 
 func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision, now stime.Time) []entity.Entity {
 	switch e := with.(type) {
-	case ActorEntity:
+	case actorEntity:
 		b := phase.actorIndex[e.ActorId()]
 
 		return phase.solveActorActor(&solverActorActor{}, a, b, collision)
@@ -105,7 +105,7 @@ func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, colli
 
 func (phase *narrowPhase) solveActorAssail(a *actor, assail assailEntity, collision quad.Collision, now stime.Time) []entity.Entity {
 	// Don't damage yourself
-	if assail.spawnedBy == a.ActorEntity.Id() {
+	if assail.spawnedBy == a.actorEntity.Id() {
 		return []entity.Entity{a.Entity()}
 	}
 
@@ -184,7 +184,7 @@ type node struct {
 // which entity is occupying the destination of the other's path action.
 func followGraph(a, b *actor, collision quad.Collision) node {
 	// normalize a, b to collision.[A, B]
-	if a.ActorEntity.Id() != collision.A.Id() {
+	if a.actorEntity.Id() != collision.A.Id() {
 		a, b = b, a
 	}
 
@@ -230,10 +230,10 @@ func otherEntityIn(a *actor, collision quad.Collision) entity.Entity {
 
 	// figure out is prioritized actor is A or B in the collision
 	switch {
-	case a.ActorEntity.Id() != collision.A.Id():
+	case a.actorEntity.Id() != collision.A.Id():
 		e = collision.A
 
-	case a.ActorEntity.Id() != collision.B.Id():
+	case a.actorEntity.Id() != collision.B.Id():
 		e = collision.B
 
 	default:
@@ -437,7 +437,7 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 		e := otherEntityIn(node.actor, c)
 
 		switch e := e.(type) {
-		case ActorEntity:
+		case actorEntity:
 			actor := phase.actorIndex[e.ActorId()]
 
 			// Detect cycles

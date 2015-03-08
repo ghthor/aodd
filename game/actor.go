@@ -9,7 +9,7 @@ import (
 )
 
 // Object stored in the quad tree
-type ActorEntity struct {
+type actorEntity struct {
 	id      entity.Id
 	actorId rpg2d.ActorId
 
@@ -28,7 +28,7 @@ type ActorEntity struct {
 	mp, mpMax int
 }
 
-type actorEntityState struct {
+type ActorEntityState struct {
 	EntityId entity.Id `json:"id"`
 
 	Name string `json:"name"`
@@ -50,7 +50,7 @@ type actorEntityState struct {
 type actor struct {
 	id rpg2d.ActorId
 
-	ActorEntity
+	actorEntity
 	undoLastMoveAction func()
 
 	// Store the last assail me made
@@ -60,13 +60,13 @@ type actor struct {
 }
 
 func (a actor) Id() rpg2d.ActorId      { return a.id }
-func (a *actor) Entity() entity.Entity { return a.ActorEntity }
+func (a *actor) Entity() entity.Entity { return a.actorEntity }
 
-func (e ActorEntity) ActorId() rpg2d.ActorId { return e.actorId }
+func (e actorEntity) ActorId() rpg2d.ActorId { return e.actorId }
 
-func (e ActorEntity) Id() entity.Id    { return e.id }
-func (e ActorEntity) Cell() coord.Cell { return e.cell }
-func (e ActorEntity) Bounds() coord.Bounds {
+func (e actorEntity) Id() entity.Id    { return e.id }
+func (e actorEntity) Cell() coord.Cell { return e.cell }
+func (e actorEntity) Bounds() coord.Bounds {
 	bounds := coord.Bounds{
 		e.cell,
 		e.cell,
@@ -79,7 +79,7 @@ func (e ActorEntity) Bounds() coord.Bounds {
 	return bounds
 }
 
-func (e ActorEntity) ToState() entity.State {
+func (e actorEntity) ToState() entity.State {
 	var pathAction *coord.PathActionJson
 
 	if e.pathAction != nil {
@@ -87,7 +87,7 @@ func (e ActorEntity) ToState() entity.State {
 		pathAction = &pa
 	}
 
-	return actorEntityState{
+	return ActorEntityState{
 		EntityId: e.id,
 
 		Name: e.name,
@@ -106,14 +106,14 @@ func (e ActorEntity) ToState() entity.State {
 	}
 }
 
-func (e ActorEntity) String() string {
+func (e actorEntity) String() string {
 	return fmt.Sprintf("{id %d, cell%v, %v, speed:%d, pathAction:%v}", e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 
-func (e actorEntityState) Id() entity.Id        { return e.EntityId }
-func (e actorEntityState) Bounds() coord.Bounds { return e.bounds }
-func (e actorEntityState) IsDifferentFrom(other entity.State) (different bool) {
-	o := other.(actorEntityState)
+func (e ActorEntityState) Id() entity.Id        { return e.EntityId }
+func (e ActorEntityState) Bounds() coord.Bounds { return e.bounds }
+func (e ActorEntityState) IsDifferentFrom(other entity.State) (different bool) {
+	o := other.(ActorEntityState)
 
 	switch {
 	case e.Name != o.Name:

@@ -15,8 +15,8 @@ type Conn struct {
 	RespAuthFailed       chan<- RespAuthFailed
 	RespActorDoesntExist chan<- RespActorDoesntExist
 
-	RespLoginSuccess  chan<- game.ActorEntity
-	RespCreateSuccess chan<- game.ActorEntity
+	RespLoginSuccess  chan<- game.ActorEntityState
+	RespCreateSuccess chan<- game.ActorEntityState
 
 	Packet chan<- encoding.Packet
 
@@ -73,7 +73,7 @@ func (c *Conn) handleLogin() (stateFn, error) {
 
 	case game.RESP_LOGIN_SUCCESS.String():
 		if c.RespLoginSuccess != nil {
-			var actorEntity game.ActorEntity
+			var actorEntity game.ActorEntityState
 
 			err := json.Unmarshal([]byte(p.Payload), &actorEntity)
 			if err != nil && c.Error != nil {
@@ -86,7 +86,7 @@ func (c *Conn) handleLogin() (stateFn, error) {
 
 	case game.RESP_CREATE_SUCCESS.String():
 		if c.RespCreateSuccess != nil {
-			var actorEntity game.ActorEntity
+			var actorEntity game.ActorEntityState
 
 			err := json.Unmarshal([]byte(p.Payload), &actorEntity)
 			if err != nil && c.Error != nil {

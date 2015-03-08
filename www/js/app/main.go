@@ -93,8 +93,8 @@ func initialize(settings *js.Object) jsObject {
 				var evAuthFailed <-chan client.RespAuthFailed
 				var evActorDoesntExist <-chan client.RespActorDoesntExist
 
-				var evLoginSuccess <-chan game.ActorEntity
-				var evCreateSuccess <-chan game.ActorEntity
+				var evLoginSuccess <-chan game.ActorEntityState
+				var evCreateSuccess <-chan game.ActorEntityState
 
 				var evHandledPacket <-chan encoding.Packet
 				var evError <-chan error
@@ -103,8 +103,8 @@ func initialize(settings *js.Object) jsObject {
 					authFailedCh := make(chan client.RespAuthFailed)
 					actorDoesntExistCh := make(chan client.RespActorDoesntExist)
 
-					logginSuccessCh := make(chan game.ActorEntity)
-					createSuccessCh := make(chan game.ActorEntity)
+					logginSuccessCh := make(chan game.ActorEntityState)
+					createSuccessCh := make(chan game.ActorEntityState)
 
 					packetCh := make(chan encoding.Packet)
 					errCh := make(chan error)

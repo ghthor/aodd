@@ -22,7 +22,7 @@ type inputPhase struct {
 
 func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 	switch e := e.(type) {
-	case ActorEntity:
+	case actorEntity:
 		actor := phase.index[e.ActorId()]
 
 		// Remove any movement actions that have completed
@@ -54,7 +54,7 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 
 func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
 	switch e := e.(type) {
-	case ActorEntity:
+	case actorEntity:
 		var entities []entity.Entity
 		actor := phase.index[e.ActorId()]
 
@@ -384,7 +384,7 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 		e := assailEntity{
 			id: phase.nextId(),
 
-			spawnedBy: a.ActorEntity.Id(),
+			spawnedBy: a.actorEntity.Id(),
 			spawnedAt: now,
 
 			cell: a.Cell().Neighbor(a.facing),
@@ -470,7 +470,7 @@ func (phase inputPhase) processChatCmd(a *actor, now stime.Time) []entity.Entity
 		return []entity.Entity{sayEntity{
 			id: phase.nextId(),
 
-			saidBy: a.ActorEntity.Id(),
+			saidBy: a.actorEntity.Id(),
 			saidAt: now,
 
 			cell: a.Cell(),

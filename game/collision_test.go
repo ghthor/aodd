@@ -25,7 +25,7 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
 			id: 0,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      0,
 				actorId: 0,
 
@@ -36,7 +36,7 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 
 		1: &actor{
 			id: 1,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      1,
 				actorId: 1,
 
@@ -93,7 +93,7 @@ func (t spec_1move_1stand) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
 			id: 0,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      0,
 				actorId: 0,
 				cell:    t.path.Orig,
@@ -103,7 +103,7 @@ func (t spec_1move_1stand) runSpec(c gospec.Context) {
 
 		1: &actor{
 			id: 1,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      1,
 				actorId: 1,
 				cell:    t.cell,
@@ -177,7 +177,7 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
 			id: 0,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      0,
 				actorId: 0,
 				cell:    t.paths[0].Orig,
@@ -187,7 +187,7 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 
 		1: &actor{
 			id: 1,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      1,
 				actorId: 1,
 				cell:    t.paths[1].Orig,
@@ -197,7 +197,7 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 
 		2: &actor{
 			id: 2,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      2,
 				actorId: 2,
 				cell:    t.cell,
@@ -291,7 +291,7 @@ func (t spec_3move) runSpec(c gospec.Context) {
 	index := actorIndex{
 		0: &actor{
 			id: 0,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      0,
 				actorId: 0,
 				cell:    t.paths[0].Orig,
@@ -301,7 +301,7 @@ func (t spec_3move) runSpec(c gospec.Context) {
 
 		1: &actor{
 			id: 1,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      1,
 				actorId: 1,
 				cell:    t.paths[1].Orig,
@@ -311,7 +311,7 @@ func (t spec_3move) runSpec(c gospec.Context) {
 
 		2: &actor{
 			id: 2,
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      2,
 				actorId: 2,
 				cell:    t.paths[2].Orig,
@@ -461,7 +461,7 @@ func (t spec_allMoving) runSpec(c gospec.Context) {
 		index[rpg2d.ActorId(i)] = &actor{
 			id: rpg2d.ActorId(i),
 
-			ActorEntity: ActorEntity{
+			actorEntity: actorEntity{
 				id:      entity.Id(i),
 				actorId: rpg2d.ActorId(i),
 				cell:    p.Orig,
