@@ -163,7 +163,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	datastore := datastore.NewMemDatastore()
 
-	wsRoute := "/actor/socket"
+	wsRoute := "/actor/socket/gob"
 	var wsUrl string
 	if c.IsHTTPS {
 		wsUrl = "wss://"
@@ -191,7 +191,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/asset/", http.StripPrefix("/asset/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newWebsocketHandler(simulation{
+	mux.Handle(wsRoute, newGobWebsocketHandler(simulation{
 		actorIndex,
 		runningSim,
 	}, datastore))
