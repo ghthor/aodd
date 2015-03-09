@@ -19,6 +19,7 @@ type EncodedType int
 //go:generate stringer -type=EncodedType
 const (
 	ET_ERROR EncodedType = iota
+	ET_DISCONNECT
 
 	ET_REQ_LOGIN
 	ET_REQ_CREATE
@@ -41,6 +42,7 @@ type RespAuthFailed struct{ Name string }
 type RespActorExists struct{ Name string }
 type RespActorDoesntExist struct{ Name, Password string }
 
+const RespDisconnect = "disconnected"
 
 func init() {
 	// Pre login Request/Response types
