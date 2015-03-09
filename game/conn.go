@@ -244,6 +244,22 @@ func (c *conn) respondToCreateReq(p encoding.Packet) (packetHandler, error) {
 	return inputHandler, nil
 }
 
+type updateType int
+
+//go:generate stringer -type=updateType
+const (
+	UT_UPDATE_FULL updateType = iota
+	UT_UPDATE_DIFF
+)
+
+func (c conn) WriteWorldState(s rpg2d.WorldState) error {
+	return c.SendJson(UT_UPDATE_FULL.String(), s)
+}
+
+func (c conn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
+	return c.SendJson(UT_UPDATE_DIFF.String(), s)
+}
+
 // Creates a new actor struct using a datastore.Actor struct.
 // Adds this new actor into the simulation.
 func (c *conn) loginActor(dsactor datastore.Actor) {

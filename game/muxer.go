@@ -1,10 +1,14 @@
 package game
 
 import (
-	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 )
+
+type stateWriter interface {
+	WriteWorldState(rpg2d.WorldState) error
+	WriteWorldStateDiff(rpg2d.WorldStateDiff) error
+}
 
 type actorConn struct {
 	// Comm interface to muxer used by SubmitCmd() method
@@ -16,20 +20,21 @@ type actorConn struct {
 	readUseCmd  <-chan *useCmd
 	readChatCmd <-chan *chatCmd
 
-	// Comm interface to muxer used by SendState() method
+	// Comm interface to muxer used to send world states
 	sendState chan<- *rpg2d.WorldState
+	sendDiff  chan<- *rpg2d.WorldStateDiff
 
 	// Comm interface to muxer used by stopIO() method
 	stop chan<- chan<- struct{}
 
 	// External connection used to publish the world state
-	protocol.Conn
+	conn stateWriter
 
-	lastState rpg2d.WorldState
+	lastState *rpg2d.WorldState
 }
 
-func newActorConn(conn protocol.Conn) actorConn {
-	return actorConn{Conn: conn}
+func newActorConn(conn stateWriter) actorConn {
+	return actorConn{conn: conn}
 }
 
 func (a *actorConn) startIO() {
@@ -42,7 +47,8 @@ func (a *actorConn) startIO() {
 	useCmdCh := make(chan *useCmd)
 	chatCmdCh := make(chan *chatCmd)
 
-	outputCh := make(chan *rpg2d.WorldState)
+	stateOutputCh := make(chan *rpg2d.WorldState)
+	diffOutputCh := make(chan *rpg2d.WorldStateDiff)
 	stopCh := make(chan chan<- struct{})
 
 	// Set the channels accessible to the outside world
@@ -54,7 +60,8 @@ func (a *actorConn) startIO() {
 	a.readUseCmd = useCmdCh
 	a.readChatCmd = chatCmdCh
 
-	a.sendState = outputCh
+	a.sendState = stateOutputCh
+	a.sendDiff = diffOutputCh
 	a.stop = stopCh
 
 	// Establish the channel endpoints used inside the go routine
@@ -67,6 +74,7 @@ func (a *actorConn) startIO() {
 	var sendChatCmd chan<- *chatCmd
 
 	var newState <-chan *rpg2d.WorldState
+	var newDiff <-chan *rpg2d.WorldStateDiff
 	var stopReq <-chan chan<- struct{}
 
 	newMoveRequest = moveReqCh
@@ -77,7 +85,8 @@ func (a *actorConn) startIO() {
 	sendUseCmd = useCmdCh
 	sendChatCmd = chatCmdCh
 
-	newState = outputCh
+	newState = stateOutputCh
+	newDiff = diffOutputCh
 	stopReq = stopCh
 
 	go func() {
@@ -189,15 +198,18 @@ func (a *actorConn) startIO() {
 		select {
 		case state := <-newState:
 			if state != nil {
-				a.SendJson("update", state)
+				a.conn.WriteWorldState(*state)
 			}
 
-			// Chat commands get consumed only once,
-			// unlike move and use commands which keep
-			// getting consumed every tick until the client
-			// cancels the command. So we reset it here.
 			cmd.chatCmd = nil
+			goto unlocked
 
+		case diff := <-newDiff:
+			if diff != nil {
+				a.conn.WriteWorldStateDiff(*diff)
+			}
+
+			cmd.chatCmd = nil
 			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
@@ -242,16 +254,18 @@ func (a *actor) WriteState(state rpg2d.WorldState) {
 // Is called after actor.WriteState(). Expects the state
 // to have been culled already.
 func (a *actorConn) WriteState(state rpg2d.WorldState) {
+	if a.lastState == nil {
+		a.lastState = &state
+		a.sendState <- &state
+		return
+	}
+
 	diff := a.lastState.Diff(state)
-	a.lastState = state
+	a.lastState = &state
 
-	// Will need this when I start comparing for terrain type changes
-	// a.lastState.Prepare()
-
-	if len(diff.Entities) > 0 || len(diff.Removed) > 0 || diff.TerrainMap != nil {
-		diff.Prepare()
-		a.sendState <- &diff
+	if len(diff.Entities) > 0 || len(diff.Removed) > 0 || diff.TerrainMapSlices != nil {
+		a.sendDiff <- &diff
 	} else {
-		a.sendState <- nil
+		a.sendDiff <- nil
 	}
 }
