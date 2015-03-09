@@ -1,124 +1,213 @@
 package client
 
 import (
-	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/ghthor/aodd/game"
-	"github.com/ghthor/engine/net/encoding"
-	"github.com/ghthor/engine/net/protocol"
 )
 
-type Conn struct {
-	protocol.Conn
-
-	RespAuthFailed       chan<- RespAuthFailed
-	RespActorDoesntExist chan<- RespActorDoesntExist
-
-	RespLoginSuccess  chan<- game.ActorEntityState
-	RespCreateSuccess chan<- game.ActorEntityState
-
-	Packet chan<- encoding.Packet
-
-	Error chan<- error
+type Conn interface {
+	AttemptLogin(name, password string) LoginRoundTrip
+	CreateActor(name, password string) CreateRoundTrip
 }
 
-type RespAuthFailed struct{ Name string }
-type RespActorDoesntExist struct{ Name, Password string }
+type conn struct {
+	game.GobConn
+}
 
-func NewConn(with io.ReadWriteCloser) Conn {
-	return Conn{
-		Conn: protocol.NewConn(with),
+func NewConn(with io.ReadWriter) Conn {
+	return &conn{
+		GobConn: game.NewGobConn(with),
 	}
 }
 
-func (c Conn) AttemptLogin(name, password string) {
-	c.SendJson(game.REQ_LOGIN.String(), game.LoginReq{name, password})
+// Represents a login request -> response roundtrip.
+// The caller should select from all the channels to
+// recv the response.
+type LoginRoundTrip struct {
+	conn *conn
+
+	Success          <-chan game.ActorEntityState
+	ActorDoesntExist <-chan game.RespActorDoesntExist
+	AuthFailed       <-chan game.RespAuthFailed
+	Error            <-chan error
 }
 
-func (c Conn) CreateActor(name, password string) {
-	c.SendJson(game.REQ_CREATE.String(), game.LoginReq{name, password})
-}
+func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
+	var (
+		success          chan<- game.ActorEntityState
+		actorDoesntExist chan<- game.RespActorDoesntExist
+		authFailed       chan<- game.RespAuthFailed
+		hadError         chan<- error
+	)
 
-type stateFn func() (stateFn, error)
+	closeChans := func() func() {
+		var (
+			successCh          = make(chan game.ActorEntityState, 1)
+			actorDoesntExistCh = make(chan game.RespActorDoesntExist, 1)
+			authFailedCh       = make(chan game.RespAuthFailed, 1)
+			errorCh            = make(chan error, 1)
+		)
 
-func (c *Conn) handleLogin() (stateFn, error) {
-	p, err := c.Read()
-	if err != nil {
-		return nil, err
-	}
+		trip.Success, success =
+			successCh, successCh
+		trip.ActorDoesntExist, actorDoesntExist =
+			actorDoesntExistCh, actorDoesntExistCh
+		trip.AuthFailed, authFailed =
+			authFailedCh, authFailedCh
+		trip.Error, hadError =
+			errorCh, errorCh
 
-	if p.Type == encoding.PT_DISCONNECT {
-		return nil, nil
-	}
+		return func() {
+			close(successCh)
+			close(actorDoesntExistCh)
+			close(authFailedCh)
+			close(errorCh)
+		}
+	}()
 
-	switch p.Msg {
-	case game.RESP_AUTH_FAILED.String():
-		if c.RespAuthFailed != nil {
-			c.RespAuthFailed <- RespAuthFailed{p.Payload}
+	go func() {
+		defer closeChans()
+
+		err := trip.conn.EncodeAndSend(game.ET_REQ_LOGIN, r)
+		if err != nil {
+			hadError <- err
+			return
 		}
 
-	case game.RESP_ACTOR_DOESNT_EXIST.String():
-		if c.RespActorDoesntExist != nil {
-			var loginReq game.LoginReq
+		eType, err := trip.conn.ReadNextType()
+		if err != nil {
+			hadError <- err
+			return
+		}
 
-			err := json.Unmarshal([]byte(p.Payload), &loginReq)
-			if err != nil && c.Error != nil {
-				c.Error <- err
-				return c.handleLogin, nil
+		switch eType {
+		case game.ET_RESP_AUTH_FAILED:
+			var r game.RespAuthFailed
+			err := trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
 			}
 
-			c.RespActorDoesntExist <- RespActorDoesntExist{loginReq.Name, loginReq.Password}
-		}
+			authFailed <- r
 
-	case game.RESP_LOGIN_SUCCESS.String():
-		if c.RespLoginSuccess != nil {
+		case game.ET_RESP_ACTOR_DOESNT_EXIST:
+			var r game.RespActorDoesntExist
+			err := trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
+			}
+
+			actorDoesntExist <- r
+
+		case game.ET_RESP_LOGIN_SUCCESS:
 			var actorEntity game.ActorEntityState
-
-			err := json.Unmarshal([]byte(p.Payload), &actorEntity)
-			if err != nil && c.Error != nil {
-				c.Error <- err
-				return c.handleLogin, nil
+			err := trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
 			}
 
-			c.RespLoginSuccess <- actorEntity
+			success <- actorEntity
+
+		default:
+			hadError <- fmt.Errorf("unexpected login request resp type: %v", eType)
 		}
+	}()
 
-	case game.RESP_CREATE_SUCCESS.String():
-		if c.RespCreateSuccess != nil {
-			var actorEntity game.ActorEntityState
-
-			err := json.Unmarshal([]byte(p.Payload), &actorEntity)
-			if err != nil && c.Error != nil {
-				c.Error <- err
-				return c.handleLogin, nil
-			}
-
-			c.RespCreateSuccess <- actorEntity
-		}
-
-	default:
-	}
-
-	if c.Packet != nil {
-		c.Packet <- p
-	}
-
-	return c.handleLogin, nil
+	return trip
 }
 
-// This method blocks in an infinite loop
-// that will read packets off the protocol.Conn
-// and send the relevant data out through a
-// channel. This method is intended
-// to be invoked as a go routine.
-func (c *Conn) StartHandling() {
-	var err error
+func (c *conn) AttemptLogin(name, password string) LoginRoundTrip {
+	return LoginRoundTrip{conn: c}.run(game.ReqLogin{name, password})
+}
 
-	f := c.handleLogin
-	for f != nil {
-		f, err = f()
-	}
+// Represents a create request -> response roundtrip.
+// The caller should select from all the channels to
+// recv the response.
+type CreateRoundTrip struct {
+	conn *conn
 
-	c.Error <- err
+	Success     <-chan game.ActorEntityState
+	ActorExists <-chan game.RespActorExists
+	Error       <-chan error
+}
+
+func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
+	var (
+		success     chan<- game.ActorEntityState
+		actorExists chan<- game.RespActorExists
+		hadError    chan<- error
+	)
+
+	closeChans := func() func() {
+		var (
+			successCh     = make(chan game.ActorEntityState, 1)
+			actorExistsCh = make(chan game.RespActorExists, 1)
+			errorCh       = make(chan error, 1)
+		)
+
+		trip.Success, success =
+			successCh, successCh
+		trip.ActorExists, actorExists =
+			actorExistsCh, actorExistsCh
+		trip.Error, hadError =
+			errorCh, errorCh
+
+		return func() {
+			close(successCh)
+			close(actorExistsCh)
+			close(errorCh)
+		}
+	}()
+
+	go func() {
+		defer closeChans()
+
+		err := trip.conn.EncodeAndSend(game.ET_REQ_CREATE, r)
+		if err != nil {
+			hadError <- err
+			return
+		}
+
+		eType, err := trip.conn.ReadNextType()
+		if err != nil {
+			hadError <- err
+			return
+		}
+
+		switch eType {
+		case game.ET_RESP_ACTOR_EXISTS:
+			var r game.RespActorExists
+			err := trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
+			}
+
+			actorExists <- r
+
+		case game.ET_RESP_CREATE_SUCCESS:
+			var actorEntity game.ActorEntityState
+			err := trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
+			}
+
+			success <- actorEntity
+
+		default:
+			hadError <- fmt.Errorf("unexpected create request resp type: %v", eType)
+		}
+	}()
+
+	return trip
+}
+
+func (c *conn) CreateActor(name, password string) CreateRoundTrip {
+	return CreateRoundTrip{conn: c}.run(game.ReqCreate{name, password})
 }

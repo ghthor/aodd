@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
-	"github.com/ghthor/engine/net/encoding"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/gopherjs/websocket"
@@ -37,8 +35,9 @@ const (
 	EV_ERROR event = iota
 	EV_CONNECTED
 
-	EV_AUTH_FAILED
 	EV_ACTOR_DOESNT_EXIST
+	EV_ACTOR_EXISTS
+	EV_AUTH_FAILED
 
 	EV_LOGIN_SUCCESS
 	EV_CREATE_SUCCESS
@@ -85,75 +84,66 @@ func initialize(settings *js.Object) jsObject {
 					log.Fatal(err)
 				}
 
-				conn := client.NewConn(ws)
-
-				// Channel endpoints we'll used to recieve
-				// information from the server and emit events
-				// in the JS universe.
-				var evAuthFailed <-chan client.RespAuthFailed
-				var evActorDoesntExist <-chan client.RespActorDoesntExist
-
-				var evLoginSuccess <-chan game.ActorEntityState
-				var evCreateSuccess <-chan game.ActorEntityState
-
-				var evHandledPacket <-chan encoding.Packet
-				var evError <-chan error
-
-				func() {
-					authFailedCh := make(chan client.RespAuthFailed)
-					actorDoesntExistCh := make(chan client.RespActorDoesntExist)
-
-					logginSuccessCh := make(chan game.ActorEntityState)
-					createSuccessCh := make(chan game.ActorEntityState)
-
-					packetCh := make(chan encoding.Packet)
-					errCh := make(chan error)
-
-					// Link send and recv comms together
-					evAuthFailed, conn.RespAuthFailed = authFailedCh, authFailedCh
-					evActorDoesntExist, conn.RespActorDoesntExist = actorDoesntExistCh, actorDoesntExistCh
-
-					evLoginSuccess, conn.RespLoginSuccess = logginSuccessCh, logginSuccessCh
-					evCreateSuccess, conn.RespCreateSuccess = createSuccessCh, createSuccessCh
-
-					evHandledPacket, conn.Packet = packetCh, packetCh
-					evError, conn.Error = errCh, errCh
+				// Create a concurrent safe client connection
+				takeConn, freeConn := func() (<-chan client.Conn, chan<- client.Conn) {
+					connLock := make(chan client.Conn, 1)
+					return connLock, connLock
 				}()
-
-				// Start the packet handlering concurrently
-				go conn.StartHandling()
+				freeConn <- client.NewConn(ws)
 
 				// Emit a connected event and a object the
 				// login form can use to send messages to the
 				// server.
 				eventPublisher{pub}.Emit(EV_CONNECTED, jsArray{jsObject{
-					"attemptLogin": conn.AttemptLogin,
-					"createActor":  conn.CreateActor,
+					"attemptLogin": func(name, password string) {
+						go func() {
+							conn := <-takeConn
+							defer func() { freeConn <- conn }()
+
+							pub := eventPublisher{pub}
+							trip := conn.AttemptLogin(name, password)
+
+							select {
+							case actorDoesntExist := <-trip.ActorDoesntExist:
+								pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray{
+									actorDoesntExist.Name,
+									actorDoesntExist.Password,
+								})
+
+							case authFailed := <-trip.AuthFailed:
+								js.Debugger()
+								pub.Emit(EV_AUTH_FAILED, jsArray{authFailed.Name})
+
+							case actor := <-trip.Success:
+								pub.Emit(EV_LOGIN_SUCCESS, jsArray{actor})
+
+							case err := <-trip.Error:
+								pub.Emit(EV_ERROR, jsArray{jsObject{"error": err}})
+							}
+						}()
+					},
+
+					"createActor": func(name, password string) {
+						go func() {
+							conn := <-takeConn
+							defer func() { freeConn <- conn }()
+
+							pub := eventPublisher{pub}
+							trip := conn.CreateActor(name, password)
+
+							select {
+							case actorExists := <-trip.ActorExists:
+								pub.Emit(EV_ACTOR_EXISTS, jsArray{actorExists.Name})
+
+							case actor := <-trip.Success:
+								pub.Emit(EV_CREATE_SUCCESS, jsArray{actor})
+
+							case err := <-trip.Error:
+								pub.Emit(EV_ERROR, jsArray{jsObject{"error": err}})
+							}
+						}()
+					},
 				}})
-
-				// Recv packets and emit events
-				for {
-					pub := eventPublisher{pub}
-					select {
-					case actor := <-evAuthFailed:
-						pub.Emit(EV_AUTH_FAILED, jsArray{actor.Name})
-
-					case actor := <-evActorDoesntExist:
-						pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray{actor.Name, actor.Password})
-
-					case entity := <-evLoginSuccess:
-						pub.Emit(EV_LOGIN_SUCCESS, jsArray{entity})
-
-					case entity := <-evCreateSuccess:
-						pub.Emit(EV_CREATE_SUCCESS, jsArray{entity})
-
-					case packet := <-evHandledPacket:
-						pub.Emit(EV_PACKET, jsArray{packet})
-
-					case err := <-evError:
-						pub.Emit(EV_ERROR, jsArray{jsObject{"error": err}})
-					}
-				}
 			}()
 		},
 	}
