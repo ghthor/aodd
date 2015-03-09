@@ -16,6 +16,7 @@ import (
 // into.
 type EncodedType int
 
+//go:generate stringer -type=EncodedType
 const (
 	ET_ERROR EncodedType = iota
 
