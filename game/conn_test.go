@@ -71,8 +71,9 @@ func twoWebsockets() (*websocket.Conn, *websocket.Conn, chan<- bool, <-chan bool
 
 type mockSimulation struct{}
 
-func (mockSimulation) ConnectActor(rpg2d.Actor)              {}
-func (mockSimulation) RemoveActor(rpg2d.Actor)               {}
+func (mockSimulation) ConnectActor(rpg2d.Actor) {}
+func (mockSimulation) RemoveActor(rpg2d.Actor)  {}
+
 func (mockSimulation) Halt() (rpg2d.HaltedSimulation, error) { return nil, nil }
 
 func DescribeActorConn(c gospec.Context) {
