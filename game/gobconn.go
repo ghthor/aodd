@@ -40,8 +40,6 @@ type RespAuthFailed struct{ Name string }
 type RespActorExists struct{ Name string }
 type RespActorDoesntExist struct{ Name, Password string }
 
-type RespLoginSucces struct{ Name string }
-type RespCreateSuccess struct{ Name string }
 
 func init() {
 	// Pre login Request/Response types
@@ -52,16 +50,15 @@ func init() {
 	gob.Register(RespActorExists{})
 	gob.Register(RespActorDoesntExist{})
 
-	gob.Register(RespLoginSucces{})
-	gob.Register(RespCreateSuccess{})
+	// ActorEntityState used for login/create success
+	gob.Register(ActorEntityState{})
 
 	// Engine types
 	gob.Register(rpg2d.WorldState{})
 	gob.Register(rpg2d.WorldStateDiff{})
 	gob.Register(rpg2d.TerrainMapState{})
 
-	// Entity states
-	gob.Register(ActorEntityState{})
+	// Other entity states
 	gob.Register(SayEntityState{})
 	gob.Register(AssailEntityState{})
 }
