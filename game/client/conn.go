@@ -444,3 +444,18 @@ func receiveUpdate(conn game.GobConn, sendUpdate chan<- rpg2d.WorldStateDiff) er
 
 	return nil
 }
+
+func (c requestSender) SendMoveRequest(r game.MoveRequest) {
+	// TODO handle errors
+	c.conn.EncodeAndSend(game.ET_REQ_MOVE, r)
+}
+
+func (c requestSender) SendUseRequest(r game.UseRequest) {
+	// TODO handle errors
+	c.conn.EncodeAndSend(game.ET_REQ_USE, r)
+}
+
+func (c requestSender) SendChatRequest(r game.ChatRequest) {
+	// TODO handle errors
+	c.conn.EncodeAndSend(game.ET_REQ_CHAT, r)
+}

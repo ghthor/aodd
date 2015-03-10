@@ -3,6 +3,7 @@ package game
 import (
 	"bufio"
 	"encoding/gob"
+	"fmt"
 	"io"
 	"log"
 
@@ -235,11 +236,56 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 }
 
 func (c *serverConn) handleInputReq() (stateFn, error) {
-	_, err := c.ReadNextType()
+	eType, err := c.ReadNextType()
 	if err != nil {
 		return nil, err
 	}
 
+	switch eType {
+	default:
+		return c.handleInputReq, fmt.Errorf("unexpected type %v when handling input", eType)
+
+	case ET_REQ_MOVE:
+		return c.handleMoveReq, nil
+	case ET_REQ_USE:
+		return c.handleUseReq, nil
+	case ET_REQ_CHAT:
+		return c.handleChatReq, nil
+	}
+
+	return c.handleInputReq, nil
+}
+
+func (c *serverConn) handleMoveReq() (stateFn, error) {
+	var r MoveRequest
+	err := c.Decode(&r)
+	if err != nil {
+		return nil, err
+	}
+
+	c.actor.SubmitMoveRequest(r)
+	return c.handleInputReq, nil
+}
+
+func (c *serverConn) handleUseReq() (stateFn, error) {
+	var r UseRequest
+	err := c.Decode(&r)
+	if err != nil {
+		return nil, err
+	}
+
+	c.actor.SubmitUseRequest(r)
+	return c.handleInputReq, nil
+}
+
+func (c *serverConn) handleChatReq() (stateFn, error) {
+	var r ChatRequest
+	err := c.Decode(&r)
+	if err != nil {
+		return nil, err
+	}
+
+	c.actor.SubmitChatRequest(r)
 	return c.handleInputReq, nil
 }
 

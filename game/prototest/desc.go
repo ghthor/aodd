@@ -227,6 +227,32 @@ func DescribeActorGobConn(c gospec.Context) {
 				c.Specify("followed by world state diffs", func() {
 				})
 			})
+
+			c.Specify("can submit a move request", func() {
+				r := game.MoveRequest{game.MR_MOVE, 2, coord.North}
+				loginResp.Conn.SendMoveRequest(r)
+				c.Expect(connectedActor.lastMoveRequest, Equals, r)
+			})
+
+			c.Specify("can submit a use request", func() {
+				r := game.UseRequest{
+					UseRequestType: game.UR_USE,
+					Time:           2,
+					Skill:          "dion",
+				}
+				loginResp.Conn.SendUseRequest(r)
+				c.Expect(connectedActor.lastUseRequest, Equals, r)
+			})
+
+			c.Specify("can submit a chat request", func() {
+				r := game.ChatRequest{
+					ChatRequestType: game.CR_SAY,
+					Time:            2,
+					Msg:             "a chat msg",
+				}
+				loginResp.Conn.SendChatRequest(r)
+				c.Expect(connectedActor.lastChatRequest, Equals, r)
+			})
 		})
 	})
 }
