@@ -136,6 +136,18 @@ func (a *actorConn) startIO() {
 			cmd.chatCmd = &chatCmd
 		}
 
+		// Wait for the initial world state
+		// and send it out to the client.
+		select {
+		case state := <-newState:
+			if state != nil {
+				a.conn.WriteWorldState(*state)
+			}
+
+		case hasStopped = <-stopReq:
+			goto exit
+		}
+
 	unlocked:
 		// # This select prioritizes the following events.
 		// ## 2 potential events to respond to
@@ -196,14 +208,6 @@ func (a *actorConn) startIO() {
 		// 4. ReadChatCmd() method requests the actor's chat command
 		// 5. stopIO() method has been called
 		select {
-		case state := <-newState:
-			if state != nil {
-				a.conn.WriteWorldState(*state)
-			}
-
-			cmd.chatCmd = nil
-			goto unlocked
-
 		case diff := <-newDiff:
 			if diff != nil {
 				a.conn.WriteWorldStateDiff(*diff)
