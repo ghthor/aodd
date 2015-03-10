@@ -50,9 +50,10 @@ type mockSimulation struct {
 	actors map[rpg2d.ActorId]rpg2d.Actor
 }
 
-func (s mockSimulation) ConnectActor(actor rpg2d.Actor) {
+func (s *mockSimulation) ConnectActor(actor rpg2d.Actor) {
 	s.Lock()
 	defer s.Unlock()
+
 	if s.actors == nil {
 		s.actors = make(map[rpg2d.ActorId]rpg2d.Actor, 1)
 	}
@@ -67,6 +68,18 @@ func (s mockSimulation) RemoveActor(actor rpg2d.Actor) {
 	delete(s.actors, actor.Id())
 }
 
+func (s mockSimulation) connectedActors() (actors []rpg2d.Actor) {
+	s.Lock()
+	defer s.Unlock()
+
+	actors = make([]rpg2d.Actor, 0, len(s.actors))
+	for _, a := range s.actors {
+		actors = append(actors, a)
+	}
+
+	return actors
+}
+
 func (mockSimulation) Halt() (rpg2d.HaltedSimulation, error) { return nil, nil }
 
 func DescribeActorGobConn(c gospec.Context) {
@@ -75,7 +88,8 @@ func DescribeActorGobConn(c gospec.Context) {
 
 	conn := newMockConn()
 
-	server := game.NewActorGobConn(conn.nextEndpoint(), mockSimulation{}, ds, entity.NewIdGenerator())
+	sim := &mockSimulation{}
+	server := game.NewActorGobConn(conn.nextEndpoint(), sim, ds, entity.NewIdGenerator())
 	go func() {
 		c.Assume(server.Run(), IsNil)
 	}()
@@ -87,8 +101,11 @@ func DescribeActorGobConn(c gospec.Context) {
 		c.Specify("can request to login", func() {
 			c.Specify("and the request will succeed", func() {
 				trip := client.AttemptLogin("actor", "password")
-				c.Expect(<-trip.Success, Equals, game.ActorEntityState{})
 				c.Expect(<-trip.Error, IsNil)
+
+				c.Specify("and an actor will be added to the simulation", func() {
+					c.Expect(<-trip.Success, Equals, sim.connectedActors()[0].Entity().ToState())
+				})
 			})
 
 			c.Specify("and the request will fail", func() {
@@ -114,8 +131,11 @@ func DescribeActorGobConn(c gospec.Context) {
 		c.Specify("can create a new actor", func() {
 			c.Specify("and the request will succeed", func() {
 				trip := client.CreateActor("newActor", "password")
-				c.Expect(<-trip.Success, Equals, game.ActorEntityState{})
 				c.Expect(<-trip.Error, IsNil)
+
+				c.Specify("and an actor will be added to the simulation", func() {
+					c.Expect(<-trip.Success, Equals, sim.connectedActors()[0].Entity().ToState())
+				})
 			})
 
 			c.Specify("and the request will fail", func() {

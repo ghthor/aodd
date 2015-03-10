@@ -8,6 +8,7 @@ import (
 
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
 	"golang.org/x/net/websocket"
 )
@@ -177,8 +178,9 @@ func (c *serverConn) handleLoginReq() (stateFn, error) {
 		return c.handleLogin, nil
 	}
 
-	// TODO create a real actor and return it
-	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, ActorEntityState{})
+	c.login(actor)
+
+	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, c.actor.ToState())
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +206,7 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 		return c.handleLogin, nil
 	}
 
-	_, err = c.datastore.AddActor(r.Name, r.Password)
+	actor, err := c.datastore.AddActor(r.Name, r.Password)
 	if err != nil {
 		// TODO Instead of terminating the connection here
 		//      we should retry contacting the database a
@@ -212,14 +214,46 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 		return nil, err
 	}
 
-	// TODO create a real actor and return it
-	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, ActorEntityState{})
+	c.login(actor)
+
+	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, c.actor.ToState())
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO Return a stateFn to handle input
 	return nil, nil
+}
+
+func (c *serverConn) login(dsactor datastore.Actor) {
+	// Create an actorEntity for this object
+	c.actor = &actor{
+		id: dsactor.Id,
+
+		actorEntity: actorEntity{
+			id:      c.nextId(),
+			actorId: dsactor.Id,
+
+			name: dsactor.Name,
+
+			cell:   dsactor.Loc,
+			facing: dsactor.Facing,
+			speed:  15,
+
+			pathAction: nil,
+			lastMoveAction: coord.TurnAction{
+				From: dsactor.Facing,
+				To:   dsactor.Facing,
+			},
+
+			hp:    100,
+			hpMax: 100,
+		},
+
+		actorConn: newActorConn(c),
+	}
+
+	c.sim.ConnectActor(c.actor)
 }
 
 func (c serverConn) Run() (err error) {
