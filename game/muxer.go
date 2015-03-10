@@ -119,12 +119,12 @@ func (a *actorConn) startIO() {
 			case UR_USE:
 				cmd.useCmd = &useCmd{
 					Time:  r.Time,
-					skill: r.skill,
+					skill: r.Skill,
 				}
 
 			case UR_USE_CANCEL:
 				if cmd.useCmd != nil {
-					if cmd.useCmd.skill == r.skill {
+					if cmd.useCmd.skill == r.Skill {
 						cmd.useCmd = nil
 					}
 				}
@@ -132,7 +132,11 @@ func (a *actorConn) startIO() {
 		}
 
 		updateChatCmdWith := func(r ChatRequest) {
-			chatCmd := chatCmd(r)
+			chatCmd := chatCmd{
+				ChatRequestType: r.ChatRequestType,
+				Time:            r.Time,
+				msg:             r.Msg,
+			}
 			cmd.chatCmd = &chatCmd
 		}
 

@@ -126,7 +126,7 @@ const (
 type UseRequest struct {
 	UseRequestType
 	stime.Time
-	skill string
+	Skill string
 }
 
 type useCmd struct {
@@ -144,7 +144,7 @@ const (
 type ChatRequest struct {
 	ChatRequestType
 	stime.Time
-	msg string
+	Msg string
 }
 
 type chatCmd struct {
@@ -183,7 +183,7 @@ func newChatRequest(t ChatRequestType, timeIssued stime.Time, params string) (Ch
 	return ChatRequest{
 		ChatRequestType: t,
 		Time:            timeIssued,
-		msg:             params,
+		Msg:             params,
 	}, nil
 }
 
