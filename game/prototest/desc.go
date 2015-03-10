@@ -94,7 +94,7 @@ func DescribeActorGobConn(c gospec.Context) {
 		c.Assume(server.Run(), IsNil)
 	}()
 
-	client := client.NewConn(conn.nextEndpoint())
+	client := client.NewLoginConn(conn.nextEndpoint())
 	c.Assume(conn.nextEndpoint(), IsNil)
 
 	c.Specify("an actor conn", func() {

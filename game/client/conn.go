@@ -7,17 +7,17 @@ import (
 	"github.com/ghthor/aodd/game"
 )
 
-type Conn interface {
+type LoginConn interface {
 	AttemptLogin(name, password string) LoginRoundTrip
 	CreateActor(name, password string) CreateRoundTrip
 }
 
-type conn struct {
+type loginConn struct {
 	game.GobConn
 }
 
-func NewConn(with io.ReadWriter) Conn {
-	return &conn{
+func NewLoginConn(with io.ReadWriter) LoginConn {
+	return &loginConn{
 		GobConn: game.NewGobConn(with),
 	}
 }
@@ -26,7 +26,7 @@ func NewConn(with io.ReadWriter) Conn {
 // The caller should select from all the channels to
 // recv the response.
 type LoginRoundTrip struct {
-	conn *conn
+	conn *loginConn
 
 	Success          <-chan game.ActorEntityState
 	ActorDoesntExist <-chan game.RespActorDoesntExist
@@ -121,7 +121,7 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 	return trip
 }
 
-func (c *conn) AttemptLogin(name, password string) LoginRoundTrip {
+func (c *loginConn) AttemptLogin(name, password string) LoginRoundTrip {
 	return LoginRoundTrip{conn: c}.run(game.ReqLogin{name, password})
 }
 
@@ -129,7 +129,7 @@ func (c *conn) AttemptLogin(name, password string) LoginRoundTrip {
 // The caller should select from all the channels to
 // recv the response.
 type CreateRoundTrip struct {
-	conn *conn
+	conn *loginConn
 
 	Success     <-chan game.ActorEntityState
 	ActorExists <-chan game.RespActorExists
@@ -208,6 +208,6 @@ func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
 	return trip
 }
 
-func (c *conn) CreateActor(name, password string) CreateRoundTrip {
+func (c *loginConn) CreateActor(name, password string) CreateRoundTrip {
 	return CreateRoundTrip{conn: c}.run(game.ReqCreate{name, password})
 }

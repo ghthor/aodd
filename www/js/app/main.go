@@ -85,11 +85,11 @@ func initialize(settings *js.Object) jsObject {
 				}
 
 				// Create a concurrent safe client connection
-				takeConn, freeConn := func() (<-chan client.Conn, chan<- client.Conn) {
-					connLock := make(chan client.Conn, 1)
+				takeConn, freeConn := func() (<-chan client.LoginConn, chan<- client.LoginConn) {
+					connLock := make(chan client.LoginConn, 1)
 					return connLock, connLock
 				}()
-				freeConn <- client.NewConn(ws)
+				freeConn <- client.NewLoginConn(ws)
 
 				// Emit a connected event and a object the
 				// login form can use to send messages to the
