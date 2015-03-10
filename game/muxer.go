@@ -241,16 +241,17 @@ func (a actorConn) stopIO() {
 	<-hasStopped
 }
 
+func ActorCullBounds(center coord.Cell) coord.Bounds {
+	return coord.Bounds{
+		center.Add(-26, 26),
+		center.Add(26, -26),
+	}
+}
+
 // Culls the world state to the actor's viewport.
 // Is called before actorConn.WriteState()
 func (a *actor) WriteState(state rpg2d.WorldState) {
-	c := a.Cell()
-
-	state = state.Cull(coord.Bounds{
-		c.Add(-26, 26),
-		c.Add(26, -26),
-	})
-
+	state = state.Cull(ActorCullBounds(a.Cell()))
 	a.actorConn.WriteState(state)
 }
 
