@@ -8,7 +8,6 @@ import (
 
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
 	"golang.org/x/net/websocket"
 )
@@ -242,33 +241,7 @@ func (c *serverConn) handleInputReq() (stateFn, error) {
 }
 
 func (c *serverConn) login(dsactor datastore.Actor) {
-	// Create an actorEntity for this object
-	c.actor = &actor{
-		id: dsactor.Id,
-
-		actorEntity: actorEntity{
-			id:      c.nextId(),
-			actorId: dsactor.Id,
-
-			name: dsactor.Name,
-
-			cell:   dsactor.Loc,
-			facing: dsactor.Facing,
-			speed:  15,
-
-			pathAction: nil,
-			lastMoveAction: coord.TurnAction{
-				From: dsactor.Facing,
-				To:   dsactor.Facing,
-			},
-
-			hp:    100,
-			hpMax: 100,
-		},
-
-		actorConn: newActorConn(c),
-	}
-
+	c.actor = NewActor(c.nextId(), dsactor, c)
 	c.sim.ConnectActor(c.actor)
 }
 

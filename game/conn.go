@@ -12,7 +12,6 @@ import (
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
 )
 
@@ -265,33 +264,7 @@ func (c conn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
 // Creates a new actor struct using a datastore.Actor struct.
 // Adds this new actor into the simulation.
 func (c *conn) loginActor(dsactor datastore.Actor) {
-	// Create an actorEntity for this object
-	c.actor = &actor{
-		id: dsactor.Id,
-
-		actorEntity: actorEntity{
-			id:      c.nextId(),
-			actorId: dsactor.Id,
-
-			name: dsactor.Name,
-
-			cell:   dsactor.Loc,
-			facing: dsactor.Facing,
-			speed:  15,
-
-			pathAction: nil,
-			lastMoveAction: coord.TurnAction{
-				From: dsactor.Facing,
-				To:   dsactor.Facing,
-			},
-
-			hp:    100,
-			hpMax: 100,
-		},
-
-		actorConn: newActorConn(c),
-	}
-
+	c.actor = NewActor(c.nextId(), dsactor, c)
 	c.sim.ConnectActor(c.actor)
 }
 

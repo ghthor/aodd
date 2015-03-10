@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
@@ -57,6 +58,35 @@ type actor struct {
 	lastAssail assailEntity
 
 	actorConn
+}
+
+func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter stateWriter) *actor {
+	// Create an actorEntity for this object
+	return &actor{
+		id: dsactor.Id,
+
+		actorEntity: actorEntity{
+			id:      id,
+			actorId: dsactor.Id,
+
+			name: dsactor.Name,
+
+			cell:   dsactor.Loc,
+			facing: dsactor.Facing,
+			speed:  15,
+
+			pathAction: nil,
+			lastMoveAction: coord.TurnAction{
+				From: dsactor.Facing,
+				To:   dsactor.Facing,
+			},
+
+			hp:    100,
+			hpMax: 100,
+		},
+
+		actorConn: newActorConn(stateWriter),
+	}
 }
 
 func (a actor) Id() rpg2d.ActorId      { return a.id }
