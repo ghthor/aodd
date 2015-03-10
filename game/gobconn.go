@@ -194,8 +194,7 @@ func (c *serverConn) handleLoginReq() (stateFn, error) {
 		return nil, err
 	}
 
-	// TODO Return a stateFn to handle input
-	return nil, nil
+	return c.handleInputReq, nil
 }
 
 func (c *serverConn) handleCreateReq() (stateFn, error) {
@@ -230,8 +229,16 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 		return nil, err
 	}
 
-	// TODO Return a stateFn to handle input
-	return nil, nil
+	return c.handleInputReq, nil
+}
+
+func (c *serverConn) handleInputReq() (stateFn, error) {
+	_, err := c.ReadNextType()
+	if err != nil {
+		return nil, err
+	}
+
+	return c.handleInputReq, nil
 }
 
 func (c *serverConn) login(dsactor datastore.Actor) {
