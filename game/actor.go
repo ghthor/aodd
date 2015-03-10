@@ -107,7 +107,7 @@ func (e actorEntity) ToState() entity.State {
 }
 
 func (e actorEntity) String() string {
-	return fmt.Sprintf("{id %d, cell%v, %v, speed:%d, pathAction:%v}", e.id, e.cell, e.facing, e.speed, e.pathAction)
+	return fmt.Sprintf("{name: %s, id %d, cell%v, %v, speed:%d, pathAction:%v}", e.name, e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 
 func (e ActorEntityState) Id() entity.Id        { return e.EntityId }
