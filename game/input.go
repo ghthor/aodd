@@ -11,13 +11,27 @@ import (
 	"github.com/ghthor/engine/sim/stime"
 )
 
+type updatePhaseLocker struct {
+	*ActorIndexLocker
+}
+
 type updatePhase struct {
-	index actorIndex
+	index ActorIndex
+}
+
+type inputPhaseLocker struct {
+	*ActorIndexLocker
+	nextId func() entity.Id
 }
 
 type inputPhase struct {
-	index  actorIndex
+	index  ActorIndex
 	nextId func() entity.Id
+}
+
+func (phase updatePhaseLocker) Update(e entity.Entity, now stime.Time) entity.Entity {
+	defer phase.ActorIndexLocker.RUnlock()
+	return updatePhase{phase.ActorIndexLocker.RLock()}.Update(e, now)
 }
 
 func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
@@ -50,6 +64,11 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
 	}
+}
+
+func (phase inputPhaseLocker) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
+	defer phase.ActorIndexLocker.RUnlock()
+	return inputPhase{phase.RLock(), phase.nextId}.ApplyInputsTo(e, now)
 }
 
 func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {

@@ -27,7 +27,7 @@ func Describe2Actors(c gospec.Context) {
 					pa(0, 10, cell(0, 0), cell(0, 1)),
 					pa(0, 10, cell(0, 1), cell(0, 0)),
 				},
-				expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+				expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 					c.Expect(index[0].pathAction, IsNil)
 					c.Expect(index[1].pathAction, IsNil)
 				},
@@ -46,7 +46,7 @@ func Describe2Actors(c gospec.Context) {
 						pa(0, 10, cell(0, 0), cell(0, 1)),
 						pa(0, 9, cell(0, -1), cell(0, 0)),
 					},
-					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+					expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 						c.Assume(testCase.paths[0].Direction(), Equals, coord.North)
 						c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 						c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -58,7 +58,7 @@ func Describe2Actors(c gospec.Context) {
 						pa(0, 10, cell(0, 0), cell(0, 1)),
 						pa(0, 10, cell(0, -1), cell(0, 0)),
 					},
-					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+					expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 						c.Assume(testCase.paths[0].Direction(), Equals, coord.North)
 						c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 						c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -80,7 +80,7 @@ func Describe2Actors(c gospec.Context) {
 						pa(0, 10, cell(0, 0), cell(1, 0)),
 						pa(0, 9, cell(0, -1), cell(0, 0)),
 					},
-					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+					expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 						c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
 						c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 						c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -92,7 +92,7 @@ func Describe2Actors(c gospec.Context) {
 						pa(0, 10, cell(0, 0), cell(1, 0)),
 						pa(0, 10, cell(0, -1), cell(0, 0)),
 					},
-					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+					expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 						c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
 						c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 						c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -104,7 +104,7 @@ func Describe2Actors(c gospec.Context) {
 						pa(0, 10, cell(0, 0), cell(1, 0)),
 						pa(0, 11, cell(0, -1), cell(0, 0)),
 					},
-					expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+					expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 						c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
 						c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 						c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -128,7 +128,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(0, 1)),
 							pa(0, 10, cell(-1, 1), cell(0, 1)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.North)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.East)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -140,7 +140,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(1, 0)),
 							pa(0, 10, cell(1, 1), cell(1, 0)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.South)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -152,7 +152,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(0, -1)),
 							pa(0, 10, cell(1, -1), cell(0, -1)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.South)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.West)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -164,7 +164,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 9, cell(0, 0), cell(-1, 0)),
 							pa(0, 10, cell(-1, -1), cell(-1, 0)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.West)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -176,7 +176,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(-1, 0)),
 							pa(1, 9, cell(-1, -1), cell(-1, 0)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.West)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.North)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -198,7 +198,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(0, 1)),
 							pa(0, 10, cell(0, 2), cell(0, 1)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.North)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.South)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -210,7 +210,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(1, 0)),
 							pa(0, 10, cell(2, 0), cell(1, 0)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.East)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.West)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -222,7 +222,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 9, cell(0, 0), cell(-1, 0)),
 							pa(0, 10, cell(-2, 0), cell(-1, 0)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.West)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.East)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -234,7 +234,7 @@ func Describe2Actors(c gospec.Context) {
 							pa(0, 10, cell(0, 0), cell(-1, 0)),
 							pa(1, 9, cell(-2, 0), cell(-1, 0)),
 						},
-						expectations: func(testCase spec_2moving, index actorIndex, c gospec.Context) {
+						expectations: func(testCase spec_2moving, index ActorIndex, c gospec.Context) {
 							c.Assume(testCase.paths[0].Direction(), Equals, coord.West)
 							c.Assume(testCase.paths[1].Direction(), Equals, coord.East)
 							c.Expect(*index[0].pathAction, Equals, testCase.paths[0])
@@ -262,7 +262,7 @@ func Describe2Actors(c gospec.Context) {
 				cell(1, 0),
 				coord.South,
 
-				func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
+				func(t spec_1move_1stand, index ActorIndex, c gospec.Context) {
 					c.Expect(index[0].pathAction, IsNil)
 				},
 			}, {
@@ -275,7 +275,7 @@ func Describe2Actors(c gospec.Context) {
 				cell(1, 0),
 				coord.East,
 
-				func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
+				func(t spec_1move_1stand, index ActorIndex, c gospec.Context) {
 					c.Expect(index[0].pathAction, IsNil)
 				},
 			}, {
@@ -288,7 +288,7 @@ func Describe2Actors(c gospec.Context) {
 				cell(1, 0),
 				coord.West,
 
-				func(t spec_1move_1stand, index actorIndex, c gospec.Context) {
+				func(t spec_1move_1stand, index ActorIndex, c gospec.Context) {
 					c.Expect(index[0].pathAction, IsNil)
 				},
 			}}
@@ -314,7 +314,7 @@ func Describe3Actors(c gospec.Context) {
 				cell:   cell(-2, 0),
 				facing: coord.West,
 
-				expectations: func(t spec_2move_1stand, index actorIndex, c gospec.Context) {
+				expectations: func(t spec_2move_1stand, index ActorIndex, c gospec.Context) {
 					pa0 := t.paths[0]
 					pa1 := t.paths[1]
 
@@ -340,7 +340,7 @@ func Describe3Actors(c gospec.Context) {
 				cell:   cell(0, 0),
 				facing: coord.West,
 
-				expectations: func(t spec_2move_1stand, index actorIndex, c gospec.Context) {
+				expectations: func(t spec_2move_1stand, index ActorIndex, c gospec.Context) {
 					pa0 := t.paths[0]
 					pa1 := t.paths[1]
 
@@ -375,7 +375,7 @@ func Describe3Actors(c gospec.Context) {
 					pa(0, 10, cell(-2, 0), cell(-3, 0)),
 				},
 
-				expectations: func(t spec_3move, index actorIndex, c gospec.Context) {
+				expectations: func(t spec_3move, index ActorIndex, c gospec.Context) {
 					pa0 := t.paths[0]
 					pa1 := t.paths[1]
 					pa2 := t.paths[2]
@@ -414,7 +414,7 @@ func DescribeSomeActors(c gospec.Context) {
 					pa(0, 10, cell(0, 1), cell(0, 0)),
 				},
 
-				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
+				expectations: func(t spec_allMoving, index ActorIndex, c gospec.Context) {
 					c.Assume(t.paths[0].Direction(), Equals, coord.East)
 					c.Assume(t.paths[1].Direction(), Equals, coord.North)
 					c.Assume(t.paths[2].Direction(), Equals, coord.West)
@@ -444,7 +444,7 @@ func DescribeSomeActors(c gospec.Context) {
 					pa(0, 10, cell(0, 0), cell(1, 0)),
 				},
 
-				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
+				expectations: func(t spec_allMoving, index ActorIndex, c gospec.Context) {
 					c.Assume(coord.NewPathCollision(t.paths[7], t.paths[0]).Type(), Equals, coord.CT_NONE)
 
 					for i, _ := range t.paths {
@@ -463,7 +463,7 @@ func DescribeSomeActors(c gospec.Context) {
 					pa(0, 10, cell(0, 1), cell(0, 0)),
 				},
 
-				expectations: func(t spec_allMoving, index actorIndex, c gospec.Context) {
+				expectations: func(t spec_allMoving, index ActorIndex, c gospec.Context) {
 					for i, _ := range t.paths {
 						c.Expect(index[rpg2d.ActorId(i)].pathAction, IsNil)
 					}

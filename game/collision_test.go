@@ -15,14 +15,14 @@ import (
 type spec_2moving struct {
 	spec         string
 	paths        []coord.PathAction
-	expectations func(spec_2moving, actorIndex, gospec.Context)
+	expectations func(spec_2moving, ActorIndex, gospec.Context)
 }
 
 func (t spec_2moving) runSpec(c gospec.Context) {
 	pa0 := t.paths[0]
 	pa1 := t.paths[1]
 
-	index := actorIndex{
+	index := ActorIndex{
 		0: &actor{
 			id: 0,
 			actorEntity: actorEntity{
@@ -86,11 +86,11 @@ type spec_1move_1stand struct {
 	cell   coord.Cell
 	facing coord.Direction
 
-	expectations func(spec_1move_1stand, actorIndex, gospec.Context)
+	expectations func(spec_1move_1stand, ActorIndex, gospec.Context)
 }
 
 func (t spec_1move_1stand) runSpec(c gospec.Context) {
-	index := actorIndex{
+	index := ActorIndex{
 		0: &actor{
 			id: 0,
 			actorEntity: actorEntity{
@@ -170,11 +170,11 @@ type spec_2move_1stand struct {
 	cell   coord.Cell
 	facing coord.Direction
 
-	expectations func(spec_2move_1stand, actorIndex, gospec.Context)
+	expectations func(spec_2move_1stand, ActorIndex, gospec.Context)
 }
 
 func (t spec_2move_1stand) runSpec(c gospec.Context) {
-	index := actorIndex{
+	index := ActorIndex{
 		0: &actor{
 			id: 0,
 			actorEntity: actorEntity{
@@ -284,11 +284,11 @@ type spec_3move struct {
 	// entity 0-2
 	paths [3]coord.PathAction
 
-	expectations func(spec_3move, actorIndex, gospec.Context)
+	expectations func(spec_3move, ActorIndex, gospec.Context)
 }
 
 func (t spec_3move) runSpec(c gospec.Context) {
-	index := actorIndex{
+	index := ActorIndex{
 		0: &actor{
 			id: 0,
 			actorEntity: actorEntity{
@@ -398,7 +398,7 @@ type spec_allMoving struct {
 
 	paths []coord.PathAction
 
-	expectations func(spec_allMoving, actorIndex, gospec.Context)
+	expectations func(spec_allMoving, ActorIndex, gospec.Context)
 }
 
 type testCase struct {
@@ -406,7 +406,7 @@ type testCase struct {
 	cgrp quad.CollisionGroup
 }
 
-func findCollisions(index actorIndex) []quad.Collision {
+func findCollisions(index ActorIndex) []quad.Collision {
 	var collisions []quad.Collision
 
 	for id1 := 0; id1 < len(index); id1++ {
@@ -428,7 +428,7 @@ func findCollisions(index actorIndex) []quad.Collision {
 }
 
 // NOTE Only generates a single case
-func generateCases(index actorIndex) []testCase {
+func generateCases(index ActorIndex) []testCase {
 	testCases := make([]testCase, 0, len(index))
 
 	// Assume that each index is only colliding with the
@@ -456,7 +456,7 @@ func generateCases(index actorIndex) []testCase {
 }
 
 func (t spec_allMoving) runSpec(c gospec.Context) {
-	index := make(actorIndex, len(t.paths))
+	index := make(ActorIndex, len(t.paths))
 	for i, p := range t.paths {
 		index[rpg2d.ActorId(i)] = &actor{
 			id: rpg2d.ActorId(i),

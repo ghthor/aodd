@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"text/template"
 
 	"github.com/ghthor/aodd/game/datastore"
@@ -14,14 +15,40 @@ import (
 )
 
 // Store actor's indexed by id
-type actorIndex map[rpg2d.ActorId]*actor
+type ActorIndex map[rpg2d.ActorId]*actor
+
+// A wrapper for actorIndex that provides
+// safety for concurrent access.
+type ActorIndexLocker struct {
+	sync.RWMutex
+	index ActorIndex
+}
+
+func (m *ActorIndexLocker) RLock() ActorIndex {
+	m.RWMutex.RLock()
+	return m.index
+}
+
+func (m *ActorIndexLocker) Lock() ActorIndex {
+	m.RWMutex.Lock()
+	return m.index
+}
+
+func (m *ActorIndexLocker) Unlock(index ActorIndex) {
+	m.index = index
+	m.RWMutex.Unlock()
+}
+
+func NewActorIndexLocker(around ActorIndex) *ActorIndexLocker {
+	return &ActorIndexLocker{index: around}
+}
 
 // Type used to wrap a running simulation interface
 // and start and stop the actor's IO muxer.
 // Also adds and removes actors from the
 // simulation's actor index.
 type simulation struct {
-	actorIndex
+	*ActorIndexLocker
 	rpg2d.RunningSimulation
 }
 
@@ -29,7 +56,9 @@ func (s simulation) ConnectActor(a rpg2d.Actor) {
 	switch a := a.(type) {
 	case *actor:
 		a.startIO()
-		s.actorIndex[a.Id()] = a
+		actorIndex := s.ActorIndexLocker.Lock()
+		actorIndex[a.Id()] = a
+		s.ActorIndexLocker.Unlock(actorIndex)
 
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
@@ -44,10 +73,19 @@ func (s simulation) RemoveActor(a rpg2d.Actor) {
 	switch a := a.(type) {
 	case *actor:
 		a.stopIO()
-		delete(s.actorIndex, a.Id())
+		actorIndex := s.ActorIndexLocker.Lock()
+		delete(actorIndex, a.Id())
+		s.ActorIndexLocker.Unlock(actorIndex)
 
 	default:
 		panic(fmt.Sprint("unexpected sim.Actor:", a))
+	}
+}
+
+func NewSimulation(actorIndex *ActorIndexLocker, sim rpg2d.RunningSimulation) rpg2d.RunningSimulation {
+	return simulation{
+		ActorIndexLocker:  actorIndex,
+		RunningSimulation: sim,
 	}
 }
 
@@ -131,7 +169,8 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	now := stime.Time(0)
 
-	actorIndex := make(actorIndex)
+	actorIndex := NewActorIndexLocker(make(ActorIndex))
+
 	entityIdGen := entity.NewIdGenerator()
 
 	simDef := rpg2d.SimulationDef{
@@ -142,9 +181,9 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		QuadTree:   quadTree,
 		TerrainMap: terrainMap,
 
-		UpdatePhaseHandler: updatePhase{actorIndex},
-		InputPhaseHandler:  inputPhase{actorIndex, entityIdGen},
-		NarrowPhaseHandler: newNarrowPhase(actorIndex),
+		UpdatePhaseHandler: updatePhaseLocker{actorIndex},
+		InputPhaseHandler:  inputPhaseLocker{actorIndex, entityIdGen},
+		NarrowPhaseHandler: newNarrowPhaseLocker(actorIndex),
 	}
 
 	runningSim, err := simDef.Begin()
@@ -182,10 +221,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/asset/", http.StripPrefix("/asset/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newGobWebsocketHandler(simulation{
-		actorIndex,
-		runningSim,
-	}, datastore, entityIdGen))
+	mux.Handle(wsRoute, newGobWebsocketHandler(NewSimulation(actorIndex, runningSim), datastore, entityIdGen))
 
 	defaultHandler := c.Handler
 	if defaultHandler == nil {

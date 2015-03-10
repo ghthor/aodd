@@ -11,8 +11,12 @@ import (
 	"github.com/ghthor/engine/sim/stime"
 )
 
+type narrowPhaseLocker struct {
+	*ActorIndexLocker
+}
+
 type narrowPhase struct {
-	actorIndex actorIndex
+	actorIndex ActorIndex
 
 	// Reset at the beginning of every ResolveCollisions call
 	solved []quad.Collision
@@ -20,7 +24,11 @@ type narrowPhase struct {
 	collisionIndex quad.CollisionIndex
 }
 
-func newNarrowPhase(actorIndex actorIndex) narrowPhase {
+func newNarrowPhaseLocker(actorMap *ActorIndexLocker) narrowPhaseLocker {
+	return narrowPhaseLocker{actorMap}
+}
+
+func newNarrowPhase(actorIndex ActorIndex) narrowPhase {
 	return narrowPhase{actorIndex, make([]quad.Collision, 0, 10), nil}
 }
 
@@ -35,6 +43,11 @@ func (phase narrowPhase) hasSolved(c quad.Collision) bool {
 	}
 
 	return false
+}
+
+func (phase narrowPhaseLocker) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
+	defer phase.ActorIndexLocker.RUnlock()
+	return newNarrowPhase(phase.ActorIndexLocker.Lock()).ResolveCollisions(cg, now)
 }
 
 // Implementation of the quad.NarrowPhaseHandler interface.
