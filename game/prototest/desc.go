@@ -229,7 +229,10 @@ func DescribeActorGobConn(c gospec.Context) {
 			})
 
 			c.Specify("can submit a move request", func() {
-				r := game.MoveRequest{game.MR_MOVE, 2, coord.North}
+				r := game.MoveRequest{
+					MoveRequestType: game.MR_MOVE,
+					Time:            2,
+					Direction:       coord.North}
 				loginResp.Conn.SendMoveRequest(r)
 				c.Expect(connectedActor.lastMoveRequest, Equals, r)
 			})
