@@ -13,12 +13,12 @@ type LoginConn interface {
 }
 
 type loginConn struct {
-	game.GobConn
+	conn game.GobConn
 }
 
 func NewLoginConn(with io.ReadWriter) LoginConn {
 	return &loginConn{
-		GobConn: game.NewGobConn(with),
+		conn: game.NewGobConn(with),
 	}
 }
 
@@ -26,7 +26,7 @@ func NewLoginConn(with io.ReadWriter) LoginConn {
 // The caller should select from all the channels to
 // recv the response.
 type LoginRoundTrip struct {
-	conn *loginConn
+	conn game.GobConn
 
 	Success          <-chan game.ActorEntityState
 	ActorDoesntExist <-chan game.RespActorDoesntExist
@@ -122,14 +122,14 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 }
 
 func (c *loginConn) AttemptLogin(name, password string) LoginRoundTrip {
-	return LoginRoundTrip{conn: c}.run(game.ReqLogin{name, password})
+	return LoginRoundTrip{conn: c.conn}.run(game.ReqLogin{name, password})
 }
 
 // Represents a create request -> response roundtrip.
 // The caller should select from all the channels to
 // recv the response.
 type CreateRoundTrip struct {
-	conn *loginConn
+	conn game.GobConn
 
 	Success     <-chan game.ActorEntityState
 	ActorExists <-chan game.RespActorExists
@@ -209,5 +209,5 @@ func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
 }
 
 func (c *loginConn) CreateActor(name, password string) CreateRoundTrip {
-	return CreateRoundTrip{conn: c}.run(game.ReqCreate{name, password})
+	return CreateRoundTrip{conn: c.conn}.run(game.ReqCreate{name, password})
 }
