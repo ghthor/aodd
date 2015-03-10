@@ -5,7 +5,7 @@ import (
 	"github.com/ghthor/engine/rpg2d/coord"
 )
 
-type stateWriter interface {
+type StateWriter interface {
 	WriteWorldState(rpg2d.WorldState) error
 	WriteWorldStateDiff(rpg2d.WorldStateDiff) error
 }
@@ -28,12 +28,12 @@ type actorConn struct {
 	stop chan<- chan<- struct{}
 
 	// External connection used to publish the world state
-	conn stateWriter
+	conn StateWriter
 
 	lastState *rpg2d.WorldState
 }
 
-func newActorConn(conn stateWriter) actorConn {
+func newActorConn(conn StateWriter) actorConn {
 	return actorConn{conn: conn}
 }
 

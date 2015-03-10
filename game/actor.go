@@ -60,8 +60,7 @@ type actor struct {
 	actorConn
 }
 
-func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter stateWriter) *actor {
-	// Create an actorEntity for this object
+func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter StateWriter) *actor {
 	return &actor{
 		id: dsactor.Id,
 
