@@ -150,6 +150,15 @@ type ShardConfig struct {
 	Handler http.Handler
 }
 
+type inputReceiver struct {
+	*actor
+	disconnect func()
+}
+
+func (i inputReceiver) Close() {
+	i.disconnect()
+}
+
 func NewSimShard(c ShardConfig) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	bounds := coord.Bounds{
@@ -191,8 +200,6 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		return nil, err
 	}
 
-	datastore := datastore.NewMemDatastore()
-
 	wsRoute := "/actor/socket/gob"
 	var wsUrl string
 	if c.IsHTTPS {
@@ -217,11 +224,25 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	mux := c.Mux
 
+	ds := datastore.NewMemDatastore()
+	sim := NewSimulation(actorIndex, runningSim)
+
 	mux.Handle("/", indexHandler)
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir(c.JsDir))))
 	mux.Handle("/asset/", http.StripPrefix("/asset/", http.FileServer(http.Dir(c.AssetDir))))
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
-	mux.Handle(wsRoute, newGobWebsocketHandler(NewSimulation(actorIndex, runningSim), datastore, entityIdGen))
+	mux.Handle(wsRoute, newGobWebsocketHandler(
+		ds,
+		func(dsactor datastore.Actor, stateWriter StateWriter) (InputReceiver, entity.State) {
+			actor := NewActor(entityIdGen(), dsactor, stateWriter)
+			sim.ConnectActor(actor)
+
+			return inputReceiver{
+				actor:      actor,
+				disconnect: func() { sim.RemoveActor(actor) },
+			}, actor.Entity().ToState()
+		},
+	))
 
 	defaultHandler := c.Handler
 	if defaultHandler == nil {

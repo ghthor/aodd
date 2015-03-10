@@ -2,7 +2,6 @@ package prototest
 
 import (
 	"io"
-	"log"
 	"sync"
 
 	"github.com/ghthor/aodd/game"
@@ -48,97 +47,55 @@ func newMockConn() *mockConn {
 	return c
 }
 
-type mockSimulation struct {
-	*game.ActorIndexLocker
+type mockActor struct {
+	actor datastore.Actor
 
-	actorsThatConnected chan rpg2d.Actor
+	stateWriter game.StateWriter
+
+	entityState game.ActorEntityState
+
+	lastMoveRequest game.MoveRequest
+	lastUseRequest  game.UseRequest
+	lastChatRequest game.ChatRequest
+
+	wasClosed bool
 }
 
-func (s *mockSimulation) ConnectActor(actor rpg2d.Actor) {
-	s.actorsThatConnected <- actor
+func (a *mockActor) SubmitMoveRequest(r game.MoveRequest) {
+	a.lastMoveRequest = r
+}
+func (a *mockActor) SubmitUseRequest(r game.UseRequest) {
+	a.lastUseRequest = r
+}
+func (a *mockActor) SubmitChatRequest(r game.ChatRequest) {
+	a.lastChatRequest = r
 }
 
-func (s *mockSimulation) RemoveActor(actor rpg2d.Actor) {}
-
-func (s *mockSimulation) connectedActors() (actors []rpg2d.Actor) {
-	defer s.ActorIndexLocker.RUnlock()
-	index := s.ActorIndexLocker.RLock()
-
-	for _, a := range index {
-		actors = append(actors, a)
-	}
-
-	return actors
-}
-
-func (s *mockSimulation) sendState(state rpg2d.WorldState) {
-	defer s.ActorIndexLocker.RUnlock()
-	index := s.ActorIndexLocker.RLock()
-
-	for _, a := range index {
-		a.WriteState(state)
-	}
-}
-
-func (s *mockSimulation) toState() (state rpg2d.WorldState) {
-	defer s.ActorIndexLocker.RUnlock()
-	index := s.ActorIndexLocker.RLock()
-
-	state.Bounds = coord.Bounds{
-		coord.Cell{-128, 128},
-		coord.Cell{127, -127},
-	}
-
-	for _, a := range index {
-		state.Entities = append(state.Entities, a.Entity().ToState())
-	}
-
-	terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
-
-	return
-}
-
-func (mockSimulation) Halt() (rpg2d.HaltedSimulation, error) { return nil, nil }
+func (a mockActor) Close() { a.wasClosed = true }
 
 func DescribeActorGobConn(c gospec.Context) {
 	ds := datastore.NewMemDatastore()
 	ds.AddActor("actor", "password")
 
-	actorIndex := game.NewActorIndexLocker(make(game.ActorIndex))
-	mockSim := &mockSimulation{
-		ActorIndexLocker:    actorIndex,
-		actorsThatConnected: make(chan rpg2d.Actor, 100),
-	}
-
-	gameSim := game.NewSimulation(actorIndex, mockSim)
-	// Defer removing any actors that haven't
-	// been removed yet. This ensures that all
-	// IO muxers have been halted by stopIO()
-	var haltGameSim func() = func() func() {
-		var haltGameSim sync.Once
-		return func() {
-			haltGameSim.Do(func() {
-				actors := mockSim.connectedActors()
-				for _, a := range actors {
-					gameSim.RemoveActor(a)
-				}
-
-				// TODO maybe the cleanup above should be moved
-				//      into the game.simulation composed type.
-				_, err := gameSim.Halt()
-				c.Assume(err, IsNil)
-			})
-		}
-	}()
-	defer haltGameSim()
-
 	conn := newMockConn()
-	server := game.NewActorGobConn(conn.nextEndpoint(), gameSim, ds, entity.NewIdGenerator())
+
+	nextId := entity.NewIdGenerator()
+	var connectedActor *mockActor
+
+	server := game.NewActorGobConn(conn.nextEndpoint(), ds,
+		func(dsactor datastore.Actor, stateWriter game.StateWriter) (game.InputReceiver, entity.State) {
+			actor := &mockActor{
+				actor:       dsactor,
+				stateWriter: stateWriter,
+				entityState: game.ActorEntityState{
+					EntityId: nextId(),
+					Name:     dsactor.Name,
+				},
+			}
+			connectedActor = actor
+			return actor, actor.entityState
+		},
+	)
 
 	serverClosed := make(chan error)
 
@@ -186,7 +143,7 @@ func DescribeActorGobConn(c gospec.Context) {
 					c.Assume(<-loginResp.Error, Equals, io.ErrClosedPipe)
 
 					c.Expect(initialState.Entity, Not(Equals), game.ActorEntityState{})
-					c.Expect(initialState.Entity, Equals, (<-mockSim.actorsThatConnected).Entity().ToState())
+					c.Expect(initialState.Entity, Equals, connectedActor.entityState)
 				})
 			})
 
@@ -223,7 +180,7 @@ func DescribeActorGobConn(c gospec.Context) {
 					c.Assume(<-loginResp.Error, Equals, io.ErrClosedPipe)
 
 					c.Expect(initialState.Entity, Not(Equals), game.ActorEntityState{})
-					c.Expect(initialState.Entity, Equals, (<-mockSim.actorsThatConnected).Entity().ToState())
+					c.Expect(initialState.Entity, Equals, connectedActor.entityState)
 				})
 			})
 
@@ -241,14 +198,28 @@ func DescribeActorGobConn(c gospec.Context) {
 			loginResp := <-trip.Success
 			c.Assume(<-trip.Error, IsNil)
 			c.Assume(loginResp, Not(Equals), client.RespLoggedIn{})
+			c.Assume(connectedActor, Not(IsNil))
+
+			initialState := func() rpg2d.WorldState {
+				state := rpg2d.WorldState{}
+				state.Time = 2
+				state.Bounds = coord.Bounds{
+					coord.Cell{-2, 2},
+					coord.Cell{1, -1},
+				}
+				terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
+				c.Assume(err, IsNil)
+				state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
+
+				return state
+			}
 
 			c.Specify("will recieve an initial world state", func() {
-				state := mockSim.toState()
-				mockSim.sendState(state)
-
+				state := initialState()
+				connectedActor.stateWriter.WriteWorldState(state)
 				initialState := <-loginResp.InitialState
-				c.Expect(initialState.Entity, Equals, (<-mockSim.actorsThatConnected).Entity().ToState())
-				c.Expect(initialState.WorldState, rpg2dtest.StateEquals, state.Cull(game.ActorCullBounds(initialState.Entity.Cell)))
+				c.Expect(initialState.Entity, Equals, connectedActor.entityState)
+				c.Expect(initialState.WorldState, rpg2dtest.StateEquals, state)
 
 				stopServer()
 				c.Expect(<-initialState.Error, Equals, io.ErrClosedPipe)

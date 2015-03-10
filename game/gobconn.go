@@ -123,14 +123,21 @@ func NewGobConn(rw io.ReadWriter) GobConn {
 	}
 }
 
+type InputReceiver interface {
+	SubmitMoveRequest(MoveRequest)
+	SubmitUseRequest(UseRequest)
+	SubmitChatRequest(ChatRequest)
+
+	Close()
+}
+
 type serverConn struct {
 	GobConn
 
-	sim       rpg2d.RunningSimulation
 	datastore datastore.Datastore
-	nextId    func() entity.Id
 
-	actor *actor
+	newActor func(datastore.Actor, StateWriter) (InputReceiver, entity.State)
+	actor    InputReceiver
 }
 
 type ActorConn interface {
@@ -186,9 +193,7 @@ func (c *serverConn) handleLoginReq() (stateFn, error) {
 		return c.handleLogin, nil
 	}
 
-	c.login(actor)
-
-	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, c.actor.ToState())
+	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, c.login(actor))
 	if err != nil {
 		return nil, err
 	}
@@ -221,9 +226,7 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 		return nil, err
 	}
 
-	c.login(actor)
-
-	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, c.actor.ToState())
+	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, c.login(actor))
 	if err != nil {
 		return nil, err
 	}
@@ -240,15 +243,19 @@ func (c *serverConn) handleInputReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c *serverConn) login(dsactor datastore.Actor) {
-	c.actor = NewActor(c.nextId(), dsactor, c)
-	c.sim.ConnectActor(c.actor)
+func (c *serverConn) login(dsactor datastore.Actor) (state entity.State) {
+	c.actor, state = c.newActor(dsactor, c)
+	return state
 }
 
 func (c serverConn) Run() (err error) {
 	f := c.handleLogin
 	for f != nil && err == nil {
 		f, err = f()
+	}
+
+	if c.actor != nil {
+		c.actor.Close()
 	}
 
 	return
@@ -262,20 +269,24 @@ func (c serverConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
 	return c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
 }
 
-func NewActorGobConn(rw io.ReadWriter, sim rpg2d.RunningSimulation, ds datastore.Datastore, eIdGen func() entity.Id) ActorConn {
+func NewActorGobConn(
+	rw io.ReadWriter,
+	ds datastore.Datastore,
+	newActor func(datastore.Actor, StateWriter) (InputReceiver, entity.State)) ActorConn {
 	return serverConn{
 		GobConn:   NewGobConn(rw),
-		sim:       sim,
 		datastore: ds,
-		nextId:    eIdGen,
+		newActor:  newActor,
 	}
 }
 
-func newGobWebsocketHandler(sim rpg2d.RunningSimulation, ds datastore.Datastore, eIdGen func() entity.Id) websocket.Handler {
+func newGobWebsocketHandler(
+	ds datastore.Datastore,
+	newActor func(datastore.Actor, StateWriter) (InputReceiver, entity.State)) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		ws.PayloadType = websocket.BinaryFrame
 
-		c := NewActorGobConn(ws, sim, ds, eIdGen)
+		c := NewActorGobConn(ws, ds, newActor)
 
 		// Blocks until the connection is disconnected
 		err := c.Run()
