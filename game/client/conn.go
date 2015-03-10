@@ -105,7 +105,7 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 
 		case game.ET_RESP_LOGIN_SUCCESS:
 			var actorEntity game.ActorEntityState
-			err := trip.conn.Decode(&r)
+			err := trip.conn.Decode(&actorEntity)
 			if err != nil {
 				hadError <- err
 				return
@@ -192,7 +192,7 @@ func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
 
 		case game.ET_RESP_CREATE_SUCCESS:
 			var actorEntity game.ActorEntityState
-			err := trip.conn.Decode(&r)
+			err := trip.conn.Decode(&actorEntity)
 			if err != nil {
 				hadError <- err
 				return
