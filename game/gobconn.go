@@ -231,6 +231,14 @@ func (c serverConn) Run() (err error) {
 	return
 }
 
+func (c serverConn) WriteWorldState(s rpg2d.WorldState) error {
+	return c.EncodeAndSend(ET_WORLD_STATE, s)
+}
+
+func (c serverConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
+	return c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
+}
+
 func NewActorGobConn(rw io.ReadWriter, sim rpg2d.RunningSimulation, ds datastore.Datastore, eIdGen func() entity.Id) ActorConn {
 	return serverConn{
 		GobConn:   NewGobConn(rw),
