@@ -12,9 +12,9 @@ type stateWriter interface {
 
 type actorConn struct {
 	// Comm interface to muxer used by SubmitCmd() method
-	submitMoveRequest chan<- moveRequest
-	submitUseRequest  chan<- useRequest
-	submitChatRequest chan<- chatRequest
+	submitMoveRequest chan<- MoveRequest
+	submitUseRequest  chan<- UseRequest
+	submitChatRequest chan<- ChatRequest
 
 	readMoveCmd <-chan *moveCmd
 	readUseCmd  <-chan *useCmd
@@ -39,9 +39,9 @@ func newActorConn(conn stateWriter) actorConn {
 
 func (a *actorConn) startIO() {
 	// Setup communication channels
-	moveReqCh := make(chan moveRequest)
-	useReqCh := make(chan useRequest)
-	chatReqCh := make(chan chatRequest)
+	moveReqCh := make(chan MoveRequest)
+	useReqCh := make(chan UseRequest)
+	chatReqCh := make(chan ChatRequest)
 
 	moveCmdCh := make(chan *moveCmd)
 	useCmdCh := make(chan *useCmd)
@@ -65,9 +65,9 @@ func (a *actorConn) startIO() {
 	a.stop = stopCh
 
 	// Establish the channel endpoints used inside the go routine
-	var newMoveRequest <-chan moveRequest
-	var newUseRequest <-chan useRequest
-	var newChatRequest <-chan chatRequest
+	var newMoveRequest <-chan MoveRequest
+	var newUseRequest <-chan UseRequest
+	var newChatRequest <-chan ChatRequest
 
 	var sendMoveCmd chan<- *moveCmd
 	var sendUseCmd chan<- *useCmd
@@ -98,8 +98,8 @@ func (a *actorConn) startIO() {
 			chatCmd *chatCmd
 		}{}
 
-		updateMoveCmdWith := func(r moveRequest) {
-			switch r.moveRequestType {
+		updateMoveCmdWith := func(r MoveRequest) {
+			switch r.MoveRequestType {
 			case MR_MOVE:
 				cmd.moveCmd = &moveCmd{
 					Time:      r.Time,
@@ -114,8 +114,8 @@ func (a *actorConn) startIO() {
 			}
 		}
 
-		updateUseCmdWith := func(r useRequest) {
-			switch r.useRequestType {
+		updateUseCmdWith := func(r UseRequest) {
+			switch r.UseRequestType {
 			case UR_USE:
 				cmd.useCmd = &useCmd{
 					Time:  r.Time,
@@ -131,7 +131,7 @@ func (a *actorConn) startIO() {
 			}
 		}
 
-		updateChatCmdWith := func(r chatRequest) {
+		updateChatCmdWith := func(r ChatRequest) {
 			chatCmd := chatCmd(r)
 			cmd.chatCmd = &chatCmd
 		}

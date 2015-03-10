@@ -37,6 +37,10 @@ const (
 
 	ET_WORLD_STATE
 	ET_WORLD_STATE_DIFF
+
+	ET_REQ_MOVE
+	ET_REQ_USE
+	ER_REQ_CHAT
 )
 
 type ReqLogin struct{ Name, Password string }
@@ -68,6 +72,11 @@ func init() {
 	// Other entity states
 	gob.Register(SayEntityState{})
 	gob.Register(AssailEntityState{})
+
+	// Cmd Requests. They have no responses.
+	gob.Register(MoveRequest{})
+	gob.Register(UseRequest{})
+	gob.Register(ChatRequest{})
 }
 
 type GobConn interface {

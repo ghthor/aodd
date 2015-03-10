@@ -77,16 +77,16 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 	}
 }
 
-type moveRequestType int
+type MoveRequestType int
 
 const (
-	MR_ERROR moveRequestType = iota
+	MR_ERROR MoveRequestType = iota
 	MR_MOVE
 	MR_MOVE_CANCEL
 )
 
-type moveRequest struct {
-	moveRequestType
+type MoveRequest struct {
+	MoveRequestType
 	stime.Time
 	coord.Direction
 }
@@ -96,16 +96,16 @@ type moveCmd struct {
 	coord.Direction
 }
 
-type useRequestType int
+type UseRequestType int
 
 const (
-	UR_ERROR useRequestType = iota
+	UR_ERROR UseRequestType = iota
 	UR_USE
 	UR_USE_CANCEL
 )
 
-type useRequest struct {
-	useRequestType
+type UseRequest struct {
+	UseRequestType
 	stime.Time
 	skill string
 }
@@ -115,56 +115,56 @@ type useCmd struct {
 	skill string
 }
 
-type chatType int
+type ChatRequestType int
 
 const (
-	CR_ERROR chatType = iota
+	CR_ERROR ChatRequestType = iota
 	CR_SAY
 )
 
-type chatRequest struct {
-	chatType
+type ChatRequest struct {
+	ChatRequestType
 	stime.Time
 	msg string
 }
 
 type chatCmd struct {
-	chatType
+	ChatRequestType
 	stime.Time
 	msg string
 }
 
-func newMoveRequest(t moveRequestType, timeIssued stime.Time, params string) (moveRequest, error) {
+func newMoveRequest(t MoveRequestType, timeIssued stime.Time, params string) (MoveRequest, error) {
 	d, err := coord.NewDirectionWithString(params)
 	if err != nil {
-		return moveRequest{}, err
+		return MoveRequest{}, err
 	}
 
-	return moveRequest{
+	return MoveRequest{
 		t,
 		timeIssued,
 		d,
 	}, nil
 }
 
-func newUseRequest(t useRequestType, timeIssued stime.Time, params string) (useRequest, error) {
+func newUseRequest(t UseRequestType, timeIssued stime.Time, params string) (UseRequest, error) {
 	switch params {
 	case "assail":
-		return useRequest{t, timeIssued, params}, nil
+		return UseRequest{t, timeIssued, params}, nil
 	default:
-		return useRequest{}, fmt.Errorf("unknown skill: %s", params)
+		return UseRequest{}, fmt.Errorf("unknown skill: %s", params)
 	}
 }
 
-func newChatRequest(t chatType, timeIssued stime.Time, params string) (chatRequest, error) {
+func newChatRequest(t ChatRequestType, timeIssued stime.Time, params string) (ChatRequest, error) {
 	if len(params) > 120 {
-		return chatRequest{}, errors.New("chat message exceeded 120 char limit")
+		return ChatRequest{}, errors.New("chat message exceeded 120 char limit")
 	}
 
-	return chatRequest{
-		chatType: t,
-		Time:     timeIssued,
-		msg:      params,
+	return ChatRequest{
+		ChatRequestType: t,
+		Time:            timeIssued,
+		msg:             params,
 	}, nil
 }
 
@@ -465,7 +465,7 @@ func (phase inputPhase) processChatCmd(a *actor, now stime.Time) []entity.Entity
 		return nil
 	}
 
-	switch cmd.chatType {
+	switch cmd.ChatRequestType {
 	case CR_SAY:
 		return []entity.Entity{sayEntity{
 			id: phase.nextId(),
