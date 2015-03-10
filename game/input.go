@@ -232,6 +232,18 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 	return nil
 }
 
+func (c actorConn) SubmitMoveRequest(r MoveRequest) {
+	c.submitMoveRequest <- r
+}
+
+func (c actorConn) SubmitUseRequest(r UseRequest) {
+	c.submitUseRequest <- r
+}
+
+func (c actorConn) SubmitChatRequest(r ChatRequest) {
+	c.submitChatRequest <- r
+}
+
 func (c actorConn) ReadMoveCmd() *moveCmd {
 	return <-c.readMoveCmd
 }
