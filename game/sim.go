@@ -16,16 +16,6 @@ import (
 // Store actor's indexed by id
 type actorIndex map[rpg2d.ActorId]*actor
 
-// TODO avoid using a global like this
-//      to dole out entity id's
-var nextId = func() func() entity.Id {
-	nextId := entity.Id(0)
-	return func() entity.Id {
-		defer func() { nextId++ }()
-		return nextId
-	}
-}()
-
 // Type used to wrap a running simulation interface
 // and start and stop the actor's IO muxer.
 // Also adds and removes actors from the
@@ -142,6 +132,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	now := stime.Time(0)
 
 	actorIndex := make(actorIndex)
+	entityIdGen := entity.NewIdGenerator()
 
 	simDef := rpg2d.SimulationDef{
 		FPS: 40,
@@ -152,7 +143,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		TerrainMap: terrainMap,
 
 		UpdatePhaseHandler: updatePhase{actorIndex},
-		InputPhaseHandler:  inputPhase{actorIndex, nextId},
+		InputPhaseHandler:  inputPhase{actorIndex, entityIdGen},
 		NarrowPhaseHandler: newNarrowPhase(actorIndex),
 	}
 
@@ -194,7 +185,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle(wsRoute, newGobWebsocketHandler(simulation{
 		actorIndex,
 		runningSim,
-	}, datastore))
+	}, datastore, entityIdGen))
 
 	defaultHandler := c.Handler
 	if defaultHandler == nil {

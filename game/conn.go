@@ -13,6 +13,7 @@ import (
 	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/rpg2d/entity"
 )
 
 type LoginReq struct {
@@ -27,6 +28,7 @@ type conn struct {
 
 	sim       rpg2d.RunningSimulation
 	datastore datastore.Datastore
+	nextId    func() entity.Id
 
 	actor *actor
 }
@@ -268,7 +270,7 @@ func (c *conn) loginActor(dsactor datastore.Actor) {
 		id: dsactor.Id,
 
 		actorEntity: actorEntity{
-			id:      nextId(),
+			id:      c.nextId(),
 			actorId: dsactor.Id,
 
 			name: dsactor.Name,
@@ -309,13 +311,14 @@ func (c conn) Actor() datastore.Actor {
 	}
 }
 
-func newWebsocketHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
+func newWebsocketHandler(sim rpg2d.RunningSimulation, ds datastore.Datastore, eIdGen func() entity.Id) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		c := conn{
 			Conn: protocol.NewConn(ws),
 
 			sim:       sim,
-			datastore: datastore,
+			datastore: ds,
+			nextId:    eIdGen,
 		}
 
 		// Blocks until the connection is disconnected

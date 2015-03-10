@@ -10,6 +10,7 @@ import (
 	"github.com/ghthor/engine/net/encoding"
 	"github.com/ghthor/engine/net/protocol"
 	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"golang.org/x/net/websocket"
 
 	"github.com/ghthor/gospec"
@@ -100,6 +101,7 @@ func DescribeActorConn(c gospec.Context) {
 
 		sim:       mockSimulation{},
 		datastore: ds,
+		nextId:    entity.NewIdGenerator(),
 	}
 
 	client := protocol.NewConn(ws)

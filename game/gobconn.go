@@ -8,6 +8,7 @@ import (
 
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"golang.org/x/net/websocket"
 )
 
@@ -118,6 +119,7 @@ type serverConn struct {
 
 	sim       rpg2d.RunningSimulation
 	datastore datastore.Datastore
+	nextId    func() entity.Id
 
 	actor *actor
 }
@@ -229,19 +231,20 @@ func (c serverConn) Run() (err error) {
 	return
 }
 
-func NewActorGobConn(rw io.ReadWriter, sim rpg2d.RunningSimulation, datastore datastore.Datastore) ActorConn {
+func NewActorGobConn(rw io.ReadWriter, sim rpg2d.RunningSimulation, ds datastore.Datastore, eIdGen func() entity.Id) ActorConn {
 	return serverConn{
 		GobConn:   NewGobConn(rw),
 		sim:       sim,
-		datastore: datastore,
+		datastore: ds,
+		nextId:    eIdGen,
 	}
 }
 
-func newGobWebsocketHandler(sim rpg2d.RunningSimulation, datastore datastore.Datastore) websocket.Handler {
+func newGobWebsocketHandler(sim rpg2d.RunningSimulation, ds datastore.Datastore, eIdGen func() entity.Id) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		ws.PayloadType = websocket.BinaryFrame
 
-		c := NewActorGobConn(ws, sim, datastore)
+		c := NewActorGobConn(ws, sim, ds, eIdGen)
 
 		// Blocks until the connection is disconnected
 		err := c.Run()

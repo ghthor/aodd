@@ -2,11 +2,13 @@ package prototest
 
 import (
 	"io"
+	"sync"
 
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/engine/rpg2d/entity"
 
 	"github.com/ghthor/gospec"
 	. "github.com/ghthor/gospec"
@@ -43,10 +45,27 @@ func newMockConn() *mockConn {
 	return c
 }
 
-type mockSimulation struct{}
+type mockSimulation struct {
+	sync.Mutex
+	actors map[rpg2d.ActorId]rpg2d.Actor
+}
 
-func (mockSimulation) ConnectActor(rpg2d.Actor) {}
-func (mockSimulation) RemoveActor(rpg2d.Actor)  {}
+func (s mockSimulation) ConnectActor(actor rpg2d.Actor) {
+	s.Lock()
+	defer s.Unlock()
+	if s.actors == nil {
+		s.actors = make(map[rpg2d.ActorId]rpg2d.Actor, 1)
+	}
+
+	s.actors[actor.Id()] = actor
+}
+
+func (s mockSimulation) RemoveActor(actor rpg2d.Actor) {
+	s.Lock()
+	defer s.Unlock()
+
+	delete(s.actors, actor.Id())
+}
 
 func (mockSimulation) Halt() (rpg2d.HaltedSimulation, error) { return nil, nil }
 
@@ -56,7 +75,7 @@ func DescribeActorGobConn(c gospec.Context) {
 
 	conn := newMockConn()
 
-	server := game.NewActorGobConn(conn.nextEndpoint(), mockSimulation{}, ds)
+	server := game.NewActorGobConn(conn.nextEndpoint(), mockSimulation{}, ds, entity.NewIdGenerator())
 	go func() {
 		c.Assume(server.Run(), IsNil)
 	}()
