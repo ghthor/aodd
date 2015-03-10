@@ -39,7 +39,7 @@ const (
 
 	ET_REQ_MOVE
 	ET_REQ_USE
-	ER_REQ_CHAT
+	ET_REQ_CHAT
 )
 
 type ReqLogin struct{ Name, Password string }
