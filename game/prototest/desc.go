@@ -84,41 +84,46 @@ func DescribeActorGobConn(c gospec.Context) {
 	var (
 		actorConnected chan<- *mockActor
 		connectedActor <-chan *mockActor
+
+		serverExitError <-chan error
+		exitWithError   chan<- error
 	)
 
 	func() {
 		actorCh := make(chan *mockActor, 1)
+		errorCh := make(chan error)
 
 		actorConnected, connectedActor =
 			actorCh, actorCh
+		exitWithError, serverExitError =
+			errorCh, errorCh
 	}()
-
-	server := game.NewPreLoginConn(game.NewGobConn(conn.nextEndpoint()), ds,
-		func(dsactor datastore.Actor, stateWriter game.InitialStateWriter) (game.InputReceiver, entity.State) {
-			actor := &mockActor{
-				actor:       dsactor,
-				stateWriter: stateWriter,
-				entityState: game.ActorEntityState{
-					EntityId: nextId(),
-					Name:     dsactor.Name,
-				},
-
-				lastMoveRequest: make(chan game.MoveRequest),
-				lastUseRequest:  make(chan game.UseRequest),
-				lastChatRequest: make(chan game.ChatRequest),
-			}
-			actorConnected <- actor
-			return actor, actor.entityState
-		},
-	)
-
-	serverClosed := make(chan error)
 
 	// Start the server and return the error
 	// so we can sync before the function scope
 	// is exitted.
-	go func() {
-		serverClosed <- server.Run()
+	func() {
+		loginConn := game.NewPreLoginConn(game.NewGobConn(conn.nextEndpoint()), ds)
+
+		go func() {
+			exitWithError <- game.RunServer(loginConn,
+				func(dsactor datastore.Actor, stateWriter game.InitialStateWriter) (game.InputReceiver, entity.State) {
+					actor := &mockActor{
+						actor:       dsactor,
+						stateWriter: stateWriter,
+						entityState: game.ActorEntityState{
+							EntityId: nextId(),
+							Name:     dsactor.Name,
+						},
+
+						lastMoveRequest: make(chan game.MoveRequest),
+						lastUseRequest:  make(chan game.UseRequest),
+						lastChatRequest: make(chan game.ChatRequest),
+					}
+					actorConnected <- actor
+					return actor, actor.entityState
+				})
+		}()
 	}()
 
 	// Close down the io.Pipe which will bring down
@@ -135,7 +140,7 @@ func DescribeActorGobConn(c gospec.Context) {
 					c.Assume(pr.Close(), IsNil)
 				}
 
-				c.Assume(<-serverClosed, Equals, io.ErrClosedPipe)
+				c.Assume(<-serverExitError, Equals, io.ErrClosedPipe)
 			})
 		}
 	}()

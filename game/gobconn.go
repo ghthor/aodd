@@ -8,7 +8,6 @@ import (
 
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/entity"
 	"golang.org/x/net/websocket"
 )
 
@@ -97,14 +96,14 @@ func NewGobConn(rw io.ReadWriter) Conn {
 
 func newGobWebsocketHandler(
 	ds datastore.Datastore,
-	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)) websocket.Handler {
+	actorConnector ActorConnector) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		ws.PayloadType = websocket.BinaryFrame
 
-		c := NewPreLoginConn(NewGobConn(ws), ds, newActor)
+		c := NewPreLoginConn(NewGobConn(ws), ds)
 
-		// Blocks until the connection is disconnected
-		err := c.Run()
+		// Blocks until the connection has disconnected
+		err := RunServer(c, actorConnector)
 
 		if err != nil {
 			log.Printf("packet handler terminated: %v", err)

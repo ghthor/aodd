@@ -56,22 +56,35 @@ type InputReceiver interface {
 	Close()
 }
 
-type serverConn struct {
-	Conn
-
-	datastore datastore.Datastore
-
-	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)
-	actor    InputReceiver
+type PreLoginConn interface {
+	HandleLogin() (LoggedInConn, error)
 }
 
-type ActorConn interface {
-	Run() error
+type ActorConnector func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)
+
+type LoggedInConn interface {
+	HandleConnect(ActorConnector) (ConnectedActorConn, error)
+}
+
+type ConnectedActorConn interface {
+	HandleIO() error
+}
+
+type preLoginConn struct {
+	Conn
+	datastore datastore.Datastore
+}
+
+type preLoginResult struct {
+	preLoginConn
+
+	// result set by handling packets
+	loggedInActor datastore.Actor
 }
 
 type stateFn func() (stateFn, error)
 
-func (c *serverConn) handleLogin() (stateFn, error) {
+func (c *preLoginResult) handleLogin() (stateFn, error) {
 	eType, err := c.ReadNextType()
 	if err != nil {
 		return nil, err
@@ -90,7 +103,7 @@ func (c *serverConn) handleLogin() (stateFn, error) {
 	return c.handleLogin, nil
 }
 
-func (c *serverConn) handleLoginReq() (stateFn, error) {
+func (c *preLoginResult) handleLoginReq() (stateFn, error) {
 	var r ReqLogin
 	err := c.Decode(&r)
 	if err != nil {
@@ -118,15 +131,17 @@ func (c *serverConn) handleLoginReq() (stateFn, error) {
 		return c.handleLogin, nil
 	}
 
+	c.loggedInActor = actor
+
 	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, RespLoginSuccess{actor.Name})
 	if err != nil {
 		return nil, err
 	}
 
-	return c.handleConnect(actor), nil
+	return nil, nil
 }
 
-func (c *serverConn) handleCreateReq() (stateFn, error) {
+func (c *preLoginResult) handleCreateReq() (stateFn, error) {
 	var r ReqCreate
 	err := c.Decode(&r)
 	if err != nil {
@@ -151,15 +166,71 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 		return nil, err
 	}
 
+	c.loggedInActor = actor
+
 	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, RespLoginSuccess{actor.Name})
 	if err != nil {
 		return nil, err
 	}
 
-	return c.handleConnect(actor), nil
+	return nil, nil
 }
 
-func (c *serverConn) handleConnect(dsactor datastore.Actor) stateFn {
+func (c preLoginConn) HandleLogin() (LoggedInConn, error) {
+	var err error
+	result := preLoginResult{preLoginConn: c}
+
+	f := result.handleLogin
+	for f != nil && err == nil {
+		f, err = f()
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return loggedInConn{
+		Conn:          c.Conn,
+		loggedInActor: result.loggedInActor,
+	}, nil
+}
+
+type loggedInConn struct {
+	Conn
+	loggedInActor datastore.Actor
+}
+
+type loggedInResult struct {
+	loggedInConn
+
+	connectedConn connectedConn
+}
+
+type initialStateWriter struct {
+	sendState   chan<- rpg2d.WorldState
+	stateWriter <-chan StateWriter
+}
+
+func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) StateWriter {
+	// Pass state out to connection to be written
+	c.sendState <- s
+
+	// Return a state writer to the muxer
+	return <-c.stateWriter
+}
+
+func (c loggedInResult) connect(connectActor ActorConnector) (actor InputReceiver, entity entity.State, initialState <-chan rpg2d.WorldState, stateWriter chan<- StateWriter) {
+	initialStateCh := make(chan rpg2d.WorldState)
+	stateWriterCh := make(chan StateWriter)
+
+	actor, entity = connectActor(c.loggedInActor, initialStateWriter{
+		sendState:   initialStateCh,
+		stateWriter: stateWriterCh,
+	})
+	return actor, entity, initialStateCh, stateWriterCh
+}
+
+func (c *loggedInResult) handleConnect(connectActor ActorConnector) stateFn {
 	var handleConnect stateFn
 
 	handleConnect = func() (stateFn, error) {
@@ -182,8 +253,7 @@ func (c *serverConn) handleConnect(dsactor datastore.Actor) stateFn {
 			return nil, err
 		}
 
-		actor, entity, initialState := c.connect(dsactor)
-		c.actor = actor
+		actor, entity, initialState, stateWriter := c.connect(connectActor)
 
 		err = c.EncodeAndSend(ET_CONNECTED, entity)
 		if err != nil {
@@ -195,30 +265,41 @@ func (c *serverConn) handleConnect(dsactor datastore.Actor) stateFn {
 			return nil, err
 		}
 
-		return c.handleInputReq, nil
+		c.connectedConn = connectedConn{
+			Conn:  c.Conn,
+			actor: actor,
+		}
+
+		stateWriter <- c.connectedConn
+
+		return nil, nil
 	}
 
 	return handleConnect
 }
 
-type initialStateWriter struct {
-	sendState chan<- rpg2d.WorldState
+func (c loggedInConn) HandleConnect(connectActor ActorConnector) (ConnectedActorConn, error) {
+	var err error
+	result := loggedInResult{loggedInConn: c}
+
+	f := result.handleConnect(connectActor)
+	for f != nil && err == nil {
+		f, err = f()
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result.connectedConn, nil
 }
 
-func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) StateWriter {
-	c.sendState <- s
-
-	// TODO Return a conncurent safe StateWriter
-	return nil
+type connectedConn struct {
+	Conn
+	actor InputReceiver
 }
 
-func (c *serverConn) connect(dsactor datastore.Actor) (actor InputReceiver, entity entity.State, initialState <-chan rpg2d.WorldState) {
-	initialStateCh := make(chan rpg2d.WorldState)
-	actor, entity = c.newActor(dsactor, initialStateWriter{initialStateCh})
-	return actor, entity, initialStateCh
-}
-
-func (c *serverConn) handleInputReq() (stateFn, error) {
+func (c *connectedConn) handleInputReq() (stateFn, error) {
 	eType, err := c.ReadNextType()
 	if err != nil {
 		return nil, err
@@ -239,7 +320,7 @@ func (c *serverConn) handleInputReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c *serverConn) handleMoveReq() (stateFn, error) {
+func (c *connectedConn) handleMoveReq() (stateFn, error) {
 	var r MoveRequest
 	err := c.Decode(&r)
 	if err != nil {
@@ -250,7 +331,7 @@ func (c *serverConn) handleMoveReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c *serverConn) handleUseReq() (stateFn, error) {
+func (c *connectedConn) handleUseReq() (stateFn, error) {
 	var r UseRequest
 	err := c.Decode(&r)
 	if err != nil {
@@ -261,7 +342,7 @@ func (c *serverConn) handleUseReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c *serverConn) handleChatReq() (stateFn, error) {
+func (c *connectedConn) handleChatReq() (stateFn, error) {
 	var r ChatRequest
 	err := c.Decode(&r)
 	if err != nil {
@@ -272,30 +353,37 @@ func (c *serverConn) handleChatReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c serverConn) Run() (err error) {
-	f := c.handleLogin
+func (c connectedConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) {
+	// TODO Handle this potentional write error
+	c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
+}
+
+func (c connectedConn) HandleIO() (err error) {
+	f := c.handleInputReq
 	for f != nil && err == nil {
 		f, err = f()
-	}
-
-	if c.actor != nil {
-		c.actor.Close()
 	}
 
 	return
 }
 
-func (c serverConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
-	return c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
-}
-
-func NewPreLoginConn(
-	conn Conn,
-	ds datastore.Datastore,
-	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)) ActorConn {
-	return serverConn{
+func NewPreLoginConn(conn Conn, ds datastore.Datastore) PreLoginConn {
+	return preLoginConn{
 		Conn:      conn,
 		datastore: ds,
-		newActor:  newActor,
 	}
+}
+
+func RunServer(loginConn PreLoginConn, actorConnector ActorConnector) error {
+	loggedInConn, err := loginConn.HandleLogin()
+	if err != nil {
+		return err
+	}
+
+	connectedConn, err := loggedInConn.HandleConnect(actorConnector)
+	if err != nil {
+		return err
+	}
+
+	return connectedConn.HandleIO()
 }
