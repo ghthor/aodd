@@ -269,13 +269,6 @@ func (c *serverConn) handleConnect(dsactor datastore.Actor) stateFn {
 			return nil, err
 		}
 
-		// TODO there is a potential race where the actor
-		//      is connected to the server and the initial
-		//      world state is sent over the connection before
-		//      the ET_CONNECTED packet. Can be solved by deferring
-		//      sending the ET_CONNECTED packet till the SendWorldState
-		//      method is called and sending them both there in the
-		//      correct order.
 		actor, entity, initialState := c.connect(dsactor)
 		c.actor = actor
 
