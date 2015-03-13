@@ -19,7 +19,7 @@ type LoggedInConn interface {
 
 // Implementation of the LoggedInConn interface
 type actorConnector struct {
-	conn game.GobConn
+	conn game.Conn
 }
 
 type RespConnected struct {
@@ -29,7 +29,7 @@ type RespConnected struct {
 }
 
 type ConnectRoundTrip struct {
-	conn game.GobConn
+	conn game.Conn
 
 	Connected <-chan RespConnected
 	Error     <-chan error

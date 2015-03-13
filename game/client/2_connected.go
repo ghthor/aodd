@@ -25,14 +25,14 @@ type InitialState struct {
 	WorldState rpg2d.WorldState
 }
 
-func receiveUpdates(conn game.GobConn, sendUpdate chan<- rpg2d.WorldStateDiff) (err error) {
+func receiveUpdates(conn game.Conn, sendUpdate chan<- rpg2d.WorldStateDiff) (err error) {
 	for err == nil {
 		err = receiveUpdate(conn, sendUpdate)
 	}
 	return
 }
 
-func receiveUpdate(conn game.GobConn, sendUpdate chan<- rpg2d.WorldStateDiff) error {
+func receiveUpdate(conn game.Conn, sendUpdate chan<- rpg2d.WorldStateDiff) error {
 	eType, err := conn.ReadNextType()
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func receiveUpdate(conn game.GobConn, sendUpdate chan<- rpg2d.WorldStateDiff) er
 
 // An implementation of the InputConn interface
 type requestSender struct {
-	conn game.GobConn
+	conn game.Conn
 }
 
 func (c requestSender) SendMoveRequest(r game.MoveRequest) {

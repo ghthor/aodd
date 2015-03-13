@@ -16,7 +16,7 @@ type LoginConn interface {
 
 // An implementation of the LoginConn interface
 type loginConn struct {
-	conn game.GobConn
+	conn game.Conn
 }
 
 type RespLoggedIn struct {
@@ -28,7 +28,7 @@ type RespLoggedIn struct {
 // The caller should select from all the channels to
 // recv the response.
 type LoginRoundTrip struct {
-	conn game.GobConn
+	conn game.Conn
 
 	Success          <-chan RespLoggedIn
 	ActorDoesntExist <-chan game.RespActorDoesntExist
@@ -134,7 +134,7 @@ func (c *loginConn) AttemptLogin(name, password string) LoginRoundTrip {
 // The caller should select from all the channels to
 // recv the response.
 type CreateRoundTrip struct {
-	conn game.GobConn
+	conn game.Conn
 
 	Success     <-chan RespLoggedIn
 	ActorExists <-chan game.RespActorExists

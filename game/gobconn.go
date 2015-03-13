@@ -90,7 +90,7 @@ func init() {
 	gob.Register(ChatRequest{})
 }
 
-type GobConn interface {
+type Conn interface {
 	EncodeAndSend(EncodedType, interface{}) error
 	ReadNextType() (EncodedType, error)
 	Decode(interface{}) error
@@ -122,7 +122,7 @@ func (c gobConn) ReadNextType() (t EncodedType, err error) {
 	return
 }
 
-func NewGobConn(rw io.ReadWriter) GobConn {
+func NewGobConn(rw io.ReadWriter) Conn {
 	wbuf := bufio.NewWriter(rw)
 	enc := gob.NewEncoder(wbuf)
 	dec := gob.NewDecoder(rw)
@@ -144,7 +144,7 @@ type InputReceiver interface {
 }
 
 type serverConn struct {
-	GobConn
+	Conn
 
 	datastore datastore.Datastore
 
@@ -381,7 +381,7 @@ func NewActorGobConn(
 	ds datastore.Datastore,
 	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)) ActorConn {
 	return serverConn{
-		GobConn:   NewGobConn(rw),
+		Conn:      NewGobConn(rw),
 		datastore: ds,
 		newActor:  newActor,
 	}
