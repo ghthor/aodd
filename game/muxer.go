@@ -6,10 +6,10 @@ import (
 )
 
 type InitialStateWriter interface {
-	WriteWorldState(rpg2d.WorldState) StateWriter
+	WriteWorldState(rpg2d.WorldState) DiffWriter
 }
 
-type StateWriter interface {
+type DiffWriter interface {
 	WriteWorldStateDiff(rpg2d.WorldStateDiff)
 }
 
@@ -143,14 +143,14 @@ func (a *actorConn) startIO() {
 			cmd.chatCmd = &chatCmd
 		}
 
-		var stateWriter StateWriter
+		var diffWriter DiffWriter
 
 		// Wait for the initial world state
 		// and send it out to the client.
 		select {
 		case state := <-newState:
 			if state != nil {
-				stateWriter = a.conn.WriteWorldState(*state)
+				diffWriter = a.conn.WriteWorldState(*state)
 			}
 
 		case hasStopped = <-stopReq:
@@ -219,7 +219,7 @@ func (a *actorConn) startIO() {
 		select {
 		case diff := <-newDiff:
 			if diff != nil {
-				stateWriter.WriteWorldStateDiff(*diff)
+				diffWriter.WriteWorldStateDiff(*diff)
 			}
 
 			cmd.chatCmd = nil

@@ -207,27 +207,27 @@ type loggedInResult struct {
 }
 
 type initialStateWriter struct {
-	sendState   chan<- rpg2d.WorldState
-	stateWriter <-chan StateWriter
+	sendState  chan<- rpg2d.WorldState
+	diffWriter <-chan DiffWriter
 }
 
-func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) StateWriter {
+func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) DiffWriter {
 	// Pass state out to connection to be written
 	c.sendState <- s
 
 	// Return a state writer to the muxer
-	return <-c.stateWriter
+	return <-c.diffWriter
 }
 
-func (c loggedInResult) connect(connectActor ActorConnector) (actor InputReceiver, entity entity.State, initialState <-chan rpg2d.WorldState, stateWriter chan<- StateWriter) {
+func (c loggedInResult) connect(connectActor ActorConnector) (InputReceiver, entity.State, <-chan rpg2d.WorldState, chan<- DiffWriter) {
 	initialStateCh := make(chan rpg2d.WorldState)
-	stateWriterCh := make(chan StateWriter)
+	diffWriterCh := make(chan DiffWriter)
 
-	actor, entity = connectActor(c.loggedInActor, initialStateWriter{
-		sendState:   initialStateCh,
-		stateWriter: stateWriterCh,
+	actor, entity := connectActor(c.loggedInActor, initialStateWriter{
+		sendState:  initialStateCh,
+		diffWriter: diffWriterCh,
 	})
-	return actor, entity, initialStateCh, stateWriterCh
+	return actor, entity, initialStateCh, diffWriterCh
 }
 
 func (c *loggedInResult) handleConnect(connectActor ActorConnector) stateFn {
@@ -253,7 +253,7 @@ func (c *loggedInResult) handleConnect(connectActor ActorConnector) stateFn {
 			return nil, err
 		}
 
-		actor, entity, initialState, stateWriter := c.connect(connectActor)
+		actor, entity, initialState, diffWriter := c.connect(connectActor)
 
 		err = c.EncodeAndSend(ET_CONNECTED, entity)
 		if err != nil {
@@ -270,7 +270,7 @@ func (c *loggedInResult) handleConnect(connectActor ActorConnector) stateFn {
 			actor: actor,
 		}
 
-		stateWriter <- c.connectedConn
+		diffWriter <- c.connectedConn
 
 		return nil, nil
 	}
