@@ -93,7 +93,7 @@ func DescribeActorGobConn(c gospec.Context) {
 			actorCh, actorCh
 	}()
 
-	server := game.NewActorGobConn(conn.nextEndpoint(), ds,
+	server := game.NewPreLoginConn(game.NewGobConn(conn.nextEndpoint()), ds,
 		func(dsactor datastore.Actor, stateWriter game.InitialStateWriter) (game.InputReceiver, entity.State) {
 			actor := &mockActor{
 				actor:       dsactor,
@@ -141,7 +141,7 @@ func DescribeActorGobConn(c gospec.Context) {
 	}()
 	defer stopServer()
 
-	loginConn := client.NewLoginConn(conn.nextEndpoint())
+	loginConn := client.NewLoginConn(game.NewGobConn(conn.nextEndpoint()))
 	c.Assume(conn.nextEndpoint(), IsNil)
 
 	c.Specify("an actor conn", func() {

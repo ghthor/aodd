@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/ghthor/aodd/game"
 )
@@ -222,8 +221,8 @@ func (c *loginConn) CreateActor(name, password string) CreateRoundTrip {
 
 // Create a new connection that can
 // login or create an actor.
-func NewLoginConn(with io.ReadWriter) LoginConn {
+func NewLoginConn(conn game.Conn) LoginConn {
 	return &loginConn{
-		conn: game.NewGobConn(with),
+		conn: conn,
 	}
 }

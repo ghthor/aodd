@@ -337,12 +337,12 @@ func (c serverConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
 	return c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
 }
 
-func NewActorGobConn(
-	rw io.ReadWriter,
+func NewPreLoginConn(
+	conn Conn,
 	ds datastore.Datastore,
 	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)) ActorConn {
 	return serverConn{
-		Conn:      NewGobConn(rw),
+		Conn:      conn,
 		datastore: ds,
 		newActor:  newActor,
 	}
@@ -354,7 +354,7 @@ func newGobWebsocketHandler(
 	return func(ws *websocket.Conn) {
 		ws.PayloadType = websocket.BinaryFrame
 
-		c := NewActorGobConn(ws, ds, newActor)
+		c := NewPreLoginConn(NewGobConn(ws), ds, newActor)
 
 		// Blocks until the connection is disconnected
 		err := c.Run()

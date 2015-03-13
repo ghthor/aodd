@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -89,7 +90,7 @@ func initialize(settings *js.Object) jsObject {
 					connLock := make(chan client.LoginConn, 1)
 					return connLock, connLock
 				}()
-				freeConn <- client.NewLoginConn(ws)
+				freeConn <- client.NewLoginConn(game.NewGobConn(ws))
 
 				// Emit a connected event and a object the
 				// login form can use to send messages to the
