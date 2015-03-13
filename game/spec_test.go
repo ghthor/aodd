@@ -194,7 +194,6 @@ func DescribeLiveWebTesting(c gospec.Context) {
 func TestUnitSpecs(t *testing.T) {
 	r := gospec.NewRunner()
 
-	r.AddSpec(game.DescribeActorConn)
 	r.AddSpec(DescribeGobConn)
 	r.AddSpec(prototest.DescribeActorGobConn)
 
