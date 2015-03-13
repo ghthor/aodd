@@ -39,6 +39,7 @@ type actorConnector struct {
 }
 
 type RespLoggedIn struct {
+	Name string
 	LoggedInConn
 }
 
@@ -161,6 +162,7 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 			}
 
 			success <- RespLoggedIn{
+				Name:         resp.Name,
 				LoggedInConn: actorConnector{trip.conn},
 			}
 
@@ -250,6 +252,7 @@ func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
 			}
 
 			success <- RespLoggedIn{
+				Name:         resp.Name,
 				LoggedInConn: actorConnector{trip.conn},
 			}
 

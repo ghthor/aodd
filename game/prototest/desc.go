@@ -150,7 +150,7 @@ func DescribeActorGobConn(c gospec.Context) {
 				trip := loginConn.AttemptLogin("actor", "password")
 				c.Assume(<-trip.Error, IsNil)
 				loginResp := <-trip.Success
-				c.Expect(loginResp, Not(Equals), client.RespLoggedIn{})
+				c.Expect(loginResp.Name, Equals, "actor")
 			})
 
 			c.Specify("and the request will fail", func() {
@@ -178,7 +178,7 @@ func DescribeActorGobConn(c gospec.Context) {
 				trip := loginConn.CreateActor("newActor", "password")
 				c.Assume(<-trip.Error, IsNil)
 				loginResp := <-trip.Success
-				c.Expect(loginResp, Not(Equals), client.RespLoggedIn{})
+				c.Expect(loginResp.Name, Equals, "newActor")
 			})
 
 			c.Specify("and the request will fail", func() {
@@ -194,7 +194,7 @@ func DescribeActorGobConn(c gospec.Context) {
 			trip := loginConn.AttemptLogin("actor", "password")
 			loginResp := <-trip.Success
 			c.Assume(<-trip.Error, IsNil)
-			c.Assume(loginResp, Not(Equals), client.RespLoggedIn{})
+			c.Assume(loginResp.Name, Equals, "actor")
 			return loginResp
 		}
 
@@ -202,7 +202,7 @@ func DescribeActorGobConn(c gospec.Context) {
 			loginResp := login()
 
 			c.Specify("can be connected to the simulation", func() {
-				trip := loginResp.ConnectActor("actor")
+				trip := loginResp.ConnectActor(loginResp.Name)
 				actor := <-connectedActor
 
 				initialState := func() rpg2d.WorldState {
@@ -239,7 +239,7 @@ func DescribeActorGobConn(c gospec.Context) {
 		c.Specify("that is connected to the simulation", func() {
 			loginResp := login()
 
-			trip := loginResp.ConnectActor("actor")
+			trip := loginResp.ConnectActor(loginResp.Name)
 			actor := <-connectedActor
 
 			initialState := func() rpg2d.WorldState {
