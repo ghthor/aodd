@@ -26,35 +26,46 @@ type InitialState struct {
 }
 
 func receiveUpdates(conn game.Conn, sendUpdate chan<- rpg2d.WorldStateDiff) (err error) {
-	for err == nil {
-		err = receiveUpdate(conn, sendUpdate)
+	var diff rpg2d.WorldStateDiff
+	for {
+		diff, err = receiveUpdate(conn)
+		if err != nil {
+			break
+		}
+		sendUpdate <- diff
 	}
 	return
 }
 
-func receiveUpdate(conn game.Conn, sendUpdate chan<- rpg2d.WorldStateDiff) error {
+func receiveUpdate(conn game.Conn) (diff rpg2d.WorldStateDiff, err error) {
 	eType, err := conn.ReadNextType()
 	if err != nil {
-		return err
+		return diff, err
 	}
 
 	switch eType {
 	default:
-		return fmt.Errorf("unexpected encoded type %v waiting for state update diffs", eType)
+		return diff, fmt.Errorf("unexpected encoded type %v waiting for state update diffs", eType)
 
 	case game.ET_WORLD_STATE_DIFF:
 	}
 
-	var diff rpg2d.WorldStateDiff
-
 	err = conn.Decode(&diff)
 	if err != nil {
-		return err
+		return diff, err
 	}
 
-	sendUpdate <- diff
+	return diff, nil
 
-	return nil
+}
+
+// An implementation of the UpdateConn interface
+type updateReceiver struct {
+	conn game.Conn
+}
+
+func (c updateReceiver) NextUpdate() (rpg2d.WorldStateDiff, error) {
+	return receiveUpdate(c.conn)
 }
 
 // An implementation of the InputConn interface

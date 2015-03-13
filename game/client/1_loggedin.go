@@ -110,8 +110,7 @@ func (trip ConnectRoundTrip) run(r game.ReqConnect) ConnectRoundTrip {
 		}
 
 		actorConnected <- RespConnected{
-			// TODO Return an UpdateConn
-			UpdateConn: nil,
+			UpdateConn: updateReceiver{trip.conn},
 			InputConn:  requestSender{trip.conn},
 			InitialState: InitialState{
 				Entity:     actorEntity,

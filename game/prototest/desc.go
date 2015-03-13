@@ -262,7 +262,14 @@ func DescribeActorGobConn(c gospec.Context) {
 				return state
 			}
 
-			actor.stateWriter.WriteWorldState(initialState())
+			worldState := initialState()
+
+			diffWriter := actor.stateWriter.WriteWorldState(
+				worldState.Cull(coord.Bounds{
+					coord.Cell{-2, 2},
+					coord.Cell{2, -2},
+				}),
+			)
 
 			var err error
 			var connectResp client.RespConnected
@@ -276,7 +283,30 @@ func DescribeActorGobConn(c gospec.Context) {
 
 			c.Specify("will receive an initial world state", func() {
 				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
-				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals, initialState())
+				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals,
+					worldState.Cull(coord.Bounds{
+						coord.Cell{-2, 2},
+						coord.Cell{2, -2},
+					}),
+				)
+
+				c.Specify("followed by world state diffs", func() {
+					diff := worldState.Cull(coord.Bounds{
+						coord.Cell{-2, 2},
+						coord.Cell{2, -2},
+					}).Diff(worldState.Cull(coord.Bounds{
+						coord.Cell{-3, 3},
+						coord.Cell{1, -1},
+					}))
+
+					go func() {
+						diffWriter.WriteWorldStateDiff(diff)
+					}()
+
+					update, err := connectResp.NextUpdate()
+					c.Assume(err, IsNil)
+					c.Expect(update, rpg2dtest.StateEquals, diff)
+				})
 			})
 
 			c.Specify("can submit a move request", func() {
