@@ -50,25 +50,25 @@ func newMockConn() *mockConn {
 type mockActor struct {
 	actor datastore.Actor
 
-	stateWriter game.StateWriter
+	stateWriter game.InitialStateWriter
 
 	entityState game.ActorEntityState
 
-	lastMoveRequest game.MoveRequest
-	lastUseRequest  game.UseRequest
-	lastChatRequest game.ChatRequest
+	lastMoveRequest chan game.MoveRequest
+	lastUseRequest  chan game.UseRequest
+	lastChatRequest chan game.ChatRequest
 
 	wasClosed bool
 }
 
 func (a *mockActor) SubmitMoveRequest(r game.MoveRequest) {
-	a.lastMoveRequest = r
+	a.lastMoveRequest <- r
 }
 func (a *mockActor) SubmitUseRequest(r game.UseRequest) {
-	a.lastUseRequest = r
+	a.lastUseRequest <- r
 }
 func (a *mockActor) SubmitChatRequest(r game.ChatRequest) {
-	a.lastChatRequest = r
+	a.lastChatRequest <- r
 }
 
 func (a mockActor) Close() { a.wasClosed = true }
@@ -80,10 +80,21 @@ func DescribeActorGobConn(c gospec.Context) {
 	conn := newMockConn()
 
 	nextId := entity.NewIdGenerator()
-	var connectedActor *mockActor
+
+	var (
+		actorConnected chan<- *mockActor
+		connectedActor <-chan *mockActor
+	)
+
+	func() {
+		actorCh := make(chan *mockActor, 1)
+
+		actorConnected, connectedActor =
+			actorCh, actorCh
+	}()
 
 	server := game.NewActorGobConn(conn.nextEndpoint(), ds,
-		func(dsactor datastore.Actor, stateWriter game.StateWriter) (game.InputReceiver, entity.State) {
+		func(dsactor datastore.Actor, stateWriter game.InitialStateWriter) (game.InputReceiver, entity.State) {
 			actor := &mockActor{
 				actor:       dsactor,
 				stateWriter: stateWriter,
@@ -91,8 +102,12 @@ func DescribeActorGobConn(c gospec.Context) {
 					EntityId: nextId(),
 					Name:     dsactor.Name,
 				},
+
+				lastMoveRequest: make(chan game.MoveRequest),
+				lastUseRequest:  make(chan game.UseRequest),
+				lastChatRequest: make(chan game.ChatRequest),
 			}
-			connectedActor = actor
+			actorConnected <- actor
 			return actor, actor.entityState
 		},
 	)
@@ -136,15 +151,6 @@ func DescribeActorGobConn(c gospec.Context) {
 				c.Assume(<-trip.Error, IsNil)
 				loginResp := <-trip.Success
 				c.Expect(loginResp, Not(Equals), client.RespLoggedIn{})
-
-				c.Specify("and an actor will be added to the simulation", func() {
-					stopServer()
-					initialState := <-loginResp.InitialState
-					c.Assume(<-loginResp.Error, Equals, io.ErrClosedPipe)
-
-					c.Expect(initialState.Entity, Not(Equals), game.ActorEntityState{})
-					c.Expect(initialState.Entity, Equals, connectedActor.entityState)
-				})
 			})
 
 			c.Specify("and the request will fail", func() {
@@ -173,15 +179,6 @@ func DescribeActorGobConn(c gospec.Context) {
 				c.Assume(<-trip.Error, IsNil)
 				loginResp := <-trip.Success
 				c.Expect(loginResp, Not(Equals), client.RespLoggedIn{})
-
-				c.Specify("and an actor will be added to the simulation", func() {
-					stopServer()
-					initialState := <-loginResp.InitialState
-					c.Assume(<-loginResp.Error, Equals, io.ErrClosedPipe)
-
-					c.Expect(initialState.Entity, Not(Equals), game.ActorEntityState{})
-					c.Expect(initialState.Entity, Equals, connectedActor.entityState)
-				})
 			})
 
 			c.Specify("and the request will fail", func() {
@@ -193,20 +190,66 @@ func DescribeActorGobConn(c gospec.Context) {
 			})
 		})
 
-		c.Specify("that is logged in", func() {
+		login := func() client.RespLoggedIn {
 			trip := loginConn.AttemptLogin("actor", "password")
 			loginResp := <-trip.Success
 			c.Assume(<-trip.Error, IsNil)
 			c.Assume(loginResp, Not(Equals), client.RespLoggedIn{})
-			c.Assume(connectedActor, Not(IsNil))
+			return loginResp
+		}
+
+		c.Specify("that is logged in", func() {
+			loginResp := login()
+
+			c.Specify("can be connected to the simulation", func() {
+				trip := loginResp.ConnectActor("actor")
+				actor := <-connectedActor
+
+				initialState := func() rpg2d.WorldState {
+					state := rpg2d.WorldState{}
+					state.Time = 2
+					state.Bounds = coord.Bounds{
+						coord.Cell{-10, 10},
+						coord.Cell{10, -10},
+					}
+					state.Entities = append(state.Entities, actor.entityState)
+					terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
+					c.Assume(err, IsNil)
+					state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
+
+					return state
+				}
+
+				actor.stateWriter.WriteWorldState(initialState())
+
+				var err error
+				var connectResp client.RespConnected
+
+				select {
+				case err = <-trip.Error:
+				case connectResp = <-trip.Connected:
+				}
+
+				c.Assume(err, IsNil)
+				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
+				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals, initialState())
+			})
+		})
+
+		c.Specify("that is connected to the simulation", func() {
+			loginResp := login()
+
+			trip := loginResp.ConnectActor("actor")
+			actor := <-connectedActor
 
 			initialState := func() rpg2d.WorldState {
 				state := rpg2d.WorldState{}
 				state.Time = 2
 				state.Bounds = coord.Bounds{
-					coord.Cell{-2, 2},
-					coord.Cell{1, -1},
+					coord.Cell{-10, 10},
+					coord.Cell{10, -10},
 				}
+				state.Entities = append(state.Entities, actor.entityState)
 				terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
 				c.Assume(err, IsNil)
 				state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
@@ -214,27 +257,31 @@ func DescribeActorGobConn(c gospec.Context) {
 				return state
 			}
 
-			c.Specify("will recieve an initial world state", func() {
-				state := initialState()
-				connectedActor.stateWriter.WriteWorldState(state)
-				initialState := <-loginResp.InitialState
-				c.Expect(initialState.Entity, Equals, connectedActor.entityState)
-				c.Expect(initialState.WorldState, rpg2dtest.StateEquals, state)
+			actor.stateWriter.WriteWorldState(initialState())
 
-				stopServer()
-				c.Expect(<-initialState.Error, Equals, io.ErrClosedPipe)
+			var err error
+			var connectResp client.RespConnected
 
-				c.Specify("followed by world state diffs", func() {
-				})
+			select {
+			case err = <-trip.Error:
+			case connectResp = <-trip.Connected:
+			}
+
+			c.Assume(err, IsNil)
+
+			c.Specify("will receive an initial world state", func() {
+				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
+				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals, initialState())
 			})
 
 			c.Specify("can submit a move request", func() {
 				r := game.MoveRequest{
 					MoveRequestType: game.MR_MOVE,
 					Time:            2,
-					Direction:       coord.North}
-				loginResp.Conn.SendMoveRequest(r)
-				c.Expect(connectedActor.lastMoveRequest, Equals, r)
+					Direction:       coord.North,
+				}
+				connectResp.InputConn.SendMoveRequest(r)
+				c.Expect(<-actor.lastMoveRequest, Equals, r)
 			})
 
 			c.Specify("can submit a use request", func() {
@@ -243,8 +290,8 @@ func DescribeActorGobConn(c gospec.Context) {
 					Time:           2,
 					Skill:          "dion",
 				}
-				loginResp.Conn.SendUseRequest(r)
-				c.Expect(connectedActor.lastUseRequest, Equals, r)
+				connectResp.InputConn.SendUseRequest(r)
+				c.Expect(<-actor.lastUseRequest, Equals, r)
 			})
 
 			c.Specify("can submit a chat request", func() {
@@ -253,8 +300,8 @@ func DescribeActorGobConn(c gospec.Context) {
 					Time:            2,
 					Msg:             "a chat msg",
 				}
-				loginResp.Conn.SendChatRequest(r)
-				c.Expect(connectedActor.lastChatRequest, Equals, r)
+				connectResp.InputConn.SendChatRequest(r)
+				c.Expect(<-actor.lastChatRequest, Equals, r)
 			})
 		})
 	})

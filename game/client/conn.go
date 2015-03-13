@@ -13,11 +13,8 @@ type LoginConn interface {
 	CreateActor(name, password string) CreateRoundTrip
 }
 
+// An implementation of the LoginConn interface
 type loginConn struct {
-	conn game.GobConn
-}
-
-type requestSender struct {
 	conn game.GobConn
 }
 
@@ -27,10 +24,37 @@ func NewLoginConn(with io.ReadWriter) LoginConn {
 	}
 }
 
-type Conn interface {
+type LoggedInConn interface {
+	// Signals the server to connect the actor
+	// into simulation. This extra step after
+	// a successful login enables the client to
+	// prepare the renderer, load all the assets,
+	// before the actor is actually placed into the
+	// world and becomes vulnerable.
+	ConnectActor(name string) ConnectRoundTrip
+}
+
+type actorConnector struct {
+	conn game.GobConn
+}
+
+type RespLoggedIn struct {
+	LoggedInConn
+}
+
+type UpdateConn interface {
+	NextUpdate() (rpg2d.WorldStateDiff, error)
+}
+
+type InputConn interface {
 	SendMoveRequest(game.MoveRequest)
 	SendUseRequest(game.UseRequest)
 	SendChatRequest(game.ChatRequest)
+}
+
+// An implementation of the ConnectedConn interface
+type requestSender struct {
+	conn game.GobConn
 }
 
 type InitialState struct {
@@ -39,18 +63,12 @@ type InitialState struct {
 
 	// The initial state of the world.
 	WorldState rpg2d.WorldState
-
-	// A channel that will recv updates to the world onA.
-	Updates <-chan rpg2d.WorldStateDiff
-
-	// A channel if there was an error reading an update
-	Error <-chan error
 }
 
-type RespLoggedIn struct {
-	Conn
-	InitialState <-chan InitialState
-	Error        <-chan error
+type RespConnected struct {
+	UpdateConn
+	InputConn
+	InitialState InitialState
 }
 
 // Represents a login request -> response roundtrip.
@@ -135,14 +153,16 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 			actorDoesntExist <- r
 
 		case game.ET_RESP_LOGIN_SUCCESS:
-			var actorEntity game.ActorEntityState
-			err := trip.conn.Decode(&actorEntity)
+			var resp game.RespLoginSuccess
+			err := trip.conn.Decode(&resp)
 			if err != nil {
 				hadError <- err
 				return
 			}
 
-			loggedIn(trip.conn, actorEntity, success)
+			success <- RespLoggedIn{
+				LoggedInConn: actorConnector{trip.conn},
+			}
 
 		default:
 			hadError <- fmt.Errorf("unexpected login request resp type: %v", eType)
@@ -222,14 +242,16 @@ func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
 			actorExists <- r
 
 		case game.ET_RESP_CREATE_SUCCESS:
-			var actorEntity game.ActorEntityState
-			err := trip.conn.Decode(&actorEntity)
+			var resp game.RespCreateSuccess
+			err := trip.conn.Decode(&resp)
 			if err != nil {
 				hadError <- err
 				return
 			}
 
-			loggedIn(trip.conn, actorEntity, success)
+			success <- RespLoggedIn{
+				LoggedInConn: actorConnector{trip.conn},
+			}
 
 		default:
 			hadError <- fmt.Errorf("unexpected create request resp type: %v", eType)
@@ -243,126 +265,30 @@ func (c *loginConn) CreateActor(name, password string) CreateRoundTrip {
 	return CreateRoundTrip{conn: c.conn}.run(game.ReqCreate{name, password})
 }
 
-func loggedIn(conn game.GobConn, entity game.ActorEntityState, success chan<- RespLoggedIn) {
-	var (
-		recvInitialState <-chan InitialState
-		sendInitialState chan<- InitialState
-
-		hadErrorReceivingState chan<- error
-		wasErrorReceivingState <-chan error
-	)
-
-	closeInitialStateCh, closeErrorCh := func() (func(), func()) {
-		initialStateCh := make(chan InitialState)
-		errorCh := make(chan error, 1)
-
-		sendInitialState, recvInitialState =
-			initialStateCh, initialStateCh
-		wasErrorReceivingState, hadErrorReceivingState =
-			errorCh, errorCh
-
-		return func() {
-				close(initialStateCh)
-			}, func() {
-				close(errorCh)
-			}
-	}()
-
-	success <- RespLoggedIn{
-		Conn:         requestSender{conn},
-		InitialState: recvInitialState,
-		Error:        wasErrorReceivingState,
-	}
-
-	go func() {
-		defer closeErrorCh()
-
-		recv := initialStateReceiver{
-			conn:   conn,
-			entity: entity,
-
-			sendInitialState: sendInitialState,
-		}
-
-		err := recv.run()
-		if err != nil {
-			hadErrorReceivingState <- err
-
-			go func() {
-				defer closeInitialStateCh()
-				sendInitialState <- InitialState{
-					Entity: entity,
-				}
-			}()
-		}
-	}()
-}
-
-type stateFn func() (stateFn, error)
-
-type initialStateReceiver struct {
+type ConnectRoundTrip struct {
 	conn game.GobConn
 
-	entity game.ActorEntityState
-	state  rpg2d.WorldState
-
-	sendInitialState chan<- InitialState
+	Connected <-chan RespConnected
+	Error     <-chan error
 }
 
-func (recv *initialStateReceiver) run() (err error) {
-	f := recv.initialState
-	for f != nil && err == nil {
-		f, err = f()
-	}
-
-	return err
-}
-
-func (recv *initialStateReceiver) initialState() (stateFn, error) {
-	eType, err := recv.conn.ReadNextType()
-	if err != nil {
-		return nil, err
-	}
-
-	switch eType {
-	default:
-		return nil, fmt.Errorf("unexpected encoded type %v waiting for initial state", eType)
-
-	case game.ET_WORLD_STATE:
-	}
-
-	var state rpg2d.WorldState
-	err = recv.conn.Decode(&state)
-	if err != nil {
-		return nil, err
-	}
-
-	recv.state = state
-
-	return recv.receivedInitialState, nil
-}
-
-// Starts the WorldStateDiff read loop
-func (recv *initialStateReceiver) receivedInitialState() (stateFn, error) {
+func (trip ConnectRoundTrip) run(r game.ReqConnect) ConnectRoundTrip {
 	var (
-		sendUpdate chan<- rpg2d.WorldStateDiff
-		newUpdate  <-chan rpg2d.WorldStateDiff
-
-		wasErrorRecvStateUpdate chan<- error
-		hadErrorRecvStateUpdate <-chan error
+		actorConnected chan<- RespConnected
+		hadError       chan<- error
 	)
 
-	closeChans := func() func() {
-		updateCh := make(chan rpg2d.WorldStateDiff)
-		errorCh := make(chan error)
+	var closeChans func() = func() func() {
+		connectedCh := make(chan RespConnected)
+		errorCh := make(chan error, 1)
 
-		sendUpdate, newUpdate =
-			updateCh, updateCh
-		wasErrorRecvStateUpdate, hadErrorRecvStateUpdate =
+		trip.Connected, actorConnected =
+			connectedCh, connectedCh
+		trip.Error, hadError =
 			errorCh, errorCh
 
 		return func() {
-			close(updateCh)
+			close(connectedCh)
 			close(errorCh)
 		}
 	}()
@@ -370,47 +296,72 @@ func (recv *initialStateReceiver) receivedInitialState() (stateFn, error) {
 	go func() {
 		defer closeChans()
 
-		// Starts an infinite read loop
-		err := receiveUpdates(recv.conn, sendUpdate)
+		err := trip.conn.EncodeAndSend(game.ET_REQ_CONNECT, r)
 		if err != nil {
-			wasErrorRecvStateUpdate <- err
+			hadError <- err
+			return
+		}
+
+		eType, err := trip.conn.ReadNextType()
+		if err != nil {
+			hadError <- err
+			return
+		}
+
+		switch eType {
+		default:
+			hadError <- fmt.Errorf("unexpected encoded type{%v} waiting for connected entity", eType)
+			return
+
+		case game.ET_CONNECTED:
+		}
+
+		var actorEntity game.ActorEntityState
+
+		err = trip.conn.Decode(&actorEntity)
+		if err != nil {
+			hadError <- err
+			return
+		}
+
+		eType, err = trip.conn.ReadNextType()
+		if err != nil {
+			hadError <- err
+			return
+		}
+
+		switch eType {
+		default:
+			hadError <- fmt.Errorf("unexpected encoded type{%v} waiting for initial state", eType)
+			return
+
+		case game.ET_WORLD_STATE:
+		}
+
+		var state rpg2d.WorldState
+
+		err = trip.conn.Decode(&state)
+		if err != nil {
+			hadError <- err
+			return
+		}
+
+		actorConnected <- RespConnected{
+			// TODO Return an UpdateConn
+			UpdateConn: nil,
+			InputConn:  requestSender{trip.conn},
+			InitialState: InitialState{
+				Entity:     actorEntity,
+				WorldState: state,
+			},
 		}
 	}()
 
-	return recv.mergeUpdates(newUpdate, hadErrorRecvStateUpdate), nil
+	return trip
 }
 
-// Create a closure that will infinite loop,
-// merging state diffs with the initial world
-// state. It terminates when the initial state
-// if requested.
-func (recv *initialStateReceiver) mergeUpdates(newUpdate <-chan rpg2d.WorldStateDiff, hadError <-chan error) stateFn {
-	var mergeUpdates stateFn
-
-	mergeUpdates = func() (stateFn, error) {
-		select {
-		case recv.sendInitialState <- InitialState{
-			Entity:     recv.entity,
-			WorldState: recv.state,
-			Updates:    newUpdate,
-			Error:      hadError,
-		}:
-
-			return nil, nil
-
-		case err := <-hadError:
-			return nil, err
-
-		case diff := <-newUpdate:
-			fmt.Println(diff)
-		}
-
-		// TODO merge diff into state
-
-		return mergeUpdates, nil
-	}
-
-	return mergeUpdates
+func (c actorConnector) ConnectActor(name string) ConnectRoundTrip {
+	return ConnectRoundTrip{conn: c.conn}.run(game.ReqConnect{name})
 }
 
 func receiveUpdates(conn game.GobConn, sendUpdate chan<- rpg2d.WorldStateDiff) (err error) {

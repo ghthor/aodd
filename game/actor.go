@@ -60,7 +60,7 @@ type actor struct {
 	actorConn
 }
 
-func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter StateWriter) *actor {
+func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWriter) *actor {
 	return &actor{
 		id: dsactor.Id,
 

@@ -35,6 +35,9 @@ const (
 	ET_RESP_LOGIN_SUCCESS
 	ET_RESP_CREATE_SUCCESS
 
+	ET_REQ_CONNECT
+	ET_CONNECTED
+
 	ET_WORLD_STATE
 	ET_WORLD_STATE_DIFF
 
@@ -50,6 +53,11 @@ type RespAuthFailed struct{ Name string }
 type RespActorExists struct{ Name string }
 type RespActorDoesntExist struct{ Name, Password string }
 
+type RespLoginSuccess struct{ Name string }
+type RespCreateSuccess struct{ Name string }
+
+type ReqConnect struct{ Name string }
+
 const RespDisconnect = "disconnected"
 
 func init() {
@@ -61,7 +69,10 @@ func init() {
 	gob.Register(RespActorExists{})
 	gob.Register(RespActorDoesntExist{})
 
-	// ActorEntityState used for login/create success
+	gob.Register(RespLoginSuccess{})
+	gob.Register(RespCreateSuccess{})
+
+	// ActorEntityState used for response to connect
 	gob.Register(ActorEntityState{})
 
 	// Engine types
@@ -137,7 +148,7 @@ type serverConn struct {
 
 	datastore datastore.Datastore
 
-	newActor func(datastore.Actor, StateWriter) (InputReceiver, entity.State)
+	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)
 	actor    InputReceiver
 }
 
@@ -194,12 +205,12 @@ func (c *serverConn) handleLoginReq() (stateFn, error) {
 		return c.handleLogin, nil
 	}
 
-	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, c.login(actor))
+	err = c.EncodeAndSend(ET_RESP_LOGIN_SUCCESS, RespLoginSuccess{actor.Name})
 	if err != nil {
 		return nil, err
 	}
 
-	return c.handleInputReq, nil
+	return c.handleConnect(actor), nil
 }
 
 func (c *serverConn) handleCreateReq() (stateFn, error) {
@@ -227,12 +238,78 @@ func (c *serverConn) handleCreateReq() (stateFn, error) {
 		return nil, err
 	}
 
-	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, c.login(actor))
+	err = c.EncodeAndSend(ET_RESP_CREATE_SUCCESS, RespLoginSuccess{actor.Name})
 	if err != nil {
 		return nil, err
 	}
 
-	return c.handleInputReq, nil
+	return c.handleConnect(actor), nil
+}
+
+func (c *serverConn) handleConnect(dsactor datastore.Actor) stateFn {
+	var handleConnect stateFn
+
+	handleConnect = func() (stateFn, error) {
+		eType, err := c.ReadNextType()
+		if err != nil {
+			return nil, err
+		}
+
+		switch eType {
+		default:
+			// TODO Send a protocol error to the client
+			return handleConnect, nil
+
+		case ET_REQ_CONNECT:
+		}
+
+		var r ReqConnect
+		err = c.Decode(&r)
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO there is a potential race where the actor
+		//      is connected to the server and the initial
+		//      world state is sent over the connection before
+		//      the ET_CONNECTED packet. Can be solved by deferring
+		//      sending the ET_CONNECTED packet till the SendWorldState
+		//      method is called and sending them both there in the
+		//      correct order.
+		actor, entity, initialState := c.connect(dsactor)
+		c.actor = actor
+
+		err = c.EncodeAndSend(ET_CONNECTED, entity)
+		if err != nil {
+			return nil, err
+		}
+
+		err = c.EncodeAndSend(ET_WORLD_STATE, <-initialState)
+		if err != nil {
+			return nil, err
+		}
+
+		return c.handleInputReq, nil
+	}
+
+	return handleConnect
+}
+
+type initialStateWriter struct {
+	sendState chan<- rpg2d.WorldState
+}
+
+func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) StateWriter {
+	c.sendState <- s
+
+	// TODO Return a conncurent safe StateWriter
+	return nil
+}
+
+func (c *serverConn) connect(dsactor datastore.Actor) (actor InputReceiver, entity entity.State, initialState <-chan rpg2d.WorldState) {
+	initialStateCh := make(chan rpg2d.WorldState)
+	actor, entity = c.newActor(dsactor, initialStateWriter{initialStateCh})
+	return actor, entity, initialStateCh
 }
 
 func (c *serverConn) handleInputReq() (stateFn, error) {
@@ -289,11 +366,6 @@ func (c *serverConn) handleChatReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c *serverConn) login(dsactor datastore.Actor) (state entity.State) {
-	c.actor, state = c.newActor(dsactor, c)
-	return state
-}
-
 func (c serverConn) Run() (err error) {
 	f := c.handleLogin
 	for f != nil && err == nil {
@@ -307,10 +379,6 @@ func (c serverConn) Run() (err error) {
 	return
 }
 
-func (c serverConn) WriteWorldState(s rpg2d.WorldState) error {
-	return c.EncodeAndSend(ET_WORLD_STATE, s)
-}
-
 func (c serverConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
 	return c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
 }
@@ -318,7 +386,7 @@ func (c serverConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) error {
 func NewActorGobConn(
 	rw io.ReadWriter,
 	ds datastore.Datastore,
-	newActor func(datastore.Actor, StateWriter) (InputReceiver, entity.State)) ActorConn {
+	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)) ActorConn {
 	return serverConn{
 		GobConn:   NewGobConn(rw),
 		datastore: ds,
@@ -328,7 +396,7 @@ func NewActorGobConn(
 
 func newGobWebsocketHandler(
 	ds datastore.Datastore,
-	newActor func(datastore.Actor, StateWriter) (InputReceiver, entity.State)) websocket.Handler {
+	newActor func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)) websocket.Handler {
 	return func(ws *websocket.Conn) {
 		ws.PayloadType = websocket.BinaryFrame
 

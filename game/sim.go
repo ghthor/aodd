@@ -233,7 +233,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
 	mux.Handle(wsRoute, newGobWebsocketHandler(
 		ds,
-		func(dsactor datastore.Actor, stateWriter StateWriter) (InputReceiver, entity.State) {
+		func(dsactor datastore.Actor, stateWriter InitialStateWriter) (InputReceiver, entity.State) {
 			actor := NewActor(entityIdGen(), dsactor, stateWriter)
 			sim.ConnectActor(actor)
 

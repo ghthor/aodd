@@ -5,9 +5,12 @@ import (
 	"github.com/ghthor/engine/rpg2d/coord"
 )
 
+type InitialStateWriter interface {
+	WriteWorldState(rpg2d.WorldState) StateWriter
+}
+
 type StateWriter interface {
-	WriteWorldState(rpg2d.WorldState) error
-	WriteWorldStateDiff(rpg2d.WorldStateDiff) error
+	WriteWorldStateDiff(rpg2d.WorldStateDiff)
 }
 
 type actorConn struct {
@@ -27,13 +30,13 @@ type actorConn struct {
 	// Comm interface to muxer used by stopIO() method
 	stop chan<- chan<- struct{}
 
-	// External connection used to publish the world state
-	conn StateWriter
+	// External connection used to publish the initial world state
+	conn InitialStateWriter
 
 	lastState *rpg2d.WorldState
 }
 
-func newActorConn(conn StateWriter) actorConn {
+func newActorConn(conn InitialStateWriter) actorConn {
 	return actorConn{conn: conn}
 }
 
@@ -140,12 +143,14 @@ func (a *actorConn) startIO() {
 			cmd.chatCmd = &chatCmd
 		}
 
+		var stateWriter StateWriter
+
 		// Wait for the initial world state
 		// and send it out to the client.
 		select {
 		case state := <-newState:
 			if state != nil {
-				a.conn.WriteWorldState(*state)
+				stateWriter = a.conn.WriteWorldState(*state)
 			}
 
 		case hasStopped = <-stopReq:
@@ -214,7 +219,7 @@ func (a *actorConn) startIO() {
 		select {
 		case diff := <-newDiff:
 			if diff != nil {
-				a.conn.WriteWorldStateDiff(*diff)
+				stateWriter.WriteWorldStateDiff(*diff)
 			}
 
 			cmd.chatCmd = nil
