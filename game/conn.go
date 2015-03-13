@@ -214,6 +214,8 @@ type initialStateWriter struct {
 func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) DiffWriter {
 	// Pass state out to connection to be written
 	c.sendState <- s
+	// Only 1 world state will ever be written
+	close(c.sendState)
 
 	// Return a state writer to the muxer
 	return <-c.diffWriter

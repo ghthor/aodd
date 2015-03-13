@@ -151,6 +151,8 @@ func (a *actorConn) startIO() {
 		case state := <-newState:
 			if state != nil {
 				diffWriter = a.conn.WriteWorldState(*state)
+				// Only 1 world state will ever be written
+				a.conn = nil
 			}
 
 		case hasStopped = <-stopReq:
@@ -271,6 +273,11 @@ func (a *actorConn) WriteState(state rpg2d.WorldState) {
 	if a.lastState == nil {
 		a.lastState = &state
 		a.sendState <- &state
+
+		// Only 1 world state will ever be written
+		close(a.sendState)
+		a.sendState = nil
+
 		return
 	}
 
