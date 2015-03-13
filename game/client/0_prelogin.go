@@ -8,19 +8,15 @@ import (
 )
 
 type LoginConn interface {
+	// Non-blocking login actor request
 	AttemptLogin(name, password string) LoginRoundTrip
+	// Non-blocking create actor request
 	CreateActor(name, password string) CreateRoundTrip
 }
 
 // An implementation of the LoginConn interface
 type loginConn struct {
 	conn game.GobConn
-}
-
-func NewLoginConn(with io.ReadWriter) LoginConn {
-	return &loginConn{
-		conn: game.NewGobConn(with),
-	}
 }
 
 type RespLoggedIn struct {
@@ -222,4 +218,12 @@ func (trip CreateRoundTrip) run(r game.ReqCreate) CreateRoundTrip {
 
 func (c *loginConn) CreateActor(name, password string) CreateRoundTrip {
 	return CreateRoundTrip{conn: c.conn}.run(game.ReqCreate{name, password})
+}
+
+// Create a new connection that can
+// login or create an actor.
+func NewLoginConn(with io.ReadWriter) LoginConn {
+	return &loginConn{
+		conn: game.NewGobConn(with),
+	}
 }
