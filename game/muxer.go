@@ -147,16 +147,23 @@ func (a *actorConn) startIO() {
 
 		// Wait for the initial world state
 		// and send it out to the client.
-		select {
-		case state := <-newState:
-			if state != nil {
-				diffWriter = a.conn.WriteWorldState(*state)
-				// Only 1 world state will ever be written
-				a.conn = nil
-			}
+		for {
+			select {
+			case sendMoveCmd <- cmd.moveCmd:
+			case sendUseCmd <- cmd.useCmd:
+			case sendChatCmd <- cmd.chatCmd:
+			case state := <-newState:
+				if state != nil {
+					diffWriter = a.conn.WriteWorldState(*state)
+					// Only 1 world state will ever be written
+					a.conn = nil
+				}
 
-		case hasStopped = <-stopReq:
-			goto exit
+				goto unlocked
+
+			case hasStopped = <-stopReq:
+				goto exit
+			}
 		}
 
 	unlocked:
