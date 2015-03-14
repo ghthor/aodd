@@ -153,5 +153,22 @@ func initialize(settings *js.Object) jsObject {
 		module[event(i).String()] = event(i).String()
 	}
 
+	gameModule := make(jsObject, int(game.MR_SIZE)+int(game.UR_SIZE)+int(game.CR_SIZE))
+
+	for i := game.MR_ERROR; i < game.MR_SIZE; i++ {
+		gameModule[game.MoveRequestType(i).String()] = game.MoveRequestType(i)
+	}
+
+	for i := game.UR_ERROR; i < game.UR_SIZE; i++ {
+		gameModule[game.UseRequestType(i).String()] = game.UseRequestType(i)
+	}
+
+	for i := game.CR_ERROR; i < game.CR_SIZE; i++ {
+		gameModule[game.ChatRequestType(i).String()] = game.ChatRequestType(i)
+	}
+
+	// require("github.com/ghthor/aodd/game")
+	module["game"] = gameModule
+
 	return module
 }

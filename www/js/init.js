@@ -25,6 +25,10 @@ requirejs.config({
     priority: ["jquery"],
 });
 
+define("github.com/ghthor/aodd/game", ["app"], function(app) {
+    return app.game;
+});
+
 require([
    "app",
    "ui/login",
