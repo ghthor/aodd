@@ -98,10 +98,12 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 
 type MoveRequestType int
 
+//go:generate stringer -type=MoveRequestType
 const (
 	MR_ERROR MoveRequestType = iota
 	MR_MOVE
 	MR_MOVE_CANCEL
+	MR_SIZE
 )
 
 type MoveRequest struct {
@@ -117,10 +119,12 @@ type moveCmd struct {
 
 type UseRequestType int
 
+//go:generate stringer -type=UseRequestType
 const (
 	UR_ERROR UseRequestType = iota
 	UR_USE
 	UR_USE_CANCEL
+	UR_SIZE
 )
 
 type UseRequest struct {
@@ -136,9 +140,11 @@ type useCmd struct {
 
 type ChatRequestType int
 
+//go:generate stringer -type=ChatRequestType
 const (
 	CR_ERROR ChatRequestType = iota
 	CR_SAY
+	CR_SIZE
 )
 
 type ChatRequest struct {
