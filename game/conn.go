@@ -366,6 +366,8 @@ func (c connectedConn) HandleIO() (err error) {
 		f, err = f()
 	}
 
+	c.actor.Close()
+
 	return
 }
 
