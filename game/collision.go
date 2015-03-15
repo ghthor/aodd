@@ -47,7 +47,7 @@ func (phase narrowPhase) hasSolved(c quad.Collision) bool {
 
 func (phase narrowPhaseLocker) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
 	defer phase.ActorIndexLocker.RUnlock()
-	return newNarrowPhase(phase.ActorIndexLocker.Lock()).ResolveCollisions(cg, now)
+	return newNarrowPhase(phase.ActorIndexLocker.RLock()).ResolveCollisions(cg, now)
 }
 
 // Implementation of the quad.NarrowPhaseHandler interface.
