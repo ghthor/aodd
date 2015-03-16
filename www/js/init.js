@@ -7,21 +7,23 @@ requirejs.config({
         CAAT:       "lib/caat",
         app:        "app/app",
     },
+
     shim: {
         "underscore": {
             exports: function() {
                 return this._.noConflict();
-            }
+            },
         },
         
         "app": {
-            deps: ["client/settings"],
+            deps:    ["client/settings"],
             exports: "gopherjsApplication",
-            init: function(settings) {
+            init:    function(settings) {
                 return this.gopherjsApplication.initialize(settings);
             },
         },
     },
+
     priority: ["jquery"],
 });
 
