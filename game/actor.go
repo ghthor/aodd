@@ -39,7 +39,7 @@ type ActorEntityState struct {
 	Cell   coord.Cell `json:"cell"`
 	bounds coord.Bounds
 
-	PathAction *coord.PathActionJson `json:"pathAction"`
+	PathAction *coord.PathActionState `json:"pathAction"`
 
 	// Health and Mana
 	Hp    int `json:"hp"`
@@ -109,10 +109,10 @@ func (e actorEntity) Bounds() coord.Bounds {
 }
 
 func (e actorEntity) ToState() entity.State {
-	var pathAction *coord.PathActionJson
+	var pathAction *coord.PathActionState
 
 	if e.pathAction != nil {
-		pa := e.pathAction.Json()
+		pa := e.pathAction.ToState()
 		pathAction = &pa
 	}
 
