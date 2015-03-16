@@ -190,5 +190,43 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 }
 
 func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
+	return jsObject{
+		"connectActor": func(pub *js.Object) {
+			if pub.Get("emit").String() == undefined {
+				log.Println("invalid publisher: missing emit() function")
+				return
+			}
+
+			go func() {
+				pub := eventPublisher{pub}
+
+				trip := loggedInConn.ConnectActor(name)
+
+				select {
+				case resp := <-trip.Connected:
+					pub.Emit(EV_RECV_INPUT_CONN, jsArray{newInputConn(resp.InputConn)})
+					pub.Emit(EV_RECV_INITIAL_STATE, jsArray{
+						resp.InitialState.Entity,
+						resp.InitialState.WorldState,
+					})
+
+					for {
+						update, err := resp.NextUpdate()
+						if err != nil {
+							pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+							return
+						}
+						pub.Emit(EV_RECV_UPDATE, jsArray{update})
+					}
+
+				case err := <-trip.Error:
+					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+				}
+			}()
+		},
+	}
+}
+
+func newInputConn(conn client.InputConn) jsObject {
 	return jsObject{}
 }
