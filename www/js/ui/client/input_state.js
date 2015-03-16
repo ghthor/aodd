@@ -1,25 +1,27 @@
-define(["underscore"], function(_) {
-
-    var InputState = function(socket) {
+// TODO rewrite this module as go
+define(["underscore",
+        "github.com/ghthor/aodd/game",
+], function(_, game) {
+    var InputState = function(inputConn) {
         var inputState = this;
         inputState.movement = [];
         inputState.assail = null;
         inputState.time = 0;
 
         var sendMovement = function(time, direction) {
-            socket.send("3::move=" + time + ":" + direction);
+            inputConn.sendMoveRequest(game.MR_MOVE, time, direction);
         };
 
         var sendMovementCancel = function(time, direction) {
-            socket.send("3::moveCancel=" + time + ":" + direction);
+            inputConn.sendMoveRequest(game.MR_MOVE_CANCEL, time, direction);
         };
 
         var sendAssail = function(time) {
-            socket.send("3::use=" + time + ":" + "assail");
+            inputConn.sendUseRequest(game.UR_USE, time, "assail");
         };
 
         var sendAssailCancel = function(time) {
-            socket.send("3::useCancel=" + time + ":" + "assail");
+            inputConn.sendUseRequest(game.UR_USE_CANCEL, time, "assail");
         };
 
         inputState.movementDown = function(direction) {

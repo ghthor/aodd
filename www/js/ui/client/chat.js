@@ -1,5 +1,8 @@
-define(["underscore"], function(_) {
-    var Chat = function(socket, pub, entityResolver) {
+// TODO rewrite this module as go
+define(["underscore",
+        "github.com/ghthor/aodd/game",
+], function(_, game) {
+    var Chat = function(inputConn, pub, entityResolver) {
         var chat = this;
 
         var time = 0;
@@ -21,8 +24,8 @@ define(["underscore"], function(_) {
             });
         };
 
-        chat.sendSay= function(msg) {
-            socket.send("3::say=" + time + ":" + msg);
+        chat.sendSay = function(msg) {
+            inputConn.sendChatRequest(game.CR_SAY, time, msg);
             pub.emit("chat/sent/say");
         };
     };

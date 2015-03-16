@@ -1,6 +1,6 @@
-define(["client/sprite/terrain",
+define(["ui/canvas/sprite/terrain",
        "underscore",
-       "lib/jasmine"
+       "lib/jasmine",
 ], function(Tile) {
     describe("when creating a sprite for", function() {
         describe("a grass tile", function() {

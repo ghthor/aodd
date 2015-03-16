@@ -1,4 +1,4 @@
-define(["client/terrainMap",
+define(["ui/canvas/terrain_map",
        "underscore",
        "lib/jasmine"
 ], function(TerrainMap, _) {
@@ -7,33 +7,36 @@ define(["client/terrainMap",
     MockSprite.prototype = {
         makeGrassTile: function(cell) {
             return {
-                paint: jasmine.createSpy("createSpy"),
+                paint: jasmine.createSpy("paint"),
                 type: "G",
-                cell: cell
+                cell: cell,
             };
         },
-        makeDirtTile:  function(cell) {
+
+        makeDirtTile: function(cell) {
             return {
-                paint: jasmine.createSpy("createSpy"),
+                paint: jasmine.createSpy("paint"),
                 type: "D",
-                cell: cell
+                cell: cell,
             };
         },
-        makeRockTile:  function(cell) {
+
+        makeRockTile: function(cell) {
             return {
-                paint: jasmine.createSpy("createSpy"),
+                paint: jasmine.createSpy("paint"),
                 type: "R",
-                cell: cell
+                cell: cell,
             };
-        }
+        },
     };
+
     var newTerrainMap = function(def) {
         var canvas = {
             getContext: function() {
                 return {
-                    drawImage: jasmine.createSpy("drawImage")
+                    drawImage: jasmine.createSpy("drawImage"),
                 };
-            }
+            },
         };
 
         var terrainMap = new TerrainMap(def, canvas, 10);
@@ -66,33 +69,33 @@ define(["client/terrainMap",
         describe("knows when it is", function() {
             it("a full map", function() {
                 var map = newTerrainMap({
-                    bounds: {
-                        tl: {x:-1, y: 1},
-                        br: {x: 1, y:-1}
+                    Bounds: {
+                        TopL: {X:-1, Y: 1},
+                        BotR: {X: 1, Y:-1},
                     },
-                    terrain: "\nDGG\nGDG\nGGD\n"
+                    Terrain: "\nDGG\nGDG\nGGD\n",
                 });
                 expect(map.isSlice()).toBe(false);
             });
 
             it("a vertical slice", function() {
                 var map = newTerrainMap({
-                    bounds: {
-                        tl: {x:-1, y:1},
-                        br: {x:-1, y:-1}
+                    Bounds: {
+                        TopL: {X:-1, Y:1},
+                        BotR: {X:-1, Y:-1},
                     },
-                    terrain: "\nD\nG\nG\n"
+                    Terrain: "\nD\nG\nG\n",
                 });
                 expect(map.isSlice()).toBe(true);
             });
 
             it("a horizontal slice", function() {
                 var map = newTerrainMap({
-                    bounds: {
-                        tl: {x:-1, y:1},
-                        br: {x:1, y:1}
+                    Bounds: {
+                        TopL: {X:-1, Y:1},
+                        BotR: {X:1, Y:1}
                     },
-                    terrain: "\nDGG\n"
+                    Terrain: "\nDGG\n",
                 });
                 expect(map.isSlice()).toBe(true);
             });
@@ -100,13 +103,13 @@ define(["client/terrainMap",
 
         it("parses terrain defination string into an array", function() {
             var bounds = {
-                tl: {x:-1, y: 1},
-                br: {x: 1, y:-1}
+                TopL: {X:-1, Y: 1},
+                BotR: {X: 1, Y:-1},
             };
 
             var map = newTerrainMap({
-                bounds: bounds,
-                terrain: "\nDGG\nRDG\nRRD\n"
+                Bounds: bounds,
+                Terrain: "\nDGG\nRDG\nRRD\n",
             });
             // height == 3
             expect(map.sprites.length).toBe(3);
@@ -119,13 +122,13 @@ define(["client/terrainMap",
 
         xit("adds all the actors to the screen", function() {
             var bounds = {
-                tl: {x:-1, y: 1},
-                br: {x: 1, y:-1}
+                TopL: {X:-1, Y: 1},
+                BotR: {X: 1, Y:-1},
             };
 
             var map = newTerrainMap({
-                bounds: bounds,
-                terrain: "\nDGG\nRDG\nRRD\n"
+                Bounds: bounds,
+                Terrain: "\nDGG\nRDG\nRRD\n",
             });
 
             expect(map.addTileToScreen.calls.length).toBe(9);
@@ -133,60 +136,60 @@ define(["client/terrainMap",
 
         it("can find it's center", function() {
             var bounds = {
-                tl: {x:-1, y: 1},
-                br: {x: 1, y:-1}
+                TopL: {X:-1, Y: 1},
+                BotR: {X: 1, Y:-1},
             };
 
             var map = newTerrainMap({
-                bounds: bounds,
-                terrain: "\nDGG\nRDG\nRRD\n"
+                Bounds: bounds,
+                Terrain: "\nDGG\nRDG\nRRD\n",
             });
 
-            expect(map.center()).toEqual({x: 0, y: 0});
+            expect(map.center()).toEqual({X: 0, Y: 0});
         });
 
         describe("can be merged with", function() {
             var map;
             beforeEach(function() {
                 map = newTerrainMap({
-                    bounds: {
-                        tl: {x:-1, y: 1},
-                        br: {x: 1, y:-1}
+                    Bounds: {
+                        TopL: {X:-1, Y: 1},
+                        BotR: {X: 1, Y:-1},
                     },
-                    terrain: "\nDGG\nGDG\nGGD\n"
+                    Terrain: "\nDGG\nGDG\nGGD\n",
                 });
 
                 this.addMatchers({
                     toHaveBounds: function(expected) {
-                        var bounds = this.actual.bounds;
+                        var bounds = this.actual.Bounds;
 
                         this.message = function() {
                             return "Expected " + bounds + "to be " + expected;
                         };
 
-                        return bounds.tl.x === expected.tl.x &&
-                            bounds.tl.y === expected.tl.y &&
-                            bounds.br.x === expected.br.x &&
-                            bounds.br.y === expected.br.y;
+                        return bounds.TopL.X === expected.TopL.X &&
+                            bounds.TopL.Y === expected.TopL.Y &&
+                            bounds.BotR.X === expected.BotR.X &&
+                            bounds.BotR.Y === expected.BotR.Y;
                     }
                 });
-                expect(map).toHaveBounds(map.bounds);
+                expect(map).toHaveBounds(map.Bounds);
             });
 
             it("a horizontal map slice to the north", function() {
                 var slice = newTerrainMap({
-                    bounds: {
-                        tl: {x:-1, y: 2},
-                        br: {x: 1, y: 2}
+                    Bounds: {
+                        TopL: {X:-1, Y: 2},
+                        BotR: {X: 1, Y: 2},
                     },
-                    terrain: "\nRRR\n"
+                    Terrain: "\nRRR\n",
                 });
 
                 expect(function() { map = map.merge(slice); }).not.toThrow();
 
                 var bounds = {
-                    tl: {x: -1, y: 2},
-                    br: {x:  1, y: 0}
+                    TopL: {X: -1, Y: 2},
+                    BotR: {X:  1, Y: 0},
                 };
 
                 expect(map).toHaveBounds(bounds);
@@ -202,18 +205,18 @@ define(["client/terrainMap",
 
             it("a horizontal map slice to the south", function() {
                 var slice = newTerrainMap({
-                    bounds: {
-                        tl: {x:-1, y:-2},
-                        br: {x: 1, y:-2}
+                    Bounds: {
+                        TopL: {X:-1, Y:-2},
+                        BotR: {X: 1, Y:-2},
                     },
-                    terrain: "\nRRR\n"
+                    Terrain: "\nRRR\n",
                 });
 
                 expect(function() { map = map.merge(slice); }).not.toThrow();
 
                 var bounds = {
-                    tl: {x: -1, y: 0},
-                    br: {x:  1, y: -2}
+                    TopL: {X: -1, Y: 0},
+                    BotR: {X:  1, Y: -2},
                 };
 
                 expect(map).toHaveBounds(bounds);
@@ -229,19 +232,19 @@ define(["client/terrainMap",
 
             it("a vertical map slice to the west", function() {
                 var slice = newTerrainMap({
-                    bounds: {
-                        tl: {x:-2, y: 1},
-                        br: {x:-2, y:-1}
+                    Bounds: {
+                        TopL: {X:-2, Y: 1},
+                        BotR: {X:-2, Y:-1},
                     },
-                    terrain: "\nR\nR\nR\n"
+                    Terrain: "\nR\nR\nR\n",
                 });
 
                 expect(function() { map = map.merge(slice); }).not.toThrow();
 
                 // The bounds must reflect the merge
                 var bounds = {
-                    tl: {x: -2, y: 1},
-                    br: {x:  0, y: -1}
+                    TopL: {X: -2, Y: 1},
+                    BotR: {X:  0, Y: -1},
                 };
 
                 expect(map).toHaveBounds(bounds);
@@ -257,18 +260,18 @@ define(["client/terrainMap",
 
             it("a vertical map slice to the east", function() {
                 var slice = newTerrainMap({
-                    bounds: {
-                        tl: {x:2, y: 1},
-                        br: {x:2, y:-1}
+                    Bounds: {
+                        TopL: {X:2, Y: 1},
+                        BotR: {X:2, Y:-1},
                     },
-                    terrain: "\nR\nR\nR\n"
+                    Terrain: "\nR\nR\nR\n",
                 });
 
                 expect(function() { map = map.merge(slice); }).not.toThrow();
 
                 var bounds = {
-                    tl: {x: 0, y: 1},
-                    br: {x: 2, y: -1}
+                    TopL: {X: 0, Y: 1},
+                    BotR: {X: 2, Y: -1},
                 };
 
                 expect(map).toHaveBounds(bounds);

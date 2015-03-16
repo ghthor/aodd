@@ -1,5 +1,4 @@
-define(["CAAT"
-], function() {
+define(["CAAT"], function() {
     var makeImage = function(director) {
         return new CAAT.SpriteImage().initialize(director.getImage("terrain_tiles"), 2, 4);
     };
@@ -20,7 +19,7 @@ define(["CAAT"
     var indexs = {
         grass: [0,1,2,3],
         dirt: 4,
-        rock: 5
+        rock: 5,
     };
 
     var getRandomInt = function(min, max) {
@@ -46,8 +45,8 @@ define(["CAAT"
     // interface
     Tile.prototype = {
         makeGrassTile: makeGrassTile,
-        makeDirtTile: makeDirtTile,
-        makeRockTile: makeRockTile
+        makeDirtTile:  makeDirtTile,
+        makeRockTile:  makeRockTile,
     };
 
     return Tile;

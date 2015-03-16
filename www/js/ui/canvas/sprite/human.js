@@ -1,6 +1,7 @@
-define(["underscore",
-       "CAAT"
-], function(_) {
+define(["github.com/ghthor/engine/rpg2d/coord",
+       "underscore",
+       "CAAT",
+], function(coord, _) {
     var animations = {
         standNorth: [1],
         standEast:  [4],
@@ -37,41 +38,41 @@ define(["underscore",
     var setAnimation = function(entity) {
         var sprite, sprites = this.sprites;
 
-        if (!_.isNull(entity.pathAction)) {
+        if (!_.isNull(entity.PathAction)) {
             // Walking
-            switch (entity.facing) {
-            case "north":
+            switch (entity.Facing) {
+            case coord.North:
                 sprite = sprites.walkNorth;
                 break;
-            case "east":
+            case coord.East:
                 sprite = sprites.walkEast;
                 break;
-            case "south":
+            case coord.South:
                 sprite = sprites.walkSouth;
                 break;
-            case "west":
+            case coord.West:
                 sprite = sprites.walkWest;
                 break;
             default:
-                throw "walking with unknown facing: " + entity.facing;
+                throw "walking with unknown facing: " + entity.Facing;
             }
         } else {
             // Standing
-            switch (entity.facing) {
-            case "north":
+            switch (entity.Facing) {
+            case coord.North:
                 sprite = sprites.standNorth;
                 break;
-            case "east":
+            case coord.East:
                 sprite = sprites.standEast;
                 break;
-            case "south":
+            case coord.South:
                 sprite = sprites.standSouth;
                 break;
-            case "west":
+            case coord.West:
                 sprite = sprites.standWest;
                 break;
             default:
-                throw "standing with unknown facing: " + entity.facing;
+                throw "standing with unknown facing: " + entity.Facing;
             }
         }
 
@@ -87,8 +88,8 @@ define(["underscore",
     Human.animations = animations;
 
     Human.prototype = {
-        makeSprites: makeSprites,
-        setAnimation: setAnimation
+        makeSprites:  makeSprites,
+        setAnimation: setAnimation,
     };
 
     return Human;

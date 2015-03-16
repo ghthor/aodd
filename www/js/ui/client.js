@@ -1,10 +1,18 @@
 define([
-        "client/client",
+        "ui/canvas",
+
+        // TODO port these into gopherjs
+        "ui/client/input_state",
+        "ui/client/chat",
+
+        "app",
+        "github.com/ghthor/engine/rpg2d/coord",
+
         "react",
         "jquery",
         "underscore",
-], function(Client, react, $, _) {
-    var takeoverDOM = function(socket, actor) {
+        "lib/minpubsub",
+], function(Canvas, InputState, Chat, app, coord, react, $, _, pubsub) {
         var Message = react.createFactory(react.createClass({
                     render: function() {
                         return react.DOM.li({
@@ -130,29 +138,49 @@ define([
             },
         }));
 
-        (function() {
-            var client = new Client(socket, actor);
+    var Client = function(container, loggedInConn) {
+        var client = this;
 
-            // Wait for the CAAT director to prepare the canvas
-            client.on("ready", function(canvas, inputState, chat) {
+        // Wait for the CAAT director to prepare the canvas
+        var canvasReady = function(canvas) {
+            client.on(app.EV_RECV_INPUT_CONN, function(inputConn) {
                 var messages = [];
                 var chatDisplayed = false;
+
+                // Create a new input state manager
+                var inputState = new InputState(inputConn);
+
+                var chat = (function() {
+                    var eventPublisher = client;
+                    return new Chat(inputConn, eventPublisher, function(entityId) {
+                        return entityId;
+                    });
+                }());
+
+                var render = function() {
+                    return react.render(new UI({
+                        canvas:        canvas,
+                        chat:          chat,
+                        chatDisplayed: chatDisplayed,
+                        messages:      messages,
+                    }), container);
+                };
 
                 var setupKeybinds = function(inputState) {
                     var gameDown = function(e) {
                         var char = String.fromCharCode(e.keyCode);
                         switch (char) {
                         case "W":
-                            inputState.movementDown("north");
+                            inputState.movementDown(coord.North);
                             break;
                         case "D":
-                            inputState.movementDown("east");
+                            inputState.movementDown(coord.East);
                             break;
                         case "S":
-                            inputState.movementDown("south");
+                            inputState.movementDown(coord.South);
                             break;
                         case "A":
-                            inputState.movementDown("west");
+                            inputState.movementDown(coord.West);
                             break;
                         default:
                         }
@@ -174,16 +202,16 @@ define([
                         var char = String.fromCharCode(e.keyCode);
                         switch (char) {
                         case "W":
-                            inputState.movementUp("north");
+                            inputState.movementUp(coord.North);
                             break;
                         case "D":
-                            inputState.movementUp("east");
+                            inputState.movementUp(coord.East);
                             break;
                         case "S":
-                            inputState.movementUp("south");
+                            inputState.movementUp(coord.South);
                             break;
                         case "A":
-                            inputState.movementUp("west");
+                            inputState.movementUp(coord.West);
                             break;
                         }
 
@@ -194,7 +222,6 @@ define([
                         default:
                         }
                     };
-
 
                     $(document).on("keydown", function(e) {
                         if (!chatDisplayed) {
@@ -209,18 +236,10 @@ define([
                     });
                 };
 
-                var render = function() {
-                    return react.render(new UI({
-                        canvas:        canvas,
-                        chat:          chat,
-                        chatDisplayed: chatDisplayed,
-                        messages:      messages,
-                    }), document.getElementById("client"));
-                };
-
                 // Setup keybinds
                 setupKeybinds(inputState);
 
+                // TODO These listeners should be triggered by gopherjs
                 client.on("chat/recv/say", function(id, saidBy, msg, saidAt) {
                     messages.push({
                         key:    id,
@@ -232,6 +251,7 @@ define([
                     render();
                 });
 
+                // TODO These listeners should be triggered by gopherjs
                 client.on("chat/sent/say", function() {
                     chatDisplayed = false;
                     render();
@@ -239,12 +259,19 @@ define([
 
                 render();
             });
-        }());
+
+            loggedInConn.connectActor(client);
+        };
+
+        client.render = function() {
+            var canvas = new Canvas(client);
+            canvas.on("ready", canvasReady);
+        };
+
+        return this;
     };
 
-    var clientUI = {
-        takeoverDOM: takeoverDOM,
-    };
+    pubsub(Client.prototype);
 
-    return clientUI;
+    return Client;
 });

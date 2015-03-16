@@ -1,4 +1,4 @@
-define(["client/sprite/terrain",
+define(["ui/canvas/sprite/terrain",
        "underscore"
 ], function(Sprite, _) {
     var parseTerrainMap = function(terrainStr) {
@@ -12,11 +12,11 @@ define(["client/sprite/terrain",
     var TerrainMap = function(def, canvas, grid) {
         var map = this;
 
-        var bounds = map.bounds = def.bounds,
-            h = bounds.tl.y - bounds.br.y + 1,
-            w = bounds.br.x - bounds.tl.x + 1;
+        var bounds = map.Bounds = def.Bounds;
+        var h = bounds.TopL.Y - bounds.BotR.Y + 1,
+            w = bounds.BotR.X - bounds.TopL.X + 1;
 
-        var terrain = parseTerrainMap(def.terrain);
+        var terrain = parseTerrainMap(def.Terrain);
 
         // Sanity checks
         if (h !== terrain.length) {
@@ -37,10 +37,10 @@ define(["client/sprite/terrain",
         var sprites = map.sprites = _.map(terrain, function(row, y) {
             return _.map(row, function(type, x) {
                 // Get the coordinates
-                var tl = bounds.tl;
+                var tl = bounds.TopL;
                 var cell = {
-                    x: x + tl.x,
-                    y: -y + tl.y
+                    X: x + tl.X,
+                    Y: -y + tl.Y
                 };
 
                 // Create tile actor
@@ -63,7 +63,7 @@ define(["client/sprite/terrain",
         if (!map.isSlice()) {
             map.center = function() {
                 var y = (sprites.length - 1) / 2,
-                x = (sprites[0].length - 1) / 2;
+                    x = (sprites[0].length - 1) / 2;
 
                 var tile = sprites[y][x];
 
@@ -147,22 +147,22 @@ define(["client/sprite/terrain",
 
     var makeVerticalMerge = function(mergeWest, mergeEast) {
         return function(slice, map) {
-            var mtl = map.bounds.tl,
-                mbr = map.bounds.br,
-                stl = slice.bounds.tl,
-                sbr = slice.bounds.br;
+            var mtl = map.Bounds.TopL,
+                mbr = map.Bounds.BotR,
+                stl = slice.Bounds.TopL,
+                sbr = slice.Bounds.BotR;
 
-            if (stl.x < mtl.x) {
+            if (stl.X < mtl.X) {
                 // shift west
-                mtl.x = stl.x;
-                mbr.x -= 1;
+                mtl.X = stl.X;
+                mbr.X -= 1;
 
                 mergeWest(slice, map);
 
-            } else if (sbr.x > mbr.x) {
+            } else if (sbr.X > mbr.X) {
                 // merge east
-                mbr.x = sbr.x;
-                mtl.x += 1;
+                mbr.X = sbr.X;
+                mtl.X += 1;
 
                 mergeEast(slice, map);
             } else {
@@ -174,21 +174,21 @@ define(["client/sprite/terrain",
 
     var makeHorizontalMerge = function(mergeSouth, mergeNorth) {
         return function(slice, map) {
-            var mtl = map.bounds.tl,
-                mbr = map.bounds.br,
-                stl = slice.bounds.tl,
-                sbr = slice.bounds.br;
+            var mtl = map.Bounds.TopL,
+                mbr = map.Bounds.BotR,
+                stl = slice.Bounds.TopL,
+                sbr = slice.Bounds.BotR;
 
-            if (stl.y > mtl.y) {
+            if (stl.Y > mtl.Y) {
                 // merge south
-                mtl.y = stl.y;
-                mbr.y += 1;
+                mtl.Y = stl.Y;
+                mbr.Y += 1;
 
                 mergeNorth(slice, map);
-            } else if (sbr.y < mbr.y) {
+            } else if (sbr.Y < mbr.Y) {
                 // merge north
-                mbr.y = sbr.y;
-                mtl.y -= 1;
+                mbr.Y = sbr.Y;
+                mtl.Y -= 1;
 
                 mergeSouth(slice, map);
             } else {
@@ -199,12 +199,12 @@ define(["client/sprite/terrain",
     };
 
     var merge = function(slice, map, mergeVerticalSlice, mergeHorizontalSlice) {
-        var tl = slice.bounds.tl,
-            br = slice.bounds.br;
+        var tl = slice.Bounds.TopL,
+            br = slice.Bounds.BotR;
 
-        if (tl.x === br.x) {
+        if (tl.X === br.X) {
             map = mergeVerticalSlice(slice, map);
-        } else if (tl.y === br.y) {
+        } else if (tl.Y === br.Y) {
             map = mergeHorizontalSlice(slice, map);
         } else {
             throw "invalid terrain map merge";
@@ -214,10 +214,10 @@ define(["client/sprite/terrain",
 
     TerrainMap.prototype = {
         isSlice: function() {
-            var tl = this.bounds.tl,
-            br = this.bounds.br;
+            var tl = this.Bounds.TopL,
+                br = this.Bounds.BotR;
 
-            return tl.x === br.x || tl.y === br.y;
+            return tl.X === br.X || tl.Y === br.Y;
         }
     };
 
@@ -225,6 +225,7 @@ define(["client/sprite/terrain",
     TerrainMap.parseTerrain        = parseTerrainMap;
     TerrainMap.makeHorizontalMerge = makeHorizontalMerge;
     TerrainMap.makeVerticalMerge   = makeVerticalMerge;
+
     TerrainMap.merge = merge;
 
     return TerrainMap;
