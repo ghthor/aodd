@@ -1,3 +1,4 @@
+// NOTE must be also eddited in specs.js
 requirejs.config({
     baseUrl: "js",
     paths: {

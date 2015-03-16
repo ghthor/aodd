@@ -1,47 +1,61 @@
-// NOTE must be also eddited in ui.js
+// NOTE must be also eddited in init.js
 requirejs.config({
     baseUrl: "js",
     paths: {
         jquery:     "lib/jquery-1.11.2",
         underscore: "lib/underscore",
         react:      "lib/react",
-        CAAT:       "lib/caat"
+        CAAT:       "lib/caat",
+        app:        "app/app",
     },
+
     shim: {
         "underscore": {
             exports: function() {
                 return this._.noConflict();
-            }
+            },
+        },
+        
+        "app": {
+            deps:    ["client/settings"],
+            exports: "gopherjsApplication",
+            init:    function(settings) {
+                return this.gopherjsApplication.initialize(settings);
+            },
         },
 
+        // Spec Framework
         "lib/jasmine.consolereporter": {
-            deps: ["lib/jasmine"]
+            deps: ["lib/jasmine"],
         },
         "lib/jasmine.htmlreporter": {
-            deps: ["lib/jasmine"]
+            deps: ["lib/jasmine"],
         },
     },
+
     priority: ["jquery"]
+});
+
+define("github.com/ghthor/engine/rpg2d/coord", ["app"], function(app) {
+    return app.coord;
+});
+
+define("github.com/ghthor/aodd/game", ["app"], function(app) {
+    return app.game;
 });
 
 define(["jquery",
        "underscore",
 
        // Specs
-       "client/actors_spec",
-       "client/terrainMap_spec",
-       "client/inputState_spec",
-       "client/updateBuffer_spec",
-       "client/packet_test",
-       "client/sprite/terrain_spec",
+       "ui/canvas/terrain_map_spec",
+       "ui/canvas/sprite/terrain_spec",
 
        // Spec Framework
        "lib/jasmine",
        "lib/jasmine.htmlreporter",
-       "lib/jasmine.consolereporter"
-], function($, _, describeActors) {
-    var asyncInit = [describeActors];
-
+       "lib/jasmine.consolereporter",
+], function($, _) {
     return {
         runConsoleReport: _.once(function() {
             var report = "";
@@ -53,14 +67,8 @@ define(["jquery",
             });
             jasmine.getEnv().addReporter(consoleReporter);
 
-            console.log("Initializing Specs...");
-
-            var jasmineExecute = _.after(asyncInit.length, function() {
-                console.log("Running Specs...");
-                jasmine.getEnv().execute();
-            });
-
-            _.each(asyncInit, function(init) { init(jasmineExecute); });
+            console.log("Running Specs...");
+            jasmine.getEnv().execute();
         }),
 
         runHtmlReport: _.once(function() {
@@ -92,14 +100,8 @@ define(["jquery",
                 $("#HTMLReporter").addClass("container");
             });
 
-            console.log("Initializing Specs...");
-
-            var jasmineExecute = _.after(asyncInit.length, function() {
-                console.log("Running Specs...");
-                jasmineEnv.execute();
-            });
-
-            _.each(asyncInit, function(init) { init(jasmineExecute); });
+            console.log("Running Specs...");
+            jasmineEnv.execute();
         })
     };
 });
