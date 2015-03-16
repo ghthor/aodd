@@ -363,7 +363,7 @@ type assailEntity struct {
 type AssailEntityState struct {
 	Type string `json:"type"`
 
-	EntityId entity.Id `json:"id"`
+	Id entity.Id `json:"id"`
 
 	SpawnedBy entity.Id  `json:"spawnedBy"`
 	SpawnedAt stime.Time `json:"spawnedAt"`
@@ -381,7 +381,7 @@ func (e assailEntity) ToState() entity.State {
 	return AssailEntityState{
 		Type: "assail",
 
-		EntityId: e.id,
+		Id: e.id,
 
 		SpawnedBy: e.spawnedBy,
 		SpawnedAt: e.spawnedAt,
@@ -390,7 +390,7 @@ func (e assailEntity) ToState() entity.State {
 	}
 }
 
-func (e AssailEntityState) Id() entity.Id { return e.EntityId }
+func (e AssailEntityState) EntityId() entity.Id { return e.Id }
 func (e AssailEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }
@@ -453,7 +453,7 @@ type sayEntity struct {
 type SayEntityState struct {
 	Type string `json:"type"`
 
-	EntityId entity.Id `json:"id"`
+	Id entity.Id `json:"id"`
 
 	SaidBy entity.Id  `json:"saidBy"`
 	SaidAt stime.Time `json:"saidAt"`
@@ -473,7 +473,7 @@ func (e sayEntity) ToState() entity.State {
 	return SayEntityState{
 		Type: "say",
 
-		EntityId: e.id,
+		Id: e.id,
 
 		SaidBy: e.saidBy,
 		SaidAt: e.saidAt,
@@ -484,7 +484,7 @@ func (e sayEntity) ToState() entity.State {
 	}
 }
 
-func (e SayEntityState) Id() entity.Id { return e.EntityId }
+func (e SayEntityState) EntityId() entity.Id { return e.Id }
 func (e SayEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }

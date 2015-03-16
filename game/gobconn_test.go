@@ -20,9 +20,9 @@ func DescribeGobConn(c gospec.Context) {
 			c.Specify("world states w/ entities", func() {
 				worldState := rpg2d.WorldState{
 					Entities: entity.StateSlice{
-						game.ActorEntityState{EntityId: 2},
-						game.SayEntityState{EntityId: 3},
-						game.AssailEntityState{EntityId: 4},
+						game.ActorEntityState{Id: 2},
+						game.SayEntityState{Id: 3},
+						game.AssailEntityState{Id: 4},
 					},
 				}
 
@@ -35,9 +35,9 @@ func DescribeGobConn(c gospec.Context) {
 				c.Specify("and can recv", func() {
 					var decodedState rpg2d.WorldState
 					c.Expect(gobconn.Decode(&decodedState), IsNil)
-					c.Expect(decodedState.Entities[0], Equals, game.ActorEntityState{EntityId: 2})
-					c.Expect(decodedState.Entities[1], Equals, game.SayEntityState{EntityId: 3})
-					c.Expect(decodedState.Entities[2], Equals, game.AssailEntityState{EntityId: 4})
+					c.Expect(decodedState.Entities[0], Equals, game.ActorEntityState{Id: 2})
+					c.Expect(decodedState.Entities[1], Equals, game.SayEntityState{Id: 3})
+					c.Expect(decodedState.Entities[2], Equals, game.AssailEntityState{Id: 4})
 				})
 			})
 

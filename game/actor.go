@@ -30,7 +30,7 @@ type actorEntity struct {
 }
 
 type ActorEntityState struct {
-	EntityId entity.Id `json:"id"`
+	Id entity.Id `json:"id"`
 
 	Name string `json:"name"`
 
@@ -117,7 +117,7 @@ func (e actorEntity) ToState() entity.State {
 	}
 
 	return ActorEntityState{
-		EntityId: e.id,
+		Id: e.id,
 
 		Name: e.name,
 
@@ -139,7 +139,7 @@ func (e actorEntity) String() string {
 	return fmt.Sprintf("{name: %s, id %d, cell%v, %v, speed:%d, pathAction:%v}", e.name, e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 
-func (e ActorEntityState) Id() entity.Id        { return e.EntityId }
+func (e ActorEntityState) EntityId() entity.Id  { return e.Id }
 func (e ActorEntityState) Bounds() coord.Bounds { return e.bounds }
 func (e ActorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 	o := other.(ActorEntityState)

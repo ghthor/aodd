@@ -112,8 +112,8 @@ func DescribeActorGobConn(c gospec.Context) {
 						actor:       dsactor,
 						stateWriter: stateWriter,
 						entityState: game.ActorEntityState{
-							EntityId: nextId(),
-							Name:     dsactor.Name,
+							Id:   nextId(),
+							Name: dsactor.Name,
 						},
 
 						lastMoveRequest: make(chan game.MoveRequest),
