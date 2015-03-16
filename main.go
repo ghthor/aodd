@@ -40,7 +40,7 @@ func main() {
 		AssetDir: "www/asset",
 		CssDir:   "www/css",
 
-		JsMain: "js/loginUI",
+		JsMain: "js/init",
 
 		IndexTmpl: indexTmpl,
 
