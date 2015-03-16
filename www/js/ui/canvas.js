@@ -5,7 +5,7 @@ define(["client/imageCache",
        "client/inputState",
        "client/chat",
        "lib/minpubsub",
-       "CAAT"
+       "CAAT",
 ], function(ImageCache, World, InputState, Chat, pubsub) {
     var Canvas = function() {
         var canvas = this;
