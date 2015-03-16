@@ -25,6 +25,10 @@ requirejs.config({
     priority: ["jquery"],
 });
 
+define("github.com/ghthor/engine/rpg2d/coord", ["app"], function(app) {
+    return app.coord;
+});
+
 define("github.com/ghthor/aodd/game", ["app"], function(app) {
     return app.game;
 });

@@ -10,6 +10,7 @@ import (
 
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
+	"github.com/ghthor/engine/rpg2d/coord"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/gopherjs/websocket"
@@ -159,6 +160,12 @@ func initialize(settings *js.Object) jsObject {
 		module[event(i).String()] = event(i).String()
 	}
 
+	coordModule := make(jsObject, int(coord.West)+1)
+
+	for i := 0; i <= int(coord.West); i++ {
+		coordModule[coord.Direction(i).String()] = coord.Direction(i)
+	}
+
 	gameModule := make(jsObject, int(game.MR_SIZE)+int(game.UR_SIZE)+int(game.CR_SIZE))
 
 	for i := game.MR_ERROR; i < game.MR_SIZE; i++ {
@@ -173,6 +180,8 @@ func initialize(settings *js.Object) jsObject {
 		gameModule[game.ChatRequestType(i).String()] = game.ChatRequestType(i)
 	}
 
+	// require("github.com/ghthor/engine/rpg2d/coord")
+	module["coord"] = coordModule
 	// require("github.com/ghthor/aodd/game")
 	module["game"] = gameModule
 
