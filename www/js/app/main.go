@@ -43,6 +43,12 @@ const (
 	EV_LOGIN_SUCCESS
 	EV_CREATE_SUCCESS
 
+	// Come together in the same response from the server
+	EV_RECV_INPUT_CONN
+	EV_RECV_INITIAL_STATE
+
+	EV_RECV_UPDATE
+
 	EV_PACKET
 	EV_SIZE
 )
