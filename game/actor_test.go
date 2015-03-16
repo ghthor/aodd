@@ -33,12 +33,12 @@ func DescribeActorState(c gospec.Context) {
 
 			c.Specify("facing has changed", func() {
 				actor := ActorEntityState{
-					Facing: coord.North.String(),
+					Facing: coord.North,
 				}
 
 				c.Expect(actor.IsDifferentFrom(actor), IsFalse)
 				c.Expect(actor.IsDifferentFrom(ActorEntityState{
-					Facing: coord.South.String(),
+					Facing: coord.South,
 				}), IsTrue)
 			})
 

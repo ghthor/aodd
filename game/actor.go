@@ -35,8 +35,8 @@ type ActorEntityState struct {
 	Name string `json:"name"`
 
 	// Movement and position
-	Facing string     `json:"facing"`
-	Cell   coord.Cell `json:"cell"`
+	Facing coord.Direction `json:"facing"`
+	Cell   coord.Cell      `json:"cell"`
 	bounds coord.Bounds
 
 	PathAction *coord.PathActionState `json:"pathAction"`
@@ -122,7 +122,7 @@ func (e actorEntity) ToState() entity.State {
 		Name: e.name,
 
 		Cell:   e.cell,
-		Facing: e.facing.String(),
+		Facing: e.facing,
 
 		bounds: e.Bounds(),
 
