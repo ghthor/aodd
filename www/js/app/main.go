@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
@@ -92,66 +93,13 @@ func initialize(settings *js.Object) jsObject {
 					log.Fatal(err)
 				}
 
-				// Create a concurrent safe client connection
-				takeConn, freeConn := func() (<-chan client.LoginConn, chan<- client.LoginConn) {
-					connLock := make(chan client.LoginConn, 1)
-					return connLock, connLock
-				}()
-				freeConn <- client.NewLoginConn(game.NewGobConn(ws))
+				loginConn := client.NewLoginConn(game.NewGobConn(ws))
+				pub := eventPublisher{pub}
 
 				// Emit a connected event and a object the
 				// login form can use to send messages to the
 				// server.
-				eventPublisher{pub}.Emit(EV_CONNECTED, jsArray{jsObject{
-					"attemptLogin": func(name, password string) {
-						go func() {
-							conn := <-takeConn
-							defer func() { freeConn <- conn }()
-
-							pub := eventPublisher{pub}
-							trip := conn.AttemptLogin(name, password)
-
-							select {
-							case actorDoesntExist := <-trip.ActorDoesntExist:
-								pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray{
-									actorDoesntExist.Name,
-									actorDoesntExist.Password,
-								})
-
-							case authFailed := <-trip.AuthFailed:
-								js.Debugger()
-								pub.Emit(EV_AUTH_FAILED, jsArray{authFailed.Name})
-
-							case actor := <-trip.Success:
-								pub.Emit(EV_LOGIN_SUCCESS, jsArray{actor})
-
-							case err := <-trip.Error:
-								pub.Emit(EV_ERROR, jsArray{jsObject{"error": err}})
-							}
-						}()
-					},
-
-					"createActor": func(name, password string) {
-						go func() {
-							conn := <-takeConn
-							defer func() { freeConn <- conn }()
-
-							pub := eventPublisher{pub}
-							trip := conn.CreateActor(name, password)
-
-							select {
-							case actorExists := <-trip.ActorExists:
-								pub.Emit(EV_ACTOR_EXISTS, jsArray{actorExists.Name})
-
-							case actor := <-trip.Success:
-								pub.Emit(EV_CREATE_SUCCESS, jsArray{actor})
-
-							case err := <-trip.Error:
-								pub.Emit(EV_ERROR, jsArray{jsObject{"error": err}})
-							}
-						}()
-					},
-				}})
+				pub.Emit(EV_CONNECTED, jsArray{newLoginConn(loginConn, pub)})
 			}()
 		},
 	}
@@ -186,4 +134,61 @@ func initialize(settings *js.Object) jsObject {
 	module["game"] = gameModule
 
 	return module
+}
+
+func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
+	var conn sync.Mutex
+
+	return jsObject{
+		"attemptLogin": func(name, password string) {
+			go func() {
+				conn.Lock()
+				defer conn.Unlock()
+
+				trip := loginConn.AttemptLogin(name, password)
+
+				select {
+				case actorDoesntExist := <-trip.ActorDoesntExist:
+					pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray{
+						actorDoesntExist.Name,
+						actorDoesntExist.Password,
+					})
+
+				case authFailed := <-trip.AuthFailed:
+					js.Debugger()
+					pub.Emit(EV_AUTH_FAILED, jsArray{authFailed.Name})
+
+				case resp := <-trip.Success:
+					pub.Emit(EV_LOGIN_SUCCESS, jsArray{resp.Name, newLoggedInConn(resp.Name, resp.LoggedInConn)})
+
+				case err := <-trip.Error:
+					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+				}
+			}()
+		},
+
+		"createActor": func(name, password string) {
+			go func() {
+				conn.Lock()
+				defer conn.Unlock()
+
+				trip := loginConn.CreateActor(name, password)
+
+				select {
+				case actorExists := <-trip.ActorExists:
+					pub.Emit(EV_ACTOR_EXISTS, jsArray{actorExists.Name})
+
+				case resp := <-trip.Success:
+					pub.Emit(EV_LOGIN_SUCCESS, jsArray{resp.Name, newLoggedInConn(resp.Name, resp.LoggedInConn)})
+
+				case err := <-trip.Error:
+					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+				}
+			}()
+		},
+	}
+}
+
+func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
+	return jsObject{}
 }
