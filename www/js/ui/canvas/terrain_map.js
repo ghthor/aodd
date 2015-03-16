@@ -1,5 +1,5 @@
 define(["ui/canvas/sprite/terrain",
-       "underscore"
+       "underscore",
 ], function(Sprite, _) {
     var parseTerrainMap = function(terrainStr) {
         var rows = terrainStr.trim("\n").split("\n");
