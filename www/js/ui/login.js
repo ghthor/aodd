@@ -1,9 +1,9 @@
-define([
+define(["ui/client",
         "app",
         "jquery",
         "react",
         "lib/minpubsub",
-], function(app, $, react, pubsub) {
+], function(Client, app, $, react, pubsub) {
     var LoginForm = react.createFactory(react.createClass({
                 getInitialState: function() {
                     return {name: ""};
@@ -209,8 +209,9 @@ define([
                 }), container).setState({password: ""});
             });
 
-            var loginSuccess = function(actor) {
-                console.log("login sucess", actor);
+            var loginSuccess = function(actor, loggedInConn) {
+                var ui = new Client(container, loggedInConn);
+                ui.render();
             };
 
             ui.on(app.EV_LOGIN_SUCCESS, loginSuccess);

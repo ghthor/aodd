@@ -1,20 +1,15 @@
 // TODO This module is 100% unspecified
 // TODO Fix these import paths
-define(["client/imageCache",
-       "client/world",
-       "client/inputState",
-       "client/chat",
+define(["app",
+       "ui/canvas/image_cache",
+       "ui/canvas/world",
        "lib/minpubsub",
        "CAAT",
-], function(ImageCache, World, InputState, Chat, pubsub) {
-    var Canvas = function() {
+], function(app, ImageCache, World, pubsub) {
+    var Canvas = function(client) {
         var canvas = this;
 
         // TODO fix chat's parameter and remove this mock
-        var socket = {
-            "send": function() {},
-        };
-
         var startRendering = function(imageCache) {
             CAAT.DEBUG = 1;
 
@@ -26,23 +21,19 @@ define(["client/imageCache",
 
             var world = new World(director, scene);
 
-            // Create a new input state manager
-            var inputState = new InputState(socket);
-
-            var chat = (function() {
-                var eventPublisher = canvas;
-                return new Chat(socket, eventPublisher, function(entityId) {
-                    return world.entityForId(entityId);
-                });
-            }());
-
-            canvas.on("update", function(worldStateDiff) {
-                    world.update(worldStateDiff);
-                    inputState.update(worldStateDiff.time);
-                    chat.update(worldStateDiff);
+            client.on(app.EV_ERROR, function(error) {
+                console.log(error);
             });
 
-            canvas.emit("ready", [director.canvas, inputState, chat]);
+            client.on(app.EV_RECV_INITIAL_STATE, function(entity, worldState) {
+                world.initialize(entity, worldState);
+            });
+
+            client.on(app.EV_RECV_UPDATE, function(worldStateDiff) {
+                world.update(worldStateDiff);
+            });
+
+            canvas.emit("ready", [director.canvas]);
 
             CAAT.loop();
         };
