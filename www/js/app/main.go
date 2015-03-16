@@ -12,6 +12,7 @@ import (
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/sim/stime"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/gopherjs/websocket"
@@ -228,5 +229,35 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 }
 
 func newInputConn(conn client.InputConn) jsObject {
-	return jsObject{}
+	return jsObject{
+		"sendMoveRequest": func(typ game.MoveRequestType, t stime.Time, d coord.Direction) {
+			go func() {
+				conn.SendMoveRequest(game.MoveRequest{
+					MoveRequestType: typ,
+					Time:            t,
+					Direction:       d,
+				})
+			}()
+		},
+
+		"sendUseRequest": func(typ game.UseRequestType, t stime.Time, skill string) {
+			go func() {
+				conn.SendUseRequest(game.UseRequest{
+					UseRequestType: typ,
+					Time:           t,
+					Skill:          skill,
+				})
+			}()
+		},
+
+		"sendChatRequest": func(typ game.ChatRequestType, t stime.Time, msg string) {
+			go func() {
+				conn.SendChatRequest(game.ChatRequest{
+					ChatRequestType: typ,
+					Time:            t,
+					Msg:             msg,
+				})
+			}()
+		},
+	}
 }
