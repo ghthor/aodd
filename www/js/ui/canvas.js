@@ -6,7 +6,7 @@ define(["client/imageCache",
        "client/chat",
        "lib/minpubsub",
        "CAAT"
-], function(ImageCache, World, InputState, Chat, pubSub) {
+], function(ImageCache, World, InputState, Chat, pubsub) {
     var Canvas = function() {
         var canvas = this;
 
@@ -56,7 +56,7 @@ define(["client/imageCache",
     };
 
     // Extend Canvas to be a message publisher generator
-    pubSub(Canvas.prototype);
+    pubsub(Canvas.prototype);
 
     return Canvas;
 });
