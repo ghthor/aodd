@@ -9,7 +9,6 @@ define(["app",
     var Canvas = function(client) {
         var canvas = this;
 
-        // TODO fix chat's parameter and remove this mock
         var startRendering = function(imageCache) {
             CAAT.DEBUG = 1;
 
