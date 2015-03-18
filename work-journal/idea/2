@@ -1,10 +1,11 @@
-## [active] [2] Release 2
-- [ ] mock the github.com/ghthor/engine/net/protocol.Conn for use in the conn_test.go specs
-    - NOTE the current specs are using a websocket for now, which is silly but it works
+## [completed] [2] Fix Deep Issues
+- [x] mock the github.com/ghthor/engine/net/protocol.Conn for use in the conn_test.go specs
+    - This got completed when the encoding was changed to encoding/gob from encoding/json
+    - NOTE github.com/ghthor/engine/net/* is deprecated and will be removed
 
-- [ ] Specify the integration of the client connection protocol with the server
+- [x] Specify the integration of the client connection protocol with the server
     - actor/login
     - actor/create
     - actor/input
 
-- [ ] Re-write of JS client using gopherjs
+- [x] Re-write of JS client using gopherjs
