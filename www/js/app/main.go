@@ -315,21 +315,21 @@ func emitChatRecvEvent(world *world, say game.SayEntityState, pub EventPublisher
 
 func newInputConn(world *world, conn client.InputConn, pub EventPublisher) jsObject {
 	return jsObject{
-		"sendMoveRequest": func(typ game.MoveRequestType, t stime.Time, d coord.Direction) {
+		"sendMoveRequest": func(typ game.MoveRequestType, d coord.Direction) {
 			go func() {
 				conn.SendMoveRequest(game.MoveRequest{
 					MoveRequestType: typ,
-					Time:            t,
+					Time:            world.now(),
 					Direction:       d,
 				})
 			}()
 		},
 
-		"sendUseRequest": func(typ game.UseRequestType, t stime.Time, skill string) {
+		"sendUseRequest": func(typ game.UseRequestType, skill string) {
 			go func() {
 				conn.SendUseRequest(game.UseRequest{
 					UseRequestType: typ,
-					Time:           t,
+					Time:           world.now(),
 					Skill:          skill,
 				})
 			}()
