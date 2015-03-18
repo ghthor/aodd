@@ -1,14 +1,19 @@
 ## [active] [1] Release 1
 - [x] Implement the update phase
 - [x] Implement the input phase
-- [ ] Implement the narrow phase [WIP]
+- [x] Implement the narrow phase
 
 - [ ] Create character classes
     - warrior
     - wizard
     - priest
 
-- [ ] Create spells and skills
+- [ ] Create spells and skills [WIP]
+    - [x] assail
+    - [ ] ioc fein
+    - [ ] dion
+    - [ ] charge
+    - [ ] ambush
 
 - [ ] Update all vendored libs [WIP]
     - [x] underscore - using 1.7.0
@@ -17,5 +22,8 @@
     - [ ] caat
     - [ ] jasmine
 
-- [ ] Update CAAT graphics engine
-    - Look into other graphic engine alternatives
+- [x] Update CAAT graphics engine [Suspended]
+    - Iff CAAT starts having problems
+    - [x] Look into other graphic engine alternatives
+        - pixi.js
+        - cocos2d-html5
