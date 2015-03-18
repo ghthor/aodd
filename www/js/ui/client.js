@@ -3,16 +3,16 @@ define([
 
         // TODO port these into gopherjs
         "ui/client/input_state",
-        "ui/client/chat",
 
         "app",
+        "github.com/ghthor/aodd/game",
         "github.com/ghthor/engine/rpg2d/coord",
 
         "react",
         "jquery",
         "underscore",
         "lib/minpubsub",
-], function(Canvas, InputState, Chat, app, coord, react, $, _, pubsub) {
+], function(Canvas, InputState, app, game, coord, react, $, _, pubsub) {
         var Message = react.createFactory(react.createClass({
                     render: function() {
                         return react.DOM.li({
@@ -150,12 +150,11 @@ define([
                 // Create a new input state manager
                 var inputState = new InputState(inputConn);
 
-                var chat = (function() {
-                    var eventPublisher = client;
-                    return new Chat(inputConn, eventPublisher, function(entityId) {
-                        return entityId;
-                    });
-                }());
+                var chat = {
+                    sendSay: function(msg) {
+                        inputConn.sendChatRequest(game.CR_SAY, msg);
+                    },
+                };
 
                 var render = function() {
                     return react.render(new UI({
@@ -239,8 +238,7 @@ define([
                 // Setup keybinds
                 setupKeybinds(inputState);
 
-                // TODO These listeners should be triggered by gopherjs
-                client.on("chat/recv/say", function(id, saidBy, msg, saidAt) {
+                client.on(app.EV_RECV_CHAT_SAY, function(id, saidBy, msg, saidAt) {
                     messages.push({
                         key:    id,
                         saidBy: saidBy,
@@ -251,8 +249,7 @@ define([
                     render();
                 });
 
-                // TODO These listeners should be triggered by gopherjs
-                client.on("chat/sent/say", function() {
+                client.on(app.EV_SENT_CHAT_SAY, function() {
                     chatDisplayed = false;
                     render();
                 });

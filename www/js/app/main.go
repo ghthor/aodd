@@ -13,6 +13,7 @@ import (
 	"github.com/ghthor/aodd/game/client"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
+	"github.com/ghthor/engine/rpg2d/entity"
 	"github.com/ghthor/engine/sim/stime"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -201,6 +202,13 @@ type world struct {
 	state  rpg2d.WorldState
 }
 
+func (w *world) now() stime.Time {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	return w.state.Time
+}
+
 func (w *world) update(diff rpg2d.WorldStateDiff) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -215,6 +223,28 @@ func (w *world) update(diff rpg2d.WorldStateDiff) {
 			break
 		}
 	}
+}
+
+func (w *world) actorEntityById(id entity.Id) (game.ActorEntityState, error) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	var err error
+
+	for _, e := range w.state.Entities {
+		if e.EntityId() == id {
+			switch e := e.(type) {
+			case game.ActorEntityState:
+				return e, nil
+
+			default:
+				err = fmt.Errorf("expected e.(game.ActorEntityState), got e.(%T)", e)
+			}
+
+			break
+		}
+	}
+
+	return game.ActorEntityState{}, err
 }
 
 func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
@@ -237,7 +267,7 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 						state:  resp.InitialState.WorldState,
 					}
 
-					pub.Emit(EV_RECV_INPUT_CONN, jsArray{newInputConn(resp.InputConn)})
+					pub.Emit(EV_RECV_INPUT_CONN, jsArray{newInputConn(&world, resp.InputConn, pub)})
 					pub.Emit(EV_RECV_INITIAL_STATE, jsArray{
 						resp.InitialState.Entity,
 						resp.InitialState.WorldState,
@@ -252,6 +282,16 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 
 						world.update(update)
 
+						for _, e := range update.Entities {
+							switch e := e.(type) {
+							case game.SayEntityState:
+								err := emitChatRecvEvent(&world, e, pub)
+								if err != nil {
+									pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+								}
+							}
+						}
+
 						pub.Emit(EV_RECV_UPDATE, jsArray{update})
 					}
 
@@ -263,7 +303,17 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 	}
 }
 
-func newInputConn(conn client.InputConn) jsObject {
+func emitChatRecvEvent(world *world, say game.SayEntityState, pub EventPublisher) error {
+	actor, err := world.actorEntityById(say.SaidBy)
+	if err != nil {
+		return err
+	}
+
+	pub.Emit(EV_RECV_CHAT_SAY, jsArray{say.Id, actor.Name, say.Msg, say.SaidAt})
+	return nil
+}
+
+func newInputConn(world *world, conn client.InputConn, pub EventPublisher) jsObject {
 	return jsObject{
 		"sendMoveRequest": func(typ game.MoveRequestType, t stime.Time, d coord.Direction) {
 			go func() {
@@ -285,14 +335,16 @@ func newInputConn(conn client.InputConn) jsObject {
 			}()
 		},
 
-		"sendChatRequest": func(typ game.ChatRequestType, t stime.Time, msg string) {
+		"sendChatRequest": func(typ game.ChatRequestType, msg string) {
 			go func() {
 				conn.SendChatRequest(game.ChatRequest{
 					ChatRequestType: typ,
-					Time:            t,
+					Time:            world.now(),
 					Msg:             msg,
 				})
 			}()
+
+			pub.Emit(EV_SENT_CHAT_SAY, nil)
 		},
 	}
 }
