@@ -1,0 +1,56 @@
+Wed Mar 18 06:20:16 EDT 2015
+
+# journal - Lots of positive progress towards a real game
+It's been a long long time since I've been writing down my thoughts.
+I don't know exactly why I haven't been doing this, but regardless I've
+been making progress anyway. Some really big picture deep fixes have
+taken place since the last time I wrote.
+
+Gopherjs is now being used and there is a decent about of code being
+shared between the JS client and the Go server now. Most, if not all
+of the magic string's are now constants that are used on the
+server AND the client, which is amazing. There are a few things left
+to finish from this re-write.
+
+Some major issue where discovered when I started trying to add skills.
+The first being that the client AND server were unable to handle an entity
+moving more then 1 square at a time. I was trying out combat and when the
+actor's hp hit 0 I was teleporting them to (0,0), but that broke the server
+first. I fixed this on the server by enabling the terrain map to be diff'ed
+when the bounds had been moved in 2 direction(example: north and east) from
+one frame to the next. After this was done it became apparent that the client
+was unable to handle this.
+
+When assessing what would have to be specc'ed and updated to make the client
+able to cope with these more complicated diffs I got overwhelmed with the
+poor quality of JS modules of the client. This sparked a few days of frustration
+and code block. The block was broken when I started experimenting with gopherjs.
+I saw the light at the end of the tunnel and cruised forward, bringing
+server side values to the client.
+
+In an attempt to avoid wrapping CAAT and ReactJS libraries to be accessible
+from the gopherjs client, I've decided that gopherjs should do ZERO dom
+and canvas manipulation. This is achieved by still have parts of the client
+written in pure JS that are listening to events that will be emitted from
+the gopherjs module.
+
+The above architecture means that gopherjs handles all the network commands,
+enabling the encoding format to be gob instead of json. It also means that
+all the async network req/resp protocol can be tested as pure Go(Thank God).
+Coverage of the server and client's req/resp protocol is very high.
+They are not tested in a vacuum, the client is tested directly against the
+server to ensure that the protocol is always in sync between them.
+
+The JS portion of the client is almost finished being updated. The
+terrain map needs to be updated to coop with the more complicated
+diffs that the server can now produce. Other then that, most of the
+discovered and theorized problems with implementing Ambush, Charge,
+Blink, and a few other mobility skills should be solved(LoL.. yeah right..).
+
+If this turns out to be true, this might actually start feeling like a game
+soon. It has chat bubbles! Once a few more skills have been created it
+will be time to make some sort of arena. Another thing on the radar is
+implementing a Postgres datastore backend enabling persistence, but
+this can be postponed I believe for a while still, we'll see.
+
+Wed Mar 18 06:46:30 EDT 2015
