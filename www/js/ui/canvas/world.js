@@ -104,7 +104,7 @@ define(["underscore",
             actor.setPositionAnchored(p.x, p.y, 0.5, 0.5);
         };
 
-        var movePlayer = function(orig, dest, duration) {
+        var playerSetPathAction = function(orig, dest, duration) {
             orig = {
                x: -orig.X * grid + scene.width/2,
                y:  orig.Y * grid + scene.height/2
@@ -124,6 +124,17 @@ define(["underscore",
                     setDelayTime(0, duration * 1000.0/40.0));
         };
 
+        var playerSetPosition = function(cell) {
+            // Convert the cell to a canvas point
+            var p = {
+                x: -cell.X * grid + scene.width/2,
+                y:  cell.Y * grid + scene.height/2,
+            };
+
+            container.emptyBehaviorList().
+                setPosition(p.x, p.y);
+        };
+
         world.initialize = function(playerEntity, worldState) {
             var time = worldState.time;
 
@@ -135,7 +146,9 @@ define(["underscore",
                     director:   director,
                     scene:      scene,
                     gridSz:     grid,
-                    movePlayer: movePlayer,
+
+                    setPathAction: playerSetPathAction,
+                    setPosition:   playerSetPosition,
             });
 
             player.initialize(time, playerEntity);

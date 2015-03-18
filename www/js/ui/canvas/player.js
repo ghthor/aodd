@@ -22,7 +22,8 @@ define(["underscore",
         // A function that sets a movement action on the world's container
         // which makes the player appear to be moving while the sprite
         // stays in the same place on the screen.
-        var movePlayer = params.movePlayer;
+        var setPathAction = params.setPathAction;
+        var setPosition   = params.setPosition;
 
         var newActor = function(name, posX, posY, width, height) {
             var actor = new CAAT.ActorContainer().
@@ -92,9 +93,12 @@ define(["underscore",
                     var pa = entity.PathAction;
                     if (pa.Start === time) {
                         var duration = pa.End - pa.Start;
-                        movePlayer(pa.Orig, pa.Dest, duration);
+                        setPathAction(pa.Orig, pa.Dest, duration);
                     }
+                } else if (playerEntity.Cell !== entity.Cell) {
+                    setPosition(entity.Cell);
                 }
+
                 actor.setAnimation(entity);
 
                 // update health display
