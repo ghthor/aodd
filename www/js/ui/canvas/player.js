@@ -69,8 +69,8 @@ define(["underscore",
         player.initialize = function(time, entity) {
             var playerEntity = entity;
 
-            player.is = function(entity) {
-                return playerEntity.Id === entity.Id;
+            player.is = function(entityId) {
+                return playerEntity.Id === entityId;
             };
 
             player.entity = function() {

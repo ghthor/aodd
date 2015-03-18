@@ -141,7 +141,7 @@ define(["underscore",
             player.initialize(time, playerEntity);
 
             var updateEntity = function(entity) {
-                if (player.is(entity)) {
+                if (player.is(entity.Id)) {
                     player.update(time, entity);
                     return; //continue
                 }
