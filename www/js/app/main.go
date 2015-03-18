@@ -11,6 +11,7 @@ import (
 
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
+	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/sim/stime"
 
@@ -193,6 +194,29 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 	}
 }
 
+type world struct {
+	mu sync.RWMutex
+
+	entity game.ActorEntityState
+	state  rpg2d.WorldState
+}
+
+func (w *world) update(diff rpg2d.WorldStateDiff) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Update the state
+	w.state.Apply(diff)
+
+	// Update the entity
+	for _, e := range w.state.Entities {
+		if e.EntityId() == w.entity.EntityId() {
+			w.entity = e.(game.ActorEntityState)
+			break
+		}
+	}
+}
+
 func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 	return jsObject{
 		"connectActor": func(pub *js.Object) {
@@ -208,6 +232,11 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 
 				select {
 				case resp := <-trip.Connected:
+					world := world{
+						entity: resp.InitialState.Entity,
+						state:  resp.InitialState.WorldState,
+					}
+
 					pub.Emit(EV_RECV_INPUT_CONN, jsArray{newInputConn(resp.InputConn)})
 					pub.Emit(EV_RECV_INITIAL_STATE, jsArray{
 						resp.InitialState.Entity,
@@ -220,6 +249,9 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 							pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
 							return
 						}
+
+						world.update(update)
+
 						pub.Emit(EV_RECV_UPDATE, jsArray{update})
 					}
 
