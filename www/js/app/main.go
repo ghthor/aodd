@@ -189,7 +189,7 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 					pub.Emit(EV_ACTOR_EXISTS, jsArray{actorExists.Name})
 
 				case resp := <-trip.Success:
-					pub.Emit(EV_LOGIN_SUCCESS, jsArray{resp.Name, newLoggedInConn(resp.Name, resp.LoggedInConn)})
+					pub.Emit(EV_CREATE_SUCCESS, jsArray{resp.Name, newLoggedInConn(resp.Name, resp.LoggedInConn)})
 
 				case err := <-trip.Error:
 					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
