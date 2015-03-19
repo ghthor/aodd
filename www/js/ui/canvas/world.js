@@ -36,6 +36,22 @@ define(["underscore",
             };
         };
 
+        var newWall = function(entity) {
+            var p = cellToLocal(entity.Cell);
+            var actor = new CAAT.ActorContainer().
+                setSize(grid, grid).
+                setPositionAnchored(p.x, p.y, 0.5, 0.5);
+
+            var img = new CAAT.SpriteImage().initialize(director.getImage("rock"), 1, 1);
+
+            var sprite = new CAAT.Actor().
+                setBackgroundImage(img.getRef(), true).
+                setPositionAnchored(actor.width/2, actor.height/2, 0.5, 0.5);
+
+            actor.addChild(sprite);
+            return actor;
+        };
+
         var newActor = function(entity) {
             var p = cellToLocal(entity.Cell);
             var actor = new CAAT.ActorContainer().
@@ -168,6 +184,15 @@ define(["underscore",
                         }
                     }
 
+                    if (entity.Type === "wall") {
+                        (function() {
+                            var actor = newWall(entity);
+                            container.addChild(actor);
+                            entities[entity.Id] = entity;
+                            actors[entity.Id] = actor;
+                        }());
+                    }
+
                     return; //continue
                 }
 
@@ -238,6 +263,7 @@ define(["underscore",
                                 actors[entity.SaidBy].clearSayMsg(entity.Id);
                             }
                         }
+
                         return; //continue
                     }
 

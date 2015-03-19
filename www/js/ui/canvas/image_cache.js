@@ -27,7 +27,8 @@ define(["lib/minpubsub",
         loadDefault: function() {
             var spriteSheets = [
                 {id: "female",        url: "asset/img/pokemon-female.png"},
-                {id: "terrain_tiles", url: "asset/img/terrain-tiles-16x16x8.png"}
+                {id: "terrain_tiles", url: "asset/img/terrain-tiles-16x16x8.png"},
+                {id: "rock",          url: "asset/rock.png"},
             ];
             this.load(spriteSheets);
         }
