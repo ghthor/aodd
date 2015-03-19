@@ -141,7 +141,7 @@ func (phase *narrowPhase) solveActorAssail(a *actor, assail assailEntity, collis
 	if a.hp <= 0 {
 		a.hp = 100
 
-		a.actorEntity.cell = coord.Cell{}
+		a.actorEntity.cell = origin
 		a.actorEntity.facing = coord.South
 		a.actorEntity.pathAction = nil
 	}

@@ -70,7 +70,7 @@ func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWri
 
 			name: dsactor.Name,
 
-			cell:   dsactor.Loc,
+			cell:   origin,
 			facing: dsactor.Facing,
 			speed:  15,
 
