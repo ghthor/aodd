@@ -181,6 +181,9 @@ define([
                         case "A":
                             inputState.movementDown(coord.West);
                             break;
+                        case "1":
+                            inputState.chargeDown();
+                            break;
                         default:
                         }
 
@@ -211,6 +214,9 @@ define([
                             break;
                         case "A":
                             inputState.movementUp(coord.West);
+                            break;
+                        case "1":
+                            inputState.chargeUp();
                             break;
                         }
 

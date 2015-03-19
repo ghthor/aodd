@@ -46,6 +46,11 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 			actor.pathAction = nil
 		}
 
+		// Reset speed after a charge
+		if actor.lastStartedCharge+chargeDuration <= now {
+			actor.speed = baseSpeed
+		}
+
 		return actor.Entity()
 
 	case assailEntity:
@@ -182,6 +187,8 @@ func newMoveRequest(t MoveRequestType, timeIssued stime.Time, params string) (Mo
 func newUseRequest(t UseRequestType, timeIssued stime.Time, params string) (UseRequest, error) {
 	switch params {
 	case "assail":
+		return UseRequest{t, timeIssued, params}, nil
+	case "charge":
 		return UseRequest{t, timeIssued, params}, nil
 	default:
 		return UseRequest{}, fmt.Errorf("unknown skill: %s", params)
@@ -440,6 +447,13 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 		a.lastAssail = e
 
 		return []entity.Entity{e}
+
+	case "charge":
+		// Implement a cooldown
+		if a.lastStartedCharge+chargeCooldown <= now {
+			a.speed = chargeSpeed
+			a.lastStartedCharge = now
+		}
 	}
 	return nil
 }

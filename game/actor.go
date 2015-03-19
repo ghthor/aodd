@@ -7,11 +7,21 @@ import (
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
+	"github.com/ghthor/engine/sim/stime"
 )
 
 const (
 	baseSpeed   = 15
+	chargeSpeed = 5
 )
+
+// 5s
+// In Frames
+const chargeCooldown = 40 * 5
+
+// 1s
+// In Frames
+const chargeDuration = 40
 
 // Object stored in the quad tree
 type actorEntity struct {
@@ -27,6 +37,8 @@ type actorEntity struct {
 
 	pathAction     *coord.PathAction
 	lastMoveAction coord.MoveAction
+
+	lastStartedCharge stime.Time
 
 	// Health and Mana
 	hp, hpMax,

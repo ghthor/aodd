@@ -23,6 +23,14 @@ define(["underscore",
             inputConn.sendUseRequest(game.UR_USE_CANCEL, "assail");
         };
 
+        var sendCharge = function() {
+            inputConn.sendUseRequest(game.UR_USE, "charge");
+        };
+
+        var sendChargeCancel = function() {
+            inputConn.sendUseRequest(game.UR_USE_CANCEL, "charge");
+        };
+
         inputState.movementDown = function(direction) {
             if (!_.include(inputState.movement, direction)) {
                 inputState.movement.push(direction);
@@ -54,6 +62,14 @@ define(["underscore",
         inputState.assailUp = function() {
             inputState.assail = null;
             sendAssailCancel();
+        };
+
+        inputState.chargeDown = function() {
+            sendCharge();
+        };
+
+        inputState.chargeUp = function() {
+            sendChargeCancel();
         };
 
         return this;
