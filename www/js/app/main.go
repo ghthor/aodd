@@ -294,6 +294,10 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 					pub.Emit(EV_RECV_INITIAL_STATE, jsArray{
 						resp.InitialState.Entity,
 						resp.InitialState.WorldState,
+						jsObject{
+							"Bounds":  resp.InitialState.WorldState.Bounds,
+							"Terrain": resp.InitialState.WorldState.TerrainMap.String(),
+						},
 					})
 
 					for {
@@ -301,6 +305,12 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 						if err != nil {
 							pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
 							return
+						}
+
+						// TODO Fix unsafe concurrent access of world.state
+						err = canvas.ApplyTerrainDiff(terrainCanvas{pub}, world.state, update)
+						if err != nil {
+							pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
 						}
 
 						world.update(update)

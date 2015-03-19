@@ -1,17 +1,13 @@
 // TODO This module is 100% unspecified
 define(["underscore",
-       "ui/canvas/terrain_map",
        "ui/canvas/sprite/human",
        "ui/canvas/bar",
        "ui/canvas/chat_bubble",
        "ui/canvas/player",
-       "jquery",
-       "CAAT"
-], function(_, TerrainMap, Human, Bar, Bubble, Player, $) {
+       "CAAT",
+], function(_, Human, Bar, Bubble, Player) {
     var World = function(director, scene) {
         var world = this;
-
-        TerrainMap.initialize(director);
 
         world.grid = 16;
         var grid = world.grid,
@@ -135,7 +131,7 @@ define(["underscore",
                 setPosition(p.x, p.y);
         };
 
-        world.initialize = function(playerEntity, worldState) {
+        world.initialize = function(playerEntity, worldState, terrain) {
             var time = worldState.time;
 
             // Index of all entities currently being displayed
@@ -215,6 +211,17 @@ define(["underscore",
             // Update all entities
             _.each(worldState.Entities, updateEntity);
 
+            // Create an actor for the rendered terrain map
+            var renderedTerrain = new CAAT.Actor().setBackgroundImage(terrain.canvas, true);
+            container.addChildAt(renderedTerrain, 0);
+
+            var terrainSetPosition = function(cell) {
+                // Moves like an entity in the world
+                var p = cellToLocal(cell);
+                renderedTerrain.setPositionAnchored(p.x, p.y, 0.5, 0.5);
+            };
+            terrainSetPosition(terrain.map.center());
+
             world.update = function(worldStateDiff) {
                 time = worldStateDiff.Time;
 
@@ -243,40 +250,12 @@ define(["underscore",
                     console.log(entity);
                 });
 
-                if (!_.isUndefined(worldStateDiff.TerrainMap)) {
-                    world.terrainMap = mergeTerrain(worldStateDiff.TerrainMap, world.terrainMap);
+                if (!_.isUndefined(worldStateDiff.TerrainMapSlices)) {
+                    if (worldStateDiff.TerrainMapSlices.length > 0) {
+                        terrainSetPosition(terrain.map.center());
+                    }
                 }
             };
-        };
-
-        var mergeTerrain = function(map) {
-            var canvas = document.createElement("canvas");
-            $(canvas).css({
-                display:  "none",
-                position: "absolute",
-                top:      -9999,
-                left:     -9999,
-            });
-            document.body.appendChild(canvas);
-
-            map = new TerrainMap(map, canvas, grid);
-
-            var renderedTiles = new CAAT.Actor().setBackgroundImage(canvas, true);
-            container.addChildAt(renderedTiles, 0);
-
-            var updatePosition = function(cell) {
-                // Moves like an entity in the world
-                var p = cellToLocal(cell);
-                renderedTiles.setPositionAnchored(p.x, p.y, 0.5, 0.5);
-            };
-            updatePosition(map.center());
-
-            mergeTerrain = function(slice, map) {
-                map = map.merge(new TerrainMap(slice));
-                updatePosition(map.center());
-                return map;
-            };
-            return map;
         };
 
         return this;

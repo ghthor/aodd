@@ -1,11 +1,13 @@
 // TODO This module is 100% unspecified
 // TODO Fix these import paths
-define(["app",
+define(["jquery",
+       "app",
        "ui/canvas/image_cache",
        "ui/canvas/world",
+       "ui/canvas/terrain_map",
        "lib/minpubsub",
        "CAAT",
-], function(app, ImageCache, World, pubsub) {
+], function($, app, ImageCache, World, TerrainMap, pubsub) {
     var Canvas = function(client) {
         var canvas = this;
 
@@ -18,14 +20,31 @@ define(["app",
                 setImagesCache(imageCache);
             var scene = director.createScene().setFillStyle("#c0c0c0");
 
+            TerrainMap.initialize(director);
+
             var world = new World(director, scene);
 
             client.on(app.EV_ERROR, function(error) {
                 console.log(error);
             });
 
-            client.on(app.EV_RECV_INITIAL_STATE, function(entity, worldState) {
-                world.initialize(entity, worldState);
+            client.on(app.EV_RECV_INITIAL_STATE, function(entity, worldState, terrainMap) {
+                var canvas = document.createElement("canvas");
+                $(canvas).css({
+                    display:  "none",
+                    position: "absolute",
+                    top:      -9999,
+                    left:     -9999,
+                });
+                document.body.appendChild(canvas);
+
+                // TODO Factor out tileSz of 16 to settings
+                var map = new TerrainMap(terrainMap, canvas, 16, client);
+
+                world.initialize(entity, worldState, {
+                    map:    map,
+                    canvas: canvas,
+                });
             });
 
             client.on(app.EV_RECV_UPDATE, function(worldStateDiff) {
