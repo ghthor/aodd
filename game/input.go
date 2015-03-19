@@ -80,10 +80,11 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		var entities []entity.Entity
 		actor := phase.index[e.ActorId()]
 
-		phase.processMoveCmd(actor, now)
 		entities = append(entities,
 			phase.processUseCmd(actor, now)...,
 		)
+
+		phase.processMoveCmd(actor, now)
 
 		entities = append(entities,
 			phase.processChatCmd(actor, now)...,
