@@ -162,8 +162,8 @@ func (i inputReceiver) Close() {
 func NewSimShard(c ShardConfig) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	bounds := coord.Bounds{
-		coord.Cell{-64, 64},
-		coord.Cell{63, -63},
+		coord.Cell{1, -1},
+		coord.Cell{128, -128},
 	}
 
 	quadTree, err := quad.New(bounds, 40, nil)
