@@ -17,6 +17,15 @@ type terrainContext struct {
 	rpg2d.TerrainMap
 }
 
+func (t *terrainContext) Reset(slice rpg2d.TerrainMapStateSlice) {
+	tm, err := rpg2d.NewTerrainMap(slice.Bounds, slice.Terrain)
+	if err != nil {
+		panic(err)
+	}
+
+	t.TerrainMap = tm
+}
+
 func (t *terrainContext) Shift(dir canvas.TerrainShift, mags canvas.TerrainShiftMagnitudes) {
 	switch dir {
 	case canvas.TS_NORTH:
@@ -123,14 +132,13 @@ func (t *terrainContext) DrawTile(terrainType rpg2d.TerrainType, cell coord.Cell
 
 func DescribeTerrainCanvas(c gospec.Context) {
 	c.Specify("a terrain canvas", func() {
-		c.Specify("can be shifted by a diff to the", func() {
-			quadTree, err := quad.New(coord.Bounds{
-				coord.Cell{-4, 4},
-				coord.Cell{3, -3},
-			}, 20, nil)
-			c.Assume(err, IsNil)
+		quadTree, err := quad.New(coord.Bounds{
+			coord.Cell{-4, 4},
+			coord.Cell{3, -3},
+		}, 20, nil)
+		c.Assume(err, IsNil)
 
-			terrain, err := rpg2d.NewTerrainMap(quadTree.Bounds(), `
+		terrain, err := rpg2d.NewTerrainMap(quadTree.Bounds(), `
 DDDDDDDD
 DGGGGGGD
 DGGRRGGD
@@ -140,57 +148,71 @@ DGGRRGGD
 DGGGGGGD
 DDDDDDDD
 `)
-			c.Assume(err, IsNil)
+		c.Assume(err, IsNil)
 
-			world := rpg2d.NewWorld(stime.Time(0), quadTree, terrain)
+		world := rpg2d.NewWorld(stime.Time(0), quadTree, terrain)
 
-			worldState := world.ToState()
+		worldState := world.ToState()
 
-			north := coord.Bounds{
-				coord.Cell{-2, 4},
-				coord.Cell{1, 1},
+		north := coord.Bounds{
+			coord.Cell{-2, 4},
+			coord.Cell{1, 1},
+		}
+
+		northEast := coord.Bounds{
+			coord.Cell{0, 4},
+			coord.Cell{3, 1},
+		}
+
+		east := coord.Bounds{
+			coord.Cell{0, 2},
+			coord.Cell{3, -1},
+		}
+
+		southEast := coord.Bounds{
+			coord.Cell{0, 0},
+			coord.Cell{3, -3},
+		}
+
+		south := coord.Bounds{
+			coord.Cell{-2, 0},
+			coord.Cell{1, -3},
+		}
+
+		southWest := coord.Bounds{
+			coord.Cell{-4, 0},
+			coord.Cell{-1, -3},
+		}
+
+		west := coord.Bounds{
+			coord.Cell{-4, 2},
+			coord.Cell{-1, -1},
+		}
+
+		northWest := coord.Bounds{
+			coord.Cell{-4, 4},
+			coord.Cell{-1, 1},
+		}
+
+		center := coord.Bounds{
+			coord.Cell{-2, 2},
+			coord.Cell{1, -1},
+		}
+
+		c.Specify("can be reset by a diff if there is no overlap", func() {
+			initialState := worldState.Cull(northWest)
+
+			context := &terrainContext{
+				TerrainMap: initialState.Clone().TerrainMap.TerrainMap,
 			}
 
-			northEast := coord.Bounds{
-				coord.Cell{0, 4},
-				coord.Cell{3, 1},
-			}
+			nextState := worldState.Cull(northEast)
 
-			east := coord.Bounds{
-				coord.Cell{0, 2},
-				coord.Cell{3, -1},
-			}
+			canvas.ApplyTerrainDiff(context, initialState, initialState.Diff(nextState))
+			c.Expect(context.String(), Equals, nextState.TerrainMap.String())
+		})
 
-			southEast := coord.Bounds{
-				coord.Cell{0, 0},
-				coord.Cell{3, -3},
-			}
-
-			south := coord.Bounds{
-				coord.Cell{-2, 0},
-				coord.Cell{1, -3},
-			}
-
-			southWest := coord.Bounds{
-				coord.Cell{-4, 0},
-				coord.Cell{-1, -3},
-			}
-
-			west := coord.Bounds{
-				coord.Cell{-4, 2},
-				coord.Cell{-1, -1},
-			}
-
-			northWest := coord.Bounds{
-				coord.Cell{-4, 4},
-				coord.Cell{-1, 1},
-			}
-
-			center := coord.Bounds{
-				coord.Cell{-2, 2},
-				coord.Cell{1, -1},
-			}
-
+		c.Specify("can be shifted by a diff to the", func() {
 			initialState := worldState.Cull(center)
 
 			context := &terrainContext{

@@ -2,6 +2,7 @@ package canvas
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
@@ -23,6 +24,11 @@ const (
 )
 
 type TerrainContext interface {
+	// Used if the bounds of the diff does NOT
+	// have any overlap with the bounds of the
+	// previous state.
+	Reset(rpg2d.TerrainMapStateSlice)
+
 	// Shift should expect A direction the canvas
 	// should be shifted to maintian the tiles that
 	// have already been drawn to it.
@@ -50,6 +56,15 @@ func abs(a int) int {
 // the painting of the canvas.
 func ApplyTerrainDiff(c TerrainContext, prevState rpg2d.WorldState, diff rpg2d.WorldStateDiff) error {
 	if len(diff.TerrainMapSlices) == 0 {
+		return nil
+	}
+
+	if !prevState.Bounds.Overlaps(diff.Bounds) {
+		if len(diff.TerrainMapSlices) != 1 {
+			return fmt.Errorf("unexpected number of terrain state slices {%v}", diff.TerrainMapSlices)
+		}
+
+		c.Reset(diff.TerrainMapSlices[0])
 		return nil
 	}
 
