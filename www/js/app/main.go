@@ -266,7 +266,7 @@ func (c terrainCanvas) Shift(dir canvas.TerrainShift, mags canvas.TerrainShiftMa
 }
 
 func (c terrainCanvas) DrawTile(ttype rpg2d.TerrainType, cell coord.Cell) {
-	c.pub.Emit(EV_TERRAIN_DRAW_TILE, jsArray{ttype, cell})
+	c.pub.Emit(EV_TERRAIN_DRAW_TILE, jsArray{string(ttype), cell})
 }
 
 func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
