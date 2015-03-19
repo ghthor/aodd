@@ -48,7 +48,6 @@ define(["jquery",
        "underscore",
 
        // Specs
-       "ui/canvas/terrain_map_spec",
        "ui/canvas/sprite/terrain_spec",
 
        // Spec Framework
