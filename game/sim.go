@@ -162,8 +162,8 @@ func (i inputReceiver) Close() {
 func NewSimShard(c ShardConfig) (*http.Server, error) {
 	// TODO pull this information from a datastore
 	bounds := coord.Bounds{
-		coord.Cell{-1024, 1024},
-		coord.Cell{1023, -1023},
+		coord.Cell{-64, 64},
+		coord.Cell{63, -63},
 	}
 
 	quadTree, err := quad.New(bounds, 40, nil)
@@ -171,7 +171,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		return nil, err
 	}
 
-	terrainMap, err := rpg2d.NewTerrainMap(bounds, string(rpg2d.TT_GRASS))
+	terrainMap, err := rpg2d.NewTerrainMap(bounds, startingTerrain)
 	if err != nil {
 		return nil, err
 	}
