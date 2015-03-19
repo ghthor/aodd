@@ -9,6 +9,10 @@ import (
 	"github.com/ghthor/engine/rpg2d/entity"
 )
 
+const (
+	baseSpeed   = 15
+)
+
 // Object stored in the quad tree
 type actorEntity struct {
 	id      entity.Id
@@ -72,7 +76,7 @@ func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWri
 
 			cell:   origin,
 			facing: dsactor.Facing,
-			speed:  15,
+			speed:  baseSpeed,
 
 			pathAction: nil,
 			lastMoveAction: coord.TurnAction{
