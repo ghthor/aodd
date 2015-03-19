@@ -129,14 +129,14 @@ func DescribeLiveWebTesting(c gospec.Context) {
 
 	var err error
 
-	f, err := os.OpenFile("test_env.js", os.O_RDONLY, 0666)
+	f, err := os.OpenFile("login_test.js", os.O_RDONLY, 0666)
 	if err != nil {
 		c.Assume(err, IsNil)
 		return
 	}
 	defer f.Close()
 
-	mux.HandleFunc("/test_env.js", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/js/ui/login.js", func(w http.ResponseWriter, r *http.Request) {
 		io.Copy(w, f)
 		f.Seek(0, 0)
 	})
@@ -167,7 +167,7 @@ func DescribeLiveWebTesting(c gospec.Context) {
 		AssetDir: "../www/asset/",
 		CssDir:   "../www/css/",
 
-		JsMain: "test_env",
+		JsMain: "js/init",
 
 		IndexTmpl: indexTmpl,
 
