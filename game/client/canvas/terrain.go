@@ -49,6 +49,10 @@ func abs(a int) int {
 // with the necessary steps to apply the diff and update
 // the painting of the canvas.
 func ApplyTerrainDiff(c TerrainContext, prevState rpg2d.WorldState, diff rpg2d.WorldStateDiff) error {
+	if len(diff.TerrainMapSlices) == 0 {
+		return nil
+	}
+
 	pb, nb := prevState.Bounds, diff.Bounds
 	switch {
 	case pb.Contains(nb.BotL()) && pb.Contains(nb.BotR):
