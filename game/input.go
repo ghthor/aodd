@@ -353,6 +353,7 @@ func (phase inputPhase) processMoveCmd(a *actor, now stime.Time) {
 	}
 }
 
+// 1s
 // In frames
 const assailCooldown = 40
 
