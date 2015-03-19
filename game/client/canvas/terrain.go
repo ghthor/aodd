@@ -44,6 +44,10 @@ func abs(a int) int {
 	return a
 }
 
+// Taking a previous world state and a diff to the next
+// state, this function will call the terrain context
+// with the necessary steps to apply the diff and update
+// the painting of the canvas.
 func ApplyTerrainDiff(c TerrainContext, prevState rpg2d.WorldState, diff rpg2d.WorldStateDiff) error {
 	pb, nb := prevState.Bounds, diff.Bounds
 	switch {
