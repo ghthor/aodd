@@ -19,6 +19,9 @@ type Actor struct {
 
 	// Way the actor is facing
 	Facing coord.Direction
+
+	// Is Connected to the simulation
+	IsConnected bool
 }
 
 // Authenticate the credentials for an actor.
