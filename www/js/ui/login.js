@@ -185,10 +185,6 @@ define(["ui/client",
         var ui = this;
 
         ui.on(app.EV_CONNECTED, function(conn) {
-            ui.on(app.EV_PACKET, function(packet) {
-                console.log(packet);
-            });
-
             ui.on(app.EV_AUTH_FAILED, function(name) {
                 console.log("auth failed for", name);
                 react.render(new LoginForm({
