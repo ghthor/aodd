@@ -182,6 +182,8 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 
 	entityIdGen := entity.NewIdGenerator()
 
+	quadTree = addWalls(quadTree, entityIdGen)
+
 	simDef := rpg2d.SimulationDef{
 		FPS: 40,
 

@@ -61,6 +61,9 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 
 		return e
 
+	case wallEntity:
+		return e
+
 	default:
 		panic(fmt.Sprint("unexpected entity type:", e))
 	}
@@ -89,6 +92,9 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		return append(entities, actor.Entity())
 
 	case sayEntity:
+		return []entity.Entity{e}
+
+	case wallEntity:
 		return []entity.Entity{e}
 
 	default:

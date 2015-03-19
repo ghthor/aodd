@@ -111,6 +111,10 @@ func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, colli
 		return phase.solveActorActor(&solverActorActor{}, a, b, collision)
 	case assailEntity:
 		return phase.solveActorAssail(a, e, collision, now)
+
+	case wallEntity:
+		a.revertMoveAction()
+		return []entity.Entity{a.Entity(), e}
 	}
 
 	return nil

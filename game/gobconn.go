@@ -48,6 +48,7 @@ func init() {
 	// Other entity states
 	gob.Register(SayEntityState{})
 	gob.Register(AssailEntityState{})
+	gob.Register(WallEntityState{})
 
 	// Cmd Requests. They have no responses.
 	gob.Register(MoveRequest{})
