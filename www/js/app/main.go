@@ -11,6 +11,7 @@ import (
 
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
+	"github.com/ghthor/aodd/game/client/canvas"
 	"github.com/ghthor/engine/rpg2d"
 	"github.com/ghthor/engine/rpg2d/coord"
 	"github.com/ghthor/engine/rpg2d/entity"
@@ -249,6 +250,24 @@ func (w *world) actorEntityById(id entity.Id) (game.ActorEntityState, error) {
 	}
 
 	return game.ActorEntityState{}, err
+}
+
+type terrainCanvas struct {
+	pub EventPublisher
+}
+
+func (c terrainCanvas) Reset(slice rpg2d.TerrainMapStateSlice) {
+	c.pub.Emit(EV_TERRAIN_RESET, jsArray{slice})
+}
+
+func (c terrainCanvas) Shift(dir canvas.TerrainShift, mags canvas.TerrainShiftMagnitudes) {
+	for dir, mag := range mags {
+		c.pub.Emit(EV_TERRAIN_CANVAS_SHIFT, jsArray{dir, mag})
+	}
+}
+
+func (c terrainCanvas) DrawTile(ttype rpg2d.TerrainType, cell coord.Cell) {
+	c.pub.Emit(EV_TERRAIN_DRAW_TILE, jsArray{ttype, cell})
 }
 
 func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
