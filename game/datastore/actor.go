@@ -48,7 +48,22 @@ func (p *actorPool) ActorExists(name string) (Actor, bool) {
 	return a, exists
 }
 
+func (p *actorPool) UpdateActor(a Actor) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	a, exists := p.store[a.Name]
+	if !exists {
+		return ErrActorDoesntExist
+	}
+
+	p.store[a.Name] = a
+
+	return nil
+}
+
 var ErrActorExists = errors.New("actor already exists")
+var ErrActorDoesntExist = errors.New("actor doesn't exist")
 
 var defaultSpawn = coord.Cell{0, 0}
 
@@ -84,6 +99,9 @@ type Datastore interface {
 	// Can return ErrActorExists if the actor's name
 	// already exists in the datastore.
 	AddActor(name, password string) (Actor, error)
+
+	// Update the actor that is stored.
+	UpdateActor(Actor) error
 }
 
 type memDb struct {
