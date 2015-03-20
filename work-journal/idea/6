@@ -1,0 +1,4 @@
+## [active] [6] Low Hanging Fruit
+- Reusing the arrays allocated during the broad phase.
+- Checking whether entities should collide during the broad phase.
+    - aka. A collision should not be generated for an actor AND it's own assail
