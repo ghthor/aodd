@@ -1,0 +1,14 @@
+## [active] [3] Major Bugs
+### Client Side
+
+- [ ] Actor's viewport overlapping edge of world
+    - Causes invalid index access while merging diffs
+    - [Current Hack] Can be avoided by bounding the actors ability to move
+      to a point where their viewport overlaps the edge of the world
+
+### Server Side
+
+- [ ] Actor's can walk out of the world
+    - The entity is removed and I believe the server panic's and dies
+    - [Current Hack] Can be avoided by bounding the actors
+      movement from ever reaching the edge of the world
