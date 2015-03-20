@@ -14,6 +14,7 @@ import (
 type ReqLogin struct{ Name, Password string }
 type ReqCreate struct{ Name, Password string }
 
+type RespActorAlreadyConnected struct{ Name string }
 type RespAuthFailed struct{ Name string }
 type RespActorExists struct{ Name string }
 type RespActorDoesntExist struct{ Name, Password string }
@@ -30,6 +31,7 @@ func init() {
 	gob.Register(ReqLogin{})
 	gob.Register(ReqCreate{})
 
+	gob.Register(RespActorAlreadyConnected{})
 	gob.Register(RespAuthFailed{})
 	gob.Register(RespActorExists{})
 	gob.Register(RespActorDoesntExist{})
