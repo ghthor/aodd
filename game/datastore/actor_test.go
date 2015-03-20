@@ -32,7 +32,12 @@ func TestActorShouldBeUpdated(t *testing.T) {
 		t.Fail()
 	}
 
-	actor.IsConnected = true
+	isConnected := <-actor.IsConnected
+	if isConnected {
+		t.Fail()
+	}
+
+	actor.IsConnected <- true
 	err := pool.UpdateActor(actor)
 	if err != nil {
 		t.Fail()
@@ -43,7 +48,7 @@ func TestActorShouldBeUpdated(t *testing.T) {
 		t.Fail()
 	}
 
-	if !actor.IsConnected {
+	if !<-actor.IsConnected {
 		t.Fail()
 	}
 }

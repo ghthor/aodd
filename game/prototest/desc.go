@@ -141,6 +141,8 @@ func DescribeActorGobConn(c gospec.Context) {
 				}
 
 				c.Assume(<-serverExitError, Equals, io.ErrClosedPipe)
+				actor, _ := ds.ActorExists("actor")
+				c.Assume(actor.IsConnected, IsFalse)
 			})
 		}
 	}()
@@ -238,6 +240,10 @@ func DescribeActorGobConn(c gospec.Context) {
 				c.Assume(err, IsNil)
 				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
 				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals, initialState())
+
+				dsactor, exists := ds.ActorExists("actor")
+				c.Assume(exists, IsTrue)
+				c.Expect(dsactor.IsConnected, IsTrue)
 			})
 		})
 

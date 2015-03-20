@@ -21,7 +21,7 @@ type Actor struct {
 	Facing coord.Direction
 
 	// Is Connected to the simulation
-	IsConnected bool
+	IsConnected chan bool
 }
 
 // Authenticate the credentials for an actor.
@@ -79,11 +79,14 @@ func (p *actorPool) AddActor(name, password string) (Actor, error) {
 
 		Id: p.nextId,
 
-		Loc:    defaultSpawn,
-		Facing: coord.South,
+		Loc:         defaultSpawn,
+		Facing:      coord.South,
+		IsConnected: make(chan bool, 1),
 	}
 
 	p.nextId++
+
+	actor.IsConnected <- false
 
 	p.lock.Lock()
 	p.store[name] = actor
