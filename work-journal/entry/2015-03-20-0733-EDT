@@ -1,0 +1,21 @@
+Fri Mar 20 07:33:46 EDT 2015
+
+# journal - Bug fixes, More bugs and fluidity
+Last evening I fixed the, you can log in as the same
+actor and everything seems to be working and then the
+server panic's and dies bug. I made an attempt to solve
+it before my presentation, but that was too little time.
+It took around 4-5 hours to actually implement the test
+and impl, but while I was working through it I found
+another corner case that I needed to handle.
+
+Theres all kinds of bugs when the players viewport overlaps
+the edges of the world. Something about invalid indices. Though
+the good news is that is appears to be all client side bugs.
+This makes lots of sense.
+
+Immediate problems that should be looked at fixing are the
+fluidity of assail and charge. The NPC and walled arena
+can be added in parallel to fixing the avoid to UX issues.
+
+Fri Mar 20 08:14:35 EDT 2015
