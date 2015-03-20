@@ -23,7 +23,7 @@ func TestAddActorShouldFailIfActorExists(t *testing.T) {
 	}
 }
 
-func TestActorShouldBeUpdated(t *testing.T) {
+func TestCanBeConnected(t *testing.T) {
 	pool := newActorPool(1)
 	pool.AddActor("testing", "testingpasswd")
 
@@ -32,23 +32,19 @@ func TestActorShouldBeUpdated(t *testing.T) {
 		t.Fail()
 	}
 
-	isConnected := <-actor.IsConnected
-	if isConnected {
+	if !actor.CanBeConnected() {
 		t.Fail()
 	}
 
+	<-actor.IsConnected
 	actor.IsConnected <- true
-	err := pool.UpdateActor(actor)
-	if err != nil {
-		t.Fail()
-	}
 
 	actor, exists = pool.ActorExists("testing")
 	if !exists {
 		t.Fail()
 	}
 
-	if !<-actor.IsConnected {
+	if actor.CanBeConnected() {
 		t.Fail()
 	}
 }

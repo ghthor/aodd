@@ -29,6 +29,13 @@ func (a Actor) Authenticate(name, password string) bool {
 	return a.Name == name && a.password == password
 }
 
+// Check if the actor can be connected.
+func (a Actor) CanBeConnected() bool {
+	isConnected := <-a.IsConnected
+	a.IsConnected <- isConnected
+	return !isConnected
+}
+
 type actorPool struct {
 	nextId rpg2d.ActorId
 	store  map[string]Actor
