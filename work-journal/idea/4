@@ -1,0 +1,12 @@
+## [active] [4] Fix Assail
+I need something that represents a frame of a path action.
+The use case is for assail. The current implementation uses
+the actor's cell and facing to spawn the assail entity in
+the adjacent cell directly in front of the actor. This is
+all well and good, unless the actor is moving. The way to
+solve this is to take into account the actor's movement
+and to create an entity that spans the 2 cells in front of
+the actor, both representing a percentage of the cell. These
+2 percentages add up to 100%, which means it still represents
+the same area as a cell, it's just offset from the discrete
+grid.
