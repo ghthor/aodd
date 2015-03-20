@@ -1,29 +1,21 @@
-## [active] [1] Release 1
-- [x] Implement the update phase
-- [x] Implement the input phase
-- [x] Implement the narrow phase
-
-- [ ] Create character classes
-    - warrior
-    - wizard
-    - priest
+## [active] [1] Release 1 - Walled Arena
+- [ ] Safe zone in the center square
+    - [ ] Disable damage
+    - [ ] An NPC to teleport you into the PVP arena
 
 - [ ] Create spells and skills [WIP]
-    - [x] assail
+    - [ ] assail [WIP]
+        - See idea "Fix Assail"
+    - [ ] charge [WIP]
+        - See idea "Fix Charge"
+
     - [ ] ioc fein
+        - A self heal
+
     - [ ] dion
-    - [ ] charge
+        - Temporary invulnerability
+        - May not implement [Hard to balance?]
+
     - [ ] ambush
-
-- [ ] Update all vendored libs [WIP]
-    - [x] underscore - using 1.7.0
-    - [x] jquery ----- using 1.11.2
-    - [x] react ------ using 0.12.2
-    - [ ] caat
-    - [ ] jasmine
-
-- [x] Update CAAT graphics engine [Suspended]
-    - Iff CAAT starts having problems
-    - [x] Look into other graphic engine alternatives
-        - pixi.js
-        - cocos2d-html5
+        - Teleport to a opposite side
+          of a target in front of you.
