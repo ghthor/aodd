@@ -169,7 +169,6 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 					})
 
 				case authFailed := <-trip.AuthFailed:
-					js.Debugger()
 					pub.Emit(EV_AUTH_FAILED, jsArray{authFailed.Name})
 
 				case resp := <-trip.Success:
