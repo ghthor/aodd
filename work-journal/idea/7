@@ -1,0 +1,13 @@
+## [inactive] [7] Update JS libaries
+- [ ] Update all vendored libs [WIP]
+    - [x] underscore - using 1.7.0
+    - [x] jquery ----- using 1.11.2
+    - [ ] react ------ using 0.12.2
+    - [ ] caat
+    - [ ] jasmine
+
+- [x] Update CAAT graphics engine [Suspended]
+    - Iff CAAT starts having problems
+    - [x] Look into other graphic engine alternatives
+        - pixi.js
+        - cocos2d-html5
