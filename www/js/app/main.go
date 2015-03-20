@@ -42,6 +42,7 @@ const (
 	EV_ERROR event = iota
 	EV_CONNECTED
 
+	EV_ACTOR_ALREADY_CONNECTED
 	EV_ACTOR_DOESNT_EXIST
 	EV_ACTOR_EXISTS
 	EV_AUTH_FAILED
@@ -158,6 +159,9 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 				trip := loginConn.AttemptLogin(name, password)
 
 				select {
+				case actorConnected := <-trip.ActorAlreadyConnected:
+					pub.Emit(EV_ACTOR_ALREADY_CONNECTED, jsArray{actorConnected.Name})
+
 				case actorDoesntExist := <-trip.ActorDoesntExist:
 					pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray{
 						actorDoesntExist.Name,
@@ -326,6 +330,9 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 
 						pub.Emit(EV_RECV_UPDATE, jsArray{update})
 					}
+
+				case resp := <-trip.ActorAlreadyConnected:
+					pub.Emit(EV_ACTOR_ALREADY_CONNECTED, jsArray{resp.Name})
 
 				case err := <-trip.Error:
 					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
