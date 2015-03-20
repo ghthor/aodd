@@ -44,6 +44,7 @@ func addWalls(quad quad.Quad, nextId func() entity.Id) quad.Quad {
 		})
 	}
 
+	// Outer Wall
 	// {c(30, -30), c(99, -30)},
 	for x := 30; x < 100; x++ {
 		newWall(c(x, -30))
@@ -62,6 +63,27 @@ func addWalls(quad quad.Quad, nextId func() entity.Id) quad.Quad {
 	// {c(30, -31), c(30, -100)},
 	for y := -31; y >= -100; y-- {
 		newWall(c(30, y))
+	}
+
+	// Inner Wall
+	// {c(45, -45), c(84, -45)}
+	for x := 45; x < 85; x++ {
+		newWall(c(x, -45))
+	}
+
+	// {c(85, -45), c(85, -84)}
+	for y := -45; y > -85; y-- {
+		newWall(c(85, y))
+	}
+
+	// {c(46, -85), c(85, -85)}
+	for x := 46; x <= 85; x++ {
+		newWall(c(x, -85))
+	}
+
+	// {c(45, -46), c(45, -85)}
+	for y := -46; y >= -85; y-- {
+		newWall(c(45, y))
 	}
 
 	return quad
