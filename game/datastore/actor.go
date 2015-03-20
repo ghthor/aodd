@@ -52,7 +52,7 @@ func (p *actorPool) UpdateActor(a Actor) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	a, exists := p.store[a.Name]
+	_, exists := p.store[a.Name]
 	if !exists {
 		return ErrActorDoesntExist
 	}

@@ -23,6 +23,31 @@ func TestAddActorShouldFailIfActorExists(t *testing.T) {
 	}
 }
 
+func TestActorShouldBeUpdated(t *testing.T) {
+	pool := newActorPool(1)
+	pool.AddActor("testing", "testingpasswd")
+
+	actor, exists := pool.ActorExists("testing")
+	if !exists {
+		t.Fail()
+	}
+
+	actor.IsConnected = true
+	err := pool.UpdateActor(actor)
+	if err != nil {
+		t.Fail()
+	}
+
+	actor, exists = pool.ActorExists("testing")
+	if !exists {
+		t.Fail()
+	}
+
+	if !actor.IsConnected {
+		t.Fail()
+	}
+}
+
 func TestActorShouldHaveAUniqueID(t *testing.T) {
 	pool := newActorPool(2)
 	a1, err := pool.AddActor("actor1", "password")
