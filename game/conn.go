@@ -123,6 +123,15 @@ func (c *preLoginResult) handleLoginReq() (stateFn, error) {
 		return c.handleLogin, nil
 	}
 
+	if !actor.CanBeConnected() {
+		err := c.EncodeAndSend(ET_RESP_ACTOR_ALREADY_CONNECTED, RespActorAlreadyConnected{actor.Name})
+		if err != nil {
+			return nil, err
+		}
+
+		return c.handleLogin, nil
+	}
+
 	if !actor.Authenticate(r.Name, r.Password) {
 		err := c.EncodeAndSend(ET_RESP_AUTH_FAILED, RespAuthFailed{r.Name})
 		if err != nil {

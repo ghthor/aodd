@@ -29,30 +29,35 @@ type RespLoggedIn struct {
 type LoginRoundTrip struct {
 	conn game.Conn
 
-	Success          <-chan RespLoggedIn
-	ActorDoesntExist <-chan game.RespActorDoesntExist
-	AuthFailed       <-chan game.RespAuthFailed
-	Error            <-chan error
+	Success               <-chan RespLoggedIn
+	ActorAlreadyConnected <-chan game.RespActorAlreadyConnected
+	ActorDoesntExist      <-chan game.RespActorDoesntExist
+	AuthFailed            <-chan game.RespAuthFailed
+	Error                 <-chan error
 }
 
 func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 	var (
-		success          chan<- RespLoggedIn
-		actorDoesntExist chan<- game.RespActorDoesntExist
-		authFailed       chan<- game.RespAuthFailed
-		hadError         chan<- error
+		success               chan<- RespLoggedIn
+		actorAlreadyConnected chan<- game.RespActorAlreadyConnected
+		actorDoesntExist      chan<- game.RespActorDoesntExist
+		authFailed            chan<- game.RespAuthFailed
+		hadError              chan<- error
 	)
 
 	closeChans := func() func() {
 		var (
-			successCh          = make(chan RespLoggedIn, 1)
-			actorDoesntExistCh = make(chan game.RespActorDoesntExist, 1)
-			authFailedCh       = make(chan game.RespAuthFailed, 1)
-			errorCh            = make(chan error, 1)
+			successCh               = make(chan RespLoggedIn, 1)
+			actorAlreadyConnectedCh = make(chan game.RespActorAlreadyConnected, 1)
+			actorDoesntExistCh      = make(chan game.RespActorDoesntExist, 1)
+			authFailedCh            = make(chan game.RespAuthFailed, 1)
+			errorCh                 = make(chan error, 1)
 		)
 
 		trip.Success, success =
 			successCh, successCh
+		trip.ActorAlreadyConnected, actorAlreadyConnected =
+			actorAlreadyConnectedCh, actorAlreadyConnectedCh
 		trip.ActorDoesntExist, actorDoesntExist =
 			actorDoesntExistCh, actorDoesntExistCh
 		trip.AuthFailed, authFailed =
@@ -62,6 +67,7 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 
 		return func() {
 			close(successCh)
+			close(actorAlreadyConnectedCh)
 			close(actorDoesntExistCh)
 			close(authFailedCh)
 			close(errorCh)
@@ -84,6 +90,16 @@ func (trip LoginRoundTrip) run(r game.ReqLogin) LoginRoundTrip {
 		}
 
 		switch eType {
+		case game.ET_RESP_ACTOR_ALREADY_CONNECTED:
+			var r game.RespActorAlreadyConnected
+			err := trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
+			}
+
+			actorAlreadyConnected <- r
+
 		case game.ET_RESP_AUTH_FAILED:
 			var r game.RespAuthFailed
 			err := trip.conn.Decode(&r)

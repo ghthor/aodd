@@ -161,6 +161,23 @@ func DescribeActorGobConn(c gospec.Context) {
 			})
 
 			c.Specify("and the request will fail", func() {
+				c.Specify("if the actor is already connected", func() {
+					dsactor, exists := ds.ActorExists("actor")
+					c.Assume(exists, IsTrue)
+
+					<-dsactor.IsConnected
+					dsactor.IsConnected <- true
+
+					trip := loginConn.AttemptLogin("actor", "password")
+					c.Expect(<-trip.ActorAlreadyConnected, Equals, game.RespActorAlreadyConnected{
+						"actor",
+					})
+					c.Expect(<-trip.Error, IsNil)
+
+					<-dsactor.IsConnected
+					dsactor.IsConnected <- false
+				})
+
 				c.Specify("if the actor doesn't exist", func() {
 					trip := loginConn.AttemptLogin("newActor", "password")
 					c.Expect(<-trip.ActorDoesntExist, Equals, game.RespActorDoesntExist{
