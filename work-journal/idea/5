@@ -1,0 +1,9 @@
+## [active] [5] Fix Charge
+When charge is activated, the player could already be in motion,
+therefore the speed will not be applied until the next path action
+is created. This break fluidity and the feedback to the player
+about the skill activating is de-synced. To fix this the client
+needs to be prepared to handle path actions that have changed. The
+server needs to rebuild the path action if charge is activated when
+a path action already exists. This may be a difficult problem and
+still may not feel very fluid to use.
