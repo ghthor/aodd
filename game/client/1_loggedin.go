@@ -31,26 +31,32 @@ type RespConnected struct {
 type ConnectRoundTrip struct {
 	conn game.Conn
 
-	Connected <-chan RespConnected
-	Error     <-chan error
+	ActorAlreadyConnected <-chan game.RespActorAlreadyConnected
+	Connected             <-chan RespConnected
+	Error                 <-chan error
 }
 
 func (trip ConnectRoundTrip) run(r game.ReqConnect) ConnectRoundTrip {
 	var (
-		actorConnected chan<- RespConnected
-		hadError       chan<- error
+		actorAlreadyConnected chan<- game.RespActorAlreadyConnected
+		actorConnected        chan<- RespConnected
+		hadError              chan<- error
 	)
 
 	var closeChans func() = func() func() {
+		actorAlreadyConnectedCh := make(chan game.RespActorAlreadyConnected)
 		connectedCh := make(chan RespConnected)
 		errorCh := make(chan error, 1)
 
+		trip.ActorAlreadyConnected, actorAlreadyConnected =
+			actorAlreadyConnectedCh, actorAlreadyConnectedCh
 		trip.Connected, actorConnected =
 			connectedCh, connectedCh
 		trip.Error, hadError =
 			errorCh, errorCh
 
 		return func() {
+			close(actorAlreadyConnectedCh)
 			close(connectedCh)
 			close(errorCh)
 		}
@@ -74,6 +80,17 @@ func (trip ConnectRoundTrip) run(r game.ReqConnect) ConnectRoundTrip {
 		switch eType {
 		default:
 			hadError <- fmt.Errorf("unexpected encoded type{%v} waiting for connected entity", eType)
+			return
+
+		case game.ET_RESP_ACTOR_ALREADY_CONNECTED:
+			var r game.RespActorAlreadyConnected
+			err = trip.conn.Decode(&r)
+			if err != nil {
+				hadError <- err
+				return
+			}
+
+			actorAlreadyConnected <- r
 			return
 
 		case game.ET_CONNECTED:

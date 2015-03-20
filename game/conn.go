@@ -256,6 +256,17 @@ func (c *loggedInResult) handleConnect(connectActor ActorConnector) stateFn {
 			return nil, err
 		}
 
+		if <-c.loggedInActor.IsConnected {
+			c.loggedInActor.IsConnected <- true
+
+			err := c.EncodeAndSend(ET_RESP_ACTOR_ALREADY_CONNECTED, RespActorAlreadyConnected{c.loggedInActor.Name})
+			if err != nil {
+				return nil, err
+			}
+
+			return handleConnect, nil
+		}
+
 		actor, entity, initialState, diffWriter := c.connect(connectActor)
 
 		err = c.EncodeAndSend(ET_CONNECTED, entity)
@@ -268,9 +279,12 @@ func (c *loggedInResult) handleConnect(connectActor ActorConnector) stateFn {
 			return nil, err
 		}
 
+		c.loggedInActor.IsConnected <- true
+
 		c.connectedConn = connectedConn{
-			Conn:  c.Conn,
-			actor: actor,
+			Conn:           c.Conn,
+			connectedActor: c.loggedInActor,
+			actor:          actor,
 		}
 
 		diffWriter <- c.connectedConn
@@ -299,6 +313,9 @@ func (c loggedInConn) HandleConnect(connectActor ActorConnector) (ConnectedActor
 
 type connectedConn struct {
 	Conn
+
+	connectedActor datastore.Actor
+
 	actor InputReceiver
 }
 
@@ -368,6 +385,10 @@ func (c connectedConn) HandleIO() (err error) {
 	}
 
 	c.actor.Close()
+
+	if <-c.connectedActor.IsConnected {
+		c.connectedActor.IsConnected <- false
+	}
 
 	return
 }

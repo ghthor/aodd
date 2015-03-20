@@ -142,7 +142,7 @@ func DescribeActorGobConn(c gospec.Context) {
 
 				c.Assume(<-serverExitError, Equals, io.ErrClosedPipe)
 				actor, _ := ds.ActorExists("actor")
-				c.Assume(actor.IsConnected, IsFalse)
+				c.Assume(actor.CanBeConnected(), IsTrue)
 			})
 		}
 	}()
@@ -208,34 +208,44 @@ func DescribeActorGobConn(c gospec.Context) {
 		c.Specify("that is logged in", func() {
 			loginResp := login()
 
-			c.Specify("can be connected to the simulation", func() {
-				trip := loginResp.ConnectActor(loginResp.Name)
-				actor := <-connectedActor
+			var actor *mockActor
 
-				initialState := func() rpg2d.WorldState {
-					state := rpg2d.WorldState{}
-					state.Time = 2
-					state.Bounds = coord.Bounds{
-						coord.Cell{-10, 10},
-						coord.Cell{10, -10},
-					}
-					state.Entities = append(state.Entities, actor.entityState)
-					terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
-					c.Assume(err, IsNil)
-					state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
-
-					return state
+			initialState := func() rpg2d.WorldState {
+				state := rpg2d.WorldState{}
+				state.Time = 2
+				state.Bounds = coord.Bounds{
+					coord.Cell{-10, 10},
+					coord.Cell{10, -10},
 				}
+				state.Entities = append(state.Entities, actor.entityState)
+				terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
+				c.Assume(err, IsNil)
+				state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
 
-				actor.stateWriter.WriteWorldState(initialState())
+				return state
+			}
 
-				var err error
+			// Must write the initial state first or this will block
+			getResponse := func(trip client.ConnectRoundTrip) (*game.RespActorAlreadyConnected, client.RespConnected, error) {
+				var actorAlreadyConnected game.RespActorAlreadyConnected
 				var connectResp client.RespConnected
+				var err error
 
 				select {
-				case err = <-trip.Error:
+				case actorAlreadyConnected = <-trip.ActorAlreadyConnected:
 				case connectResp = <-trip.Connected:
+				case err = <-trip.Error:
 				}
+
+				return &actorAlreadyConnected, connectResp, err
+			}
+
+			c.Specify("can be connected to the simulation", func() {
+				trip := loginResp.ConnectActor(loginResp.Name)
+				actor = <-connectedActor
+
+				actor.stateWriter.WriteWorldState(initialState())
+				_, connectResp, err := getResponse(trip)
 
 				c.Assume(err, IsNil)
 				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
@@ -243,7 +253,72 @@ func DescribeActorGobConn(c gospec.Context) {
 
 				dsactor, exists := ds.ActorExists("actor")
 				c.Assume(exists, IsTrue)
-				c.Expect(dsactor.IsConnected, IsTrue)
+				c.Expect(dsactor.CanBeConnected(), IsFalse)
+			})
+
+			c.Specify("cannot be connected if it is already connected", func() {
+				// Open a second connection that will use the
+				// same datastore as the existing connection.
+				conn := newMockConn()
+				var (
+					serverExitError <-chan error
+					exitWithError   chan<- error
+				)
+
+				func() {
+					errorCh := make(chan error)
+					exitWithError, serverExitError =
+						errorCh, errorCh
+				}()
+
+				// Start the server and return the error
+				// so we can sync before the function scope
+				// is exitted.
+				func() {
+					loginConn := game.NewPreLoginConn(game.NewGobConn(conn.nextEndpoint()), ds)
+
+					go func() {
+						exitWithError <- game.RunServer(loginConn, nil)
+					}()
+				}()
+
+				defer func() {
+					for _, pw := range conn.pw {
+						c.Assume(pw.Close(), IsNil)
+					}
+
+					for _, pr := range conn.pr {
+						c.Assume(pr.Close(), IsNil)
+					}
+					c.Assume(<-serverExitError, Equals, io.ErrClosedPipe)
+				}()
+
+				loginConn := client.NewLoginConn(game.NewGobConn(conn.nextEndpoint()))
+				c.Assume(conn.nextEndpoint(), IsNil)
+
+				// Log the second connection in
+				login := func() client.RespLoggedIn {
+					trip := loginConn.AttemptLogin("actor", "password")
+					loginResp := <-trip.Success
+					c.Assume(<-trip.Error, IsNil)
+					c.Assume(loginResp.Name, Equals, "actor")
+					return loginResp
+				}
+				loggedInCantConnect := login()
+
+				// Connect the first connection that logged in
+				trip := loginResp.ConnectActor(loginResp.Name)
+				actor = <-connectedActor
+
+				actor.stateWriter.WriteWorldState(initialState())
+				_, _, err := getResponse(trip)
+				c.Assume(err, IsNil)
+
+				trip = loggedInCantConnect.ConnectActor(loggedInCantConnect.Name)
+
+				resp, _, err := getResponse(trip)
+				c.Assume(err, IsNil)
+				c.Expect(resp.Name, Equals, loginResp.Name)
 			})
 		})
 
