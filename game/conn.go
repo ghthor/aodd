@@ -213,6 +213,7 @@ type loggedInConn struct {
 type loggedInResult struct {
 	loggedInConn
 
+	// result set by connecting
 	connectedConn connectedConn
 }
 
