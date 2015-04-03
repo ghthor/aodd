@@ -1,5 +1,5 @@
 define(["app",
-       "github.com/ghthor/engine/rpg2d/coord",
+       "github.com/ghthor/filu/rpg2d/coord",
        "ui/canvas/sprite/terrain",
        "underscore",
 ], function(app, coord, Sprite, _) {
@@ -14,7 +14,7 @@ define(["app",
     // Constructs a new terrain map.
     //
     // terrainMap rpg2d.TerrainMapStateSlice
-    //            http://godoc.org/github.com/ghthor/engine/rpg2d#TerrainMapStateSlice
+    //            http://godoc.org/github.com/ghthor/filu/rpg2d#TerrainMapStateSlice
     //
     // canvas     canvas dom element
     // tileSz     int

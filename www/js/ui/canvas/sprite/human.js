@@ -1,4 +1,4 @@
-define(["github.com/ghthor/engine/rpg2d/coord",
+define(["github.com/ghthor/filu/rpg2d/coord",
        "underscore",
        "CAAT",
 ], function(coord, _) {

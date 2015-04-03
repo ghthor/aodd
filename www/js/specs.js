@@ -36,7 +36,7 @@ requirejs.config({
     priority: ["jquery"]
 });
 
-define("github.com/ghthor/engine/rpg2d/coord", ["app"], function(app) {
+define("github.com/ghthor/filu/rpg2d/coord", ["app"], function(app) {
     return app.coord;
 });
 

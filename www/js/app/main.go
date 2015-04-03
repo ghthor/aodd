@@ -139,7 +139,7 @@ func initialize(settings *js.Object) jsObject {
 		gameModule[game.ChatRequestType(i).String()] = game.ChatRequestType(i)
 	}
 
-	// require("github.com/ghthor/engine/rpg2d/coord")
+	// require("github.com/ghthor/filu/rpg2d/coord")
 	module["coord"] = coordModule
 	// require("github.com/ghthor/aodd/game")
 	module["game"] = gameModule

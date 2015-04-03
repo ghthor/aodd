@@ -6,7 +6,7 @@ define([
 
         "app",
         "github.com/ghthor/aodd/game",
-        "github.com/ghthor/engine/rpg2d/coord",
+        "github.com/ghthor/filu/rpg2d/coord",
 
         "react",
         "jquery",
