@@ -4,8 +4,8 @@ import (
 	"bytes"
 
 	"github.com/ghthor/aodd/game"
-	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/entity"
 
 	"github.com/ghthor/gospec"
 	. "github.com/ghthor/gospec"

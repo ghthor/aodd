@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/ghthor/aodd/game/datastore"
-	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/entity"
 )
 
 // Used to determine the next type that's in the

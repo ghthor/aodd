@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ghthor/aodd/game"
-	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/filu/rpg2d"
 )
 
 type LoggedInConn interface {

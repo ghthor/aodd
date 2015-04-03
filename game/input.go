@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ghthor/engine/rpg2d/coord"
-	"github.com/ghthor/engine/rpg2d/entity"
-	"github.com/ghthor/engine/sim/stime"
+	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/sim/stime"
 )
 
 type updatePhaseLocker struct {

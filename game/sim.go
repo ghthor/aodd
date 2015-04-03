@@ -7,11 +7,11 @@ import (
 	"text/template"
 
 	"github.com/ghthor/aodd/game/datastore"
-	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/coord"
-	"github.com/ghthor/engine/rpg2d/entity"
-	"github.com/ghthor/engine/rpg2d/quad"
-	"github.com/ghthor/engine/sim/stime"
+	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad"
+	"github.com/ghthor/filu/sim/stime"
 )
 
 // Store actor's indexed by id

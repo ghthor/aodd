@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/ghthor/aodd/game/datastore"
-	"github.com/ghthor/engine/rpg2d"
+	"github.com/ghthor/filu/rpg2d"
 	"golang.org/x/net/websocket"
 )
 

@@ -1,9 +1,9 @@
 package game
 
 import (
-	"github.com/ghthor/engine/rpg2d"
-	"github.com/ghthor/engine/rpg2d/coord"
-	"github.com/ghthor/engine/sim/stime"
+	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/sim/stime"
 
 	"github.com/ghthor/gospec"
 	. "github.com/ghthor/gospec"

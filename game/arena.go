@@ -1,9 +1,9 @@
 package game
 
 import (
-	"github.com/ghthor/engine/rpg2d/coord"
-	"github.com/ghthor/engine/rpg2d/entity"
-	"github.com/ghthor/engine/rpg2d/quad"
+	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad"
 )
 
 type wallEntity struct {

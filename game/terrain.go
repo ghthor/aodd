@@ -1,6 +1,6 @@
 package game
 
-import "github.com/ghthor/engine/rpg2d/coord"
+import "github.com/ghthor/filu/rpg2d/coord"
 
 const startingTerrain = `
 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
