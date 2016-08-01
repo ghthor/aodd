@@ -1,0 +1,31 @@
+{
+	"ImportPath": "github.com/ghthor/aodd",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "github.com/ghthor/filu/rpg2d",
+			"Rev": "c76489faf9194b242d29e3d9ff43d9fd30e843fa"
+		},
+		{
+			"ImportPath": "github.com/ghthor/filu/rpg2d/coord",
+			"Rev": "c76489faf9194b242d29e3d9ff43d9fd30e843fa"
+		},
+		{
+			"ImportPath": "github.com/ghthor/filu/rpg2d/entity",
+			"Rev": "c76489faf9194b242d29e3d9ff43d9fd30e843fa"
+		},
+		{
+			"ImportPath": "github.com/ghthor/filu/rpg2d/quad",
+			"Rev": "c76489faf9194b242d29e3d9ff43d9fd30e843fa"
+		},
+		{
+			"ImportPath": "github.com/ghthor/filu/sim/stime",
+			"Rev": "c76489faf9194b242d29e3d9ff43d9fd30e843fa"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		}
+	]
+}
