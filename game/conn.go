@@ -410,7 +410,7 @@ func NewPreLoginConn(conn Conn, ds datastore.Datastore) PreLoginConn {
 	}
 }
 
-func RunServer(loginConn PreLoginConn, actorConnector ActorConnector) error {
+func LoginAndConnectActor(loginConn PreLoginConn, actorConnector ActorConnector) error {
 	loggedInConn, err := loginConn.HandleLogin()
 	if err != nil {
 		return err

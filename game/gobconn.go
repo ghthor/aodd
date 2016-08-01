@@ -106,7 +106,7 @@ func newGobWebsocketHandler(
 		c := NewPreLoginConn(NewGobConn(ws), ds)
 
 		// Blocks until the connection has disconnected
-		err := RunServer(c, actorConnector)
+		err := LoginAndConnectActor(c, actorConnector)
 
 		if err != nil {
 			log.Printf("packet handler terminated: %v", err)
