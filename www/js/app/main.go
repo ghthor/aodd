@@ -101,7 +101,8 @@ func initialize(settings *js.Object) jsObject {
 
 				ws, err := websocket.Dial(wsUrl)
 				if err != nil {
-					log.Fatal(err)
+					log.Print(err)
+					return
 				}
 
 				loginConn := client.NewLoginConn(game.NewGobConn(ws))
