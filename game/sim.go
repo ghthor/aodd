@@ -116,12 +116,14 @@ type SimulationSettings struct {
 }
 
 type ShardConfig struct {
-	// Is the resultant http server going to be
-	// run using TLS or just standard HTTP.
-	IsHTTPS bool
+	// Flag whether the server is running from heroku
+	OnHeroku bool
 
-	// LAddr for the http server
-	LAddr,
+	// FQDN that the server is running at
+	Domain,
+
+	// Port that the server is running on
+	Port,
 
 	// Path to javascript directory
 	JsDir,
@@ -202,15 +204,14 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		return nil, err
 	}
 
+	wsUrl := "ws://" + c.Domain
 	wsRoute := "/actor/socket/gob"
-	var wsUrl string
-	if c.IsHTTPS {
-		wsUrl = "wss://"
-	} else {
-		wsUrl = "ws://"
+
+	if !c.OnHeroku {
+		wsUrl += ":" + c.Port
 	}
 
-	wsUrl += c.LAddr + wsRoute
+	wsUrl += wsRoute
 
 	indexHandler := indexHandler{
 		c.IndexTmpl,
@@ -251,8 +252,15 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		defaultHandler = mux
 	}
 
+	var laddr string
+	if c.OnHeroku {
+		laddr = ":" + c.Port
+	} else {
+		laddr = fmt.Sprintf("%s:%s", c.Domain, c.Port)
+	}
+
 	return &http.Server{
-		Addr:    c.LAddr,
+		Addr:    laddr,
 		Handler: defaultHandler,
 	}, nil
 }

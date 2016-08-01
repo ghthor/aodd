@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 	"text/template"
 
 	"github.com/ghthor/aodd/game"
@@ -11,30 +12,27 @@ import (
 
 var indexTmpl = template.Must(template.New("index.tmpl").ParseFiles("www/index.tmpl"))
 
+func serverUrl(onHeroku bool, domain, port string) string {
+	url := "http://" + domain
+	if !onHeroku {
+		url += ":" + port
+	}
+
+	return url
+}
+
 func main() {
-	laddrHTTP := flag.String("r", "localhost:8080",
-		"address for a HTTP server that redirects to the HTTPS game server")
-	laddrTLS := flag.String("s", "localhost:8081", "address for the HTTPS game server")
+	domain := os.Getenv("DOMAIN")
+	port := os.Getenv("PORT")
 
-	certFile := flag.String("cert", "cert.pem", "TLS cert filepath")
-	keyFile := flag.String("key", "key.pem", "TLS key filepath")
-
+	isHeroku := flag.Bool("heroku", true, "enable is the app is running on heroku")
 	flag.Parse()
 
-	go func() {
-		http.Handle("/", http.RedirectHandler("https://"+*laddrTLS, 301))
-
-		log.Printf("started: redirect server http://%s -> https://%s", *laddrHTTP, *laddrTLS)
-		err := http.ListenAndServe(*laddrHTTP, nil)
-
-		if err != nil {
-			log.Fatal("error in redirect server:", err)
-		}
-	}()
-
 	c := game.ShardConfig{
-		LAddr:   *laddrTLS,
-		IsHTTPS: true,
+		OnHeroku: *isHeroku,
+
+		Domain: domain,
+		Port:   port,
 
 		JsDir:    "www/js",
 		AssetDir: "www/asset",
@@ -52,8 +50,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("started: tls server https://%s", *laddrTLS)
-	err = s.ListenAndServeTLS(*certFile, *keyFile)
+	log.Println("starting server at", serverUrl(*isHeroku, domain, port))
+	err = s.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
