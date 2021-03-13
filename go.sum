@@ -1,0 +1,12 @@
+github.com/ghthor/filu v0.0.0-20160706204927-c76489faf919 h1:PqfpXtPpFBK9fIzCIooStMf6JBLBHzsUhjT2PcDhbc4=
+github.com/ghthor/filu v0.0.0-20160706204927-c76489faf919/go.mod h1:qPojm4/VNCQRwR2DT+FupK/K5XQH6h4QF6oWHJ3YarQ=
+github.com/ghthor/gospec v0.0.0-20150305022215-c3bd6471e5bd h1:R7ITWneIKHD7Wzb9q6SEHLC67BoD1b2nk8jQ149crLI=
+github.com/ghthor/gospec v0.0.0-20150305022215-c3bd6471e5bd/go.mod h1:ssB9epY+FXcYkhuVdh65wkjs0iMJzGsM05k7Nu7tc94=
+github.com/gopherjs/gopherjs v0.0.0-20210202160940-bed99a852dfe h1:rcf1P0fm+1l0EjG16p06mYLj9gW9X36KgdHJ/88hS4g=
+github.com/gopherjs/gopherjs v0.0.0-20210202160940-bed99a852dfe/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
+github.com/gopherjs/websocket v0.0.0-20191103002815-9a42957e2b3a h1:AG0ZwOFfTjzk5n1PXhWttuw3i7i0TeqypKSqCXhMlyM=
+github.com/gopherjs/websocket v0.0.0-20191103002815-9a42957e2b3a/go.mod h1:jd+zY81Fx2lC4bfw58+Rflg1srqmedQjbBUejKOjYNY=
+github.com/orfjackal/nanospec.go v0.0.0-20120727230329-de4694c1d701 h1:yOXfzNV7qkZ3nf2NPqy4BMzlCmnQzIEbI1vuqKb2FkQ=
+github.com/orfjackal/nanospec.go v0.0.0-20120727230329-de4694c1d701/go.mod h1:VtBIF1XX0c1nKkeAPk8i4aXkYopqQgfDqolHUIHPwNI=
+golang.org/x/net v0.0.0-20150202051010-1dfe7915deaf h1:5mAS4Gz1lm/7MUrQlC1S1wOPHeZIgGp11QKJcZBoZWw=
+golang.org/x/net v0.0.0-20150202051010-1dfe7915deaf/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
