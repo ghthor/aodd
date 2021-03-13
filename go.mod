@@ -7,6 +7,7 @@ require (
 	github.com/ghthor/gospec v0.0.0-20150305022215-c3bd6471e5bd
 	github.com/gopherjs/gopherjs v0.0.0-20210202160940-bed99a852dfe
 	github.com/gopherjs/websocket v0.0.0-20191103002815-9a42957e2b3a
-	github.com/orfjackal/nanospec.go v0.0.0-20120727230329-de4694c1d701 // indirect
-	golang.org/x/net v0.0.0-20150202051010-1dfe7915deaf
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 )
+
+replace github.com/ghthor/filu => ../filu

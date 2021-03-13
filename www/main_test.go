@@ -100,12 +100,13 @@ func startWebServer(shardConfig game.ShardConfig) (*http.Server, error) {
 func DescribeConsoleReport(c gospec.Context) {
 	indexTmpl := template.Must(template.New("index.tmpl").ParseFiles("index.tmpl"))
 
+	domain := "localhost"
 	port := "45001"
-	laddr := fmt.Sprintf("localhost:%s", port)
+	laddr := fmt.Sprintf("%s:%s", domain, port)
 
 	shardConfig := game.ShardConfig{
-		LAddr:   laddr,
-		IsHTTPS: false,
+		Domain: domain,
+		Port:   port,
 
 		JsDir:    "js/",
 		AssetDir: "asset/",
@@ -170,8 +171,9 @@ func (specs specsHaveBeenRanHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 func DescribeHtmlReport(c gospec.Context) {
 	indexTmpl := template.Must(template.New("index.tmpl").ParseFiles("index.tmpl"))
 
+	domain := "localhost"
 	port := "45001"
-	laddr := fmt.Sprintf("localhost:%s", port)
+	laddr := fmt.Sprintf("%s:%s", domain, port)
 
 	specsHaveBeenRan := make(chan struct{})
 
@@ -179,8 +181,8 @@ func DescribeHtmlReport(c gospec.Context) {
 	mux.Handle("/specs/complete", specsHaveBeenRanHandler{specsHaveBeenRan})
 
 	shardConfig := game.ShardConfig{
-		LAddr:   laddr,
-		IsHTTPS: false,
+		Domain: domain,
+		Port:   port,
 
 		JsDir:    "js/",
 		AssetDir: "asset/",

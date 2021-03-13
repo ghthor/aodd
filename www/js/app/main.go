@@ -1,7 +1,7 @@
-//go:generate stringer -type=event
 //go:generate gopherjs build
 
 // +build js
+
 package main
 
 import (
@@ -35,36 +35,6 @@ type eventPublisher struct {
 func (e eventPublisher) Emit(event fmt.Stringer, params jsArray) {
 	e.Call("emit", event.String(), params)
 }
-
-type event int
-
-const (
-	EV_ERROR event = iota
-	EV_CONNECTED
-
-	EV_ACTOR_ALREADY_CONNECTED
-	EV_ACTOR_DOESNT_EXIST
-	EV_ACTOR_EXISTS
-	EV_AUTH_FAILED
-
-	EV_LOGIN_SUCCESS
-	EV_CREATE_SUCCESS
-
-	// Come together in the same response from the server
-	EV_RECV_INPUT_CONN
-	EV_RECV_INITIAL_STATE
-
-	EV_RECV_UPDATE
-
-	EV_RECV_CHAT_SAY
-	EV_SENT_CHAT_SAY
-
-	EV_TERRAIN_RESET
-	EV_TERRAIN_CANVAS_SHIFT
-	EV_TERRAIN_DRAW_TILE
-
-	EV_SIZE
-)
 
 // Key used on the window object
 // window.gopherjsApplication

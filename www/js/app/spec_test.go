@@ -23,7 +23,6 @@ var chromium string
 
 func init() {
 	flag.BoolVar(&web, "web", false, "start a web server and launch a browser to test in")
-	flag.Parse()
 }
 
 type triggerStartHandler struct {
@@ -116,8 +115,9 @@ func (testing completedTriggerHandler) ServeHTTP(w http.ResponseWriter, r *http.
 func DescribeLiveWebTesting(c gospec.Context) {
 	indexTmpl := template.Must(template.New("index.tmpl").ParseFiles("../../index.tmpl"))
 
+	domain := "localhost"
 	port := "45001"
-	laddr := fmt.Sprintf("localhost:%s", port)
+	laddr := fmt.Sprintf("%s:%s", domain, port)
 
 	userClosedBrowser := make(chan struct{})
 
@@ -147,8 +147,8 @@ func DescribeLiveWebTesting(c gospec.Context) {
 	})
 
 	shardConfig := game.ShardConfig{
-		LAddr:   laddr,
-		IsHTTPS: false,
+		Domain: domain,
+		Port:   port,
 
 		JsDir:    "../../js/",
 		AssetDir: "../../asset/",
