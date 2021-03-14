@@ -126,12 +126,12 @@ func DescribeActorGobConn(c gospec.Context) {
 		}()
 	}()
 
+	var stopServerOnce sync.Once
 	// Close down the io.Pipe which will bring down
 	// the read loops on both the server and client.
 	var stopServer func() = func() func() {
-		var stopServer sync.Once
 		return func() {
-			stopServer.Do(func() {
+			stopServerOnce.Do(func() {
 				for _, pw := range conn.pw {
 					c.Assume(pw.Close(), IsNil)
 				}
@@ -140,28 +140,33 @@ func DescribeActorGobConn(c gospec.Context) {
 					c.Assume(pr.Close(), IsNil)
 				}
 
-				c.Assume(<-serverExitError, Equals, io.ErrClosedPipe)
+				c.Assume(<-serverExitError, Not(IsNil))
 				actor, _ := ds.ActorExists("actor")
 				c.Assume(actor.CanBeConnected(), IsTrue)
 			})
 		}
 	}()
+
+	withStopServer := func(f func()) func() {
+		return func() { defer stopServer(); f() }
+	}
+
 	defer stopServer()
 
 	loginConn := client.NewLoginConn(game.NewGobConn(conn.nextEndpoint()))
 	c.Assume(conn.nextEndpoint(), IsNil)
 
-	c.Specify("an actor conn", func() {
-		c.Specify("can request to login", func() {
-			c.Specify("and the request will succeed", func() {
+	c.Specify("an actor conn", withStopServer(func() {
+		c.Specify("can request to login", withStopServer(func() {
+			c.Specify("and the request will succeed", withStopServer(func() {
 				trip := loginConn.AttemptLogin("actor", "password")
 				c.Assume(<-trip.Error, IsNil)
 				loginResp := <-trip.Success
 				c.Expect(loginResp.Name, Equals, "actor")
-			})
+			}))
 
-			c.Specify("and the request will fail", func() {
-				c.Specify("if the actor is already connected", func() {
+			c.Specify("and the request will fail", withStopServer(func() {
+				c.Specify("if the actor is already connected", withStopServer(func() {
 					dsactor, exists := ds.ActorExists("actor")
 					c.Assume(exists, IsTrue)
 
@@ -176,43 +181,43 @@ func DescribeActorGobConn(c gospec.Context) {
 
 					<-dsactor.IsConnected
 					dsactor.IsConnected <- false
-				})
+				}))
 
-				c.Specify("if the actor doesn't exist", func() {
+				c.Specify("if the actor doesn't exist", withStopServer(func() {
 					trip := loginConn.AttemptLogin("newActor", "password")
 					c.Expect(<-trip.ActorDoesntExist, Equals, game.RespActorDoesntExist{
 						"newActor",
 						"password",
 					})
 					c.Expect(<-trip.Error, IsNil)
-				})
+				}))
 
-				c.Specify("if the password is incorrect", func() {
+				c.Specify("if the password is incorrect", withStopServer(func() {
 					trip := loginConn.AttemptLogin("actor", "wrongpassword")
 					c.Expect(<-trip.AuthFailed, Equals, game.RespAuthFailed{
 						"actor",
 					})
 					c.Expect(<-trip.Error, IsNil)
-				})
-			})
-		})
+				}))
+			}))
+		}))
 
-		c.Specify("can create a new actor", func() {
-			c.Specify("and the request will succeed", func() {
+		c.Specify("can create a new actor", withStopServer(func() {
+			c.Specify("and the request will succeed", withStopServer(func() {
 				trip := loginConn.CreateActor("newActor", "password")
 				c.Assume(<-trip.Error, IsNil)
 				loginResp := <-trip.Success
 				c.Expect(loginResp.Name, Equals, "newActor")
-			})
+			}))
 
-			c.Specify("and the request will fail", func() {
-				c.Specify("if the actor already exists", func() {
+			c.Specify("and the request will fail", withStopServer(func() {
+				c.Specify("if the actor already exists", withStopServer(func() {
 					trip := loginConn.CreateActor("actor", "password")
 					c.Expect(<-trip.ActorExists, Equals, game.RespActorExists{"actor"})
 					c.Expect(<-trip.Error, IsNil)
-				})
-			})
-		})
+				}))
+			}))
+		}))
 
 		login := func() client.RespLoggedIn {
 			trip := loginConn.AttemptLogin("actor", "password")
@@ -222,7 +227,7 @@ func DescribeActorGobConn(c gospec.Context) {
 			return loginResp
 		}
 
-		c.Specify("that is logged in", func() {
+		c.Specify("that is logged in", withStopServer(func() {
 			loginResp := login()
 
 			var actor *mockActor
@@ -257,7 +262,7 @@ func DescribeActorGobConn(c gospec.Context) {
 				return &actorAlreadyConnected, connectResp, err
 			}
 
-			c.Specify("can be connected to the simulation", func() {
+			c.Specify("can be connected to the simulation", withStopServer(func() {
 				trip := loginResp.ConnectActor(loginResp.Name)
 				actor = <-connectedActor
 
@@ -271,9 +276,9 @@ func DescribeActorGobConn(c gospec.Context) {
 				dsactor, exists := ds.ActorExists("actor")
 				c.Assume(exists, IsTrue)
 				c.Expect(dsactor.CanBeConnected(), IsFalse)
-			})
+			}))
 
-			c.Specify("cannot be connected if it is already connected", func() {
+			c.Specify("cannot be connected if it is already connected", withStopServer(func() {
 				// Open a second connection that will use the
 				// same datastore as the existing connection.
 				conn := newMockConn()
@@ -307,7 +312,7 @@ func DescribeActorGobConn(c gospec.Context) {
 					for _, pr := range conn.pr {
 						c.Assume(pr.Close(), IsNil)
 					}
-					c.Assume(<-serverExitError, Equals, io.ErrClosedPipe)
+					c.Assume(<-serverExitError, Not(IsNil))
 				}()
 
 				loginConn := client.NewLoginConn(game.NewGobConn(conn.nextEndpoint()))
@@ -336,10 +341,10 @@ func DescribeActorGobConn(c gospec.Context) {
 				resp, _, err := getResponse(trip)
 				c.Assume(err, IsNil)
 				c.Expect(resp.Name, Equals, loginResp.Name)
-			})
-		})
+			}))
+		}))
 
-		c.Specify("that is connected to the simulation", func() {
+		c.Specify("that is connected to the simulation", withStopServer(func() {
 			loginResp := login()
 
 			trip := loginResp.ConnectActor(loginResp.Name)
@@ -379,7 +384,7 @@ func DescribeActorGobConn(c gospec.Context) {
 
 			c.Assume(err, IsNil)
 
-			c.Specify("will receive an initial world state", func() {
+			c.Specify("will receive an initial world state", withStopServer(func() {
 				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
 				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals,
 					worldState.Cull(coord.Bounds{
@@ -388,7 +393,7 @@ func DescribeActorGobConn(c gospec.Context) {
 					}),
 				)
 
-				c.Specify("followed by world state diffs", func() {
+				c.Specify("followed by world state diffs", withStopServer(func() {
 					diff := worldState.Cull(coord.Bounds{
 						coord.Cell{-2, 2},
 						coord.Cell{2, -2},
@@ -404,10 +409,10 @@ func DescribeActorGobConn(c gospec.Context) {
 					update, err := connectResp.NextUpdate()
 					c.Assume(err, IsNil)
 					c.Expect(update, rpg2dtest.StateEquals, diff)
-				})
-			})
+				}))
+			}))
 
-			c.Specify("can submit a move request", func() {
+			c.Specify("can submit a move request", withStopServer(func() {
 				r := game.MoveRequest{
 					MoveRequestType: game.MR_MOVE,
 					Time:            2,
@@ -415,9 +420,9 @@ func DescribeActorGobConn(c gospec.Context) {
 				}
 				connectResp.InputConn.SendMoveRequest(r)
 				c.Expect(<-actor.lastMoveRequest, Equals, r)
-			})
+			}))
 
-			c.Specify("can submit a use request", func() {
+			c.Specify("can submit a use request", withStopServer(func() {
 				r := game.UseRequest{
 					UseRequestType: game.UR_USE,
 					Time:           2,
@@ -425,9 +430,9 @@ func DescribeActorGobConn(c gospec.Context) {
 				}
 				connectResp.InputConn.SendUseRequest(r)
 				c.Expect(<-actor.lastUseRequest, Equals, r)
-			})
+			}))
 
-			c.Specify("can submit a chat request", func() {
+			c.Specify("can submit a chat request", withStopServer(func() {
 				r := game.ChatRequest{
 					ChatRequestType: game.CR_SAY,
 					Time:            2,
@@ -435,7 +440,7 @@ func DescribeActorGobConn(c gospec.Context) {
 				}
 				connectResp.InputConn.SendChatRequest(r)
 				c.Expect(<-actor.lastChatRequest, Equals, r)
-			})
-		})
-	})
+			}))
+		}))
+	}))
 }
