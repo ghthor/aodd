@@ -101,15 +101,60 @@ type Bot struct {
 }
 
 func (b Bot) startRandomMove(ctx context.Context) {
+	stopCh := make(chan struct{}, 1)
+	startCh := make(chan struct{}, 1)
+	go func() {
+		for {
+			diff, err := b.NextUpdate()
+			if err != nil {
+				log.Println(b.Name, err)
+			}
+
+			for _, e := range diff.Entities {
+				switch e := e.(type) {
+				case game.SayEntityState:
+					switch e.Msg {
+					case "stop":
+						stopCh <- struct{}{}
+						break
+					case "start":
+						startCh <- struct{}{}
+						break
+					default:
+					}
+				}
+			}
+		}
+	}()
+
 	go func() {
 		next := time.Tick(2 * time.Second)
+
+		running := true
+		curDir := coord.Direction(0)
+
 		for {
-			dir := RandDir()
-			b.SendMoveRequest(game.MoveRequest{game.MR_MOVE, 0, dir})
+			if running {
+				dir := RandDir()
+				curDir = dir
+				b.SendMoveRequest(game.MoveRequest{game.MR_MOVE, 0, dir})
+			} else {
+				b.SendMoveRequest(game.MoveRequest{game.MR_MOVE_CANCEL, 0, curDir})
+			}
 
 			select {
 			case <-ctx.Done():
 				return
+			case <-stopCh:
+				if running {
+					b.SendChatRequest(game.ChatRequest{game.CR_SAY, 0, "stop"})
+				}
+				running = false
+			case <-startCh:
+				if !running {
+					b.SendChatRequest(game.ChatRequest{game.CR_SAY, 0, "start"})
+				}
+				running = true
 			case <-next:
 				continue
 			}
@@ -135,7 +180,7 @@ func main() {
 
 	password := "hellohitacopie"
 
-	nameCount := 100
+	nameCount := 200
 	nameMap := make(map[string]int, nameCount)
 
 	for i := 0; i < nameCount; i++ {
