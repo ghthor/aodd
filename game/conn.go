@@ -385,6 +385,9 @@ func (c *connectedConn) handleChatReq() (stateFn, error) {
 
 func (c connectedConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) {
 	// TODO Handle this potentional write error
+	// TODO This Write needs to timeout to avoid Denial-Of-Service attacks
+	//      by misbehaving clients that never read of the frames we send them.
+	//      Causes a deadlock during writes.
 	c.EncodeAndSend(ET_WORLD_STATE_DIFF, s)
 }
 

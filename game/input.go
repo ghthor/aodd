@@ -272,15 +272,24 @@ func (c actorConn) SubmitCmd(cmd, params string) error {
 }
 
 func (c actorConn) SubmitMoveRequest(r MoveRequest) {
-	c.submitMoveRequest <- r
+	select {
+	case c.submitMoveRequest <- r:
+	default:
+	}
 }
 
 func (c actorConn) SubmitUseRequest(r UseRequest) {
-	c.submitUseRequest <- r
+	select {
+	case c.submitUseRequest <- r:
+	default:
+	}
 }
 
 func (c actorConn) SubmitChatRequest(r ChatRequest) {
-	c.submitChatRequest <- r
+	select {
+	case c.submitChatRequest <- r:
+	default:
+	}
 }
 
 func (c actorConn) ReadMoveCmd() *moveCmd {

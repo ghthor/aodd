@@ -42,9 +42,9 @@ func newActorConn(conn InitialStateWriter) actorConn {
 
 func (a *actorConn) startIO() {
 	// Setup communication channels
-	moveReqCh := make(chan MoveRequest)
-	useReqCh := make(chan UseRequest)
-	chatReqCh := make(chan ChatRequest)
+	moveReqCh := make(chan MoveRequest, 2)
+	useReqCh := make(chan UseRequest, 2)
+	chatReqCh := make(chan ChatRequest, 2)
 
 	moveCmdCh := make(chan *moveCmd)
 	useCmdCh := make(chan *useCmd)
@@ -152,6 +152,7 @@ func (a *actorConn) startIO() {
 			case sendMoveCmd <- cmd.moveCmd:
 			case sendUseCmd <- cmd.useCmd:
 			case sendChatCmd <- cmd.chatCmd:
+				cmd.chatCmd = nil
 			case state := <-newState:
 				if state != nil {
 					diffWriter = a.conn.WriteWorldState(*state)
@@ -179,6 +180,7 @@ func (a *actorConn) startIO() {
 		case sendUseCmd <- cmd.useCmd:
 			goto locked
 		case sendChatCmd <- cmd.chatCmd:
+			cmd.chatCmd = nil
 			goto locked
 
 		case hasStopped = <-stopReq:
@@ -203,11 +205,19 @@ func (a *actorConn) startIO() {
 			updateChatCmdWith(r)
 			goto unlocked
 
+		case diff := <-newDiff:
+			if diff != nil {
+				diffWriter.WriteWorldStateDiff(*diff)
+			}
+
+			goto unlocked
+
 		case sendMoveCmd <- cmd.moveCmd:
 			goto locked
 		case sendUseCmd <- cmd.useCmd:
 			goto locked
 		case sendChatCmd <- cmd.chatCmd:
+			cmd.chatCmd = nil
 			goto locked
 
 		case hasStopped = <-stopReq:
@@ -231,7 +241,6 @@ func (a *actorConn) startIO() {
 				diffWriter.WriteWorldStateDiff(*diff)
 			}
 
-			cmd.chatCmd = nil
 			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
@@ -239,6 +248,7 @@ func (a *actorConn) startIO() {
 		case sendUseCmd <- cmd.useCmd:
 			goto locked
 		case sendChatCmd <- cmd.chatCmd:
+			cmd.chatCmd = nil
 			goto locked
 
 		case hasStopped = <-stopReq:
