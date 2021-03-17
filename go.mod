@@ -3,6 +3,7 @@ module github.com/ghthor/aodd
 go 1.16
 
 require (
+	github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0 // indirect
 	github.com/ghthor/filu v0.0.0-20160706204927-c76489faf919
 	github.com/ghthor/gospec v0.0.0-20150305022215-c3bd6471e5bd
 	github.com/gopherjs/gopherjs v0.0.0-20210202160940-bed99a852dfe

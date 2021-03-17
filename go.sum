@@ -1,3 +1,5 @@
+github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0 h1:90Ly+6UfUypEF6vvvW5rQIv9opIL8CbmW9FT20LDQoY=
+github.com/dustinkirkland/golang-petname v0.0.0-20191129215211-8e5a1ed0cff0/go.mod h1:V+Qd57rJe8gd4eiGzZyg4h54VLHmYVVw54iMnlAMrF8=
 github.com/ghthor/gospec v0.0.0-20150305022215-c3bd6471e5bd h1:R7ITWneIKHD7Wzb9q6SEHLC67BoD1b2nk8jQ149crLI=
 github.com/ghthor/gospec v0.0.0-20150305022215-c3bd6471e5bd/go.mod h1:ssB9epY+FXcYkhuVdh65wkjs0iMJzGsM05k7Nu7tc94=
 github.com/gopherjs/gopherjs v0.0.0-20210202160940-bed99a852dfe h1:rcf1P0fm+1l0EjG16p06mYLj9gW9X36KgdHJ/88hS4g=
