@@ -17,6 +17,8 @@ import (
 // Store actor's indexed by id
 type ActorIndex map[rpg2d.ActorId]*actor
 
+const quadMaxSize = 20
+
 // A wrapper for actorIndex that provides
 // safety for concurrent access.
 type ActorIndexLocker struct {
@@ -168,7 +170,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		coord.Cell{128, -128},
 	}
 
-	quadTree, err := quad.New(bounds, 40, nil)
+	quadTree, err := quad.New(bounds, quadMaxSize, nil)
 	if err != nil {
 		return nil, err
 	}
