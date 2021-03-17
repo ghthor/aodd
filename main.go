@@ -7,6 +7,8 @@ import (
 	"os"
 	"text/template"
 
+	_ "net/http/pprof"
+
 	"github.com/ghthor/aodd/game"
 )
 
@@ -49,6 +51,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go func() {
+		log.Println("starting profiling server at", "http://localhost:6060")
+		err := http.ListenAndServe("localhost:6060", nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	log.Println("starting server at", serverUrl(*isHeroku, domain, port))
 	err = s.ListenAndServe()
