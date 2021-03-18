@@ -1,4 +1,4 @@
-## [active] [4] Fix Assail
+## [inactive] [4] Fix Assail
 I need something that represents a frame of a path action.
 The use case is for assail. The current implementation uses
 the actor's cell and facing to spawn the assail entity in
