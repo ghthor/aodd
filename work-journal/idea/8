@@ -1,0 +1,15 @@
+## [active] [8] Performance Issues
+I need to centralize the system that tracks diffs between world states.
+The cpu profiling has highlighted that the current system where each
+actor contains a WorldState and a diff is calculated between it and the
+next WorldState is repeating tons of work per simulation tick. Seems like
+it's a O(N^2) issue. I need to reduce this down O(N) and I have a few ideas.
+
+- Maintain 3 quadtrees
+    - 1 is modified during the phases, 2 is left as is
+    - Compare 1 against 2 and produce a holistic (3)QuadTreeDiff
+    - Apply 3 onto 2 so the next tick starts with 1 == 2
+    - Use 3 to produce the updates that are sent out to clients
+
+This should reduce the amount of duplicated work being performed each
+tick on the server from N^2 to 3N
