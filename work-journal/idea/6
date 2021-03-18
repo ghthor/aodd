@@ -1,4 +1,11 @@
-## [active] [6] Low Hanging Fruit
+## [inactive] [6] Low Hanging Fruit
+Neither of these issues are showing up the in the current round of
+performance testing which is being dominated by the world state diff
+calculations. Regardless, the following are both still good low hanging
+fruits and the runtime.mallocgc and runtime.scanobject are also showing
+up in the cpu profiles so I'll need to look into better allocation
+in the near future.
+
 - Reusing the arrays allocated during the broad phase.
 - Checking whether entities should collide during the broad phase.
     - aka. A collision should not be generated for an actor AND it's own assail
