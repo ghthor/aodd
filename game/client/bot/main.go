@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"math/rand"
 	"time"
@@ -178,12 +179,14 @@ func main() {
 	// 	"rogue",
 	// }
 
+	botCount := flag.Int("n", 200, "number of bots to spawn")
+	flag.Parse()
+
 	password := "hellohitacopie"
 
-	nameCount := 200
-	nameMap := make(map[string]int, nameCount)
+	nameMap := make(map[string]int, *botCount)
 
-	for i := 0; i < nameCount; i++ {
+	for i := 0; i < *botCount; i++ {
 		name := petname.Generate(2, " ")
 		nameMap[name] = i
 	}
