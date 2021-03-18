@@ -1,0 +1,13 @@
+Wed Mar 17 23:52:09 EST 2021
+
+# Checking back in
+I've been hacking away at a bot and doing some performance testing.
+Found some deadlocking bugs from using the bot to load actors into the game.
+Playing with the bot has identified some ugly edges of my WorldStateDiff implementation
+that is causing some serious performance issues.
+Each actor having a WorldState and calculating the diff serverside before sending
+the state is causing lots of repeated work per actor that needs to be somehow cached
+so the diff calculations are only done once per server tick instead of N times where
+N is the number of actors where the viewport contains the same entity.
+
+Thu Mar 18 00:20:19 EST 2021
