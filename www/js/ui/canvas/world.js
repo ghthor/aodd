@@ -180,8 +180,12 @@ define(["underscore",
                         if (player.is(entity.SaidBy)) {
                             player.setSayMsg(entity.Id, entity.Msg);
                         } else {
-                            actors[entity.SaidBy].setSayMsg(entity.Id, entity.Msg);
+                            var actor = actors[entity.SaidBy];
+                            if (!_.isUndefined(actor)) {
+                                actor.setSayMsg(entity.Id, entity.Msg);
+                            }
                         }
+                        entities[entity.Id] = entity;
                     }
 
                     if (entity.Type === "wall") {
@@ -252,18 +256,27 @@ define(["underscore",
 
                 // Update all entities
                 _.each(worldStateDiff.Entities, updateEntity);
-
                 // Remove entities that don't exist anymore
                 _.each(worldStateDiff.Removed, function(entity) {
+                    entity = entities[entity.Id];
+
+                    if (_.isUndefined(entity)) {
+                      return; // continue
+                    }
+
                     if (!_.isUndefined(entity.Type)) {
                         if (entity.Type === "say") {
                             if (player.is(entity.SaidBy)) {
                                 player.clearSayMsg(entity.Id);
                             } else {
-                                actors[entity.SaidBy].clearSayMsg(entity.Id);
+                                var actor = actors[entity.SaidBy];
+                                if (!_.isUndefined(actor)) {
+                                    actor.clearSayMsg(entity.Id);
+                                }
                             }
                         }
 
+                        delete entities[entity.Id];
                         return; //continue
                     }
 
@@ -276,7 +289,7 @@ define(["underscore",
                     console.log(entity);
                 });
 
-                if (!_.isUndefined(worldStateDiff.TerrainMapSlices)) {
+                if (!_.isNull(worldStateDiff.TerrainMapSlices)) {
                     if (worldStateDiff.TerrainMapSlices.length > 0) {
                         terrainSetPosition(terrain.map.center());
                     }

@@ -1,13 +1,13 @@
-all: app.js app.js.map
+all: wasm_exec.js app.wasm
 
-app.js: *.go
-	GOPATH=$${HOME}/src/gamedev/ go1.12.16 get -u golang.org/x/net/websocket
-	GOPATH=$${HOME}/src/gamedev/ go1.12.16 get -u github.com/gopherjs/websocket
-	GOPHERJS_GOROOT=$$(go1.12.16 env GOROOT) GOPATH=$${HOME}/src/gamedev/ gopherjs build
+wasm_exec.js:
+	cp "$$(go env GOROOT)/misc/wasm/wasm_exec.js" ./wasm_exec.js
+	patch wasm_exec.js < wasm_exec.js.patch
 
-app.js.map: app.js
+app.wasm: wasm_exec.js *.go
+	GOOS=js GOARCH=wasm go build -o app.wasm
 
 clean:
-	rm -f app.js app.js.map
+	rm -f app.wasm
 
 .PHONY: all clean

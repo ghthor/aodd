@@ -6,7 +6,7 @@ requirejs.config({
         underscore: "lib/underscore",
         react:      "lib/react",
         CAAT:       "lib/caat",
-        app:        "app/app",
+        wasm:       "app/wasm_exec",
     },
 
     shim: {
@@ -17,7 +17,7 @@ requirejs.config({
         },
         
         "app": {
-            deps:    ["client/settings"],
+            deps:    ["client/settings", "wasm"],
             exports: "gopherjsApplication",
             init:    function(settings) {
                 return this.gopherjsApplication.initialize(settings);

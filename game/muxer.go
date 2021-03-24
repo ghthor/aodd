@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/rpg2d/entity"
 )
 
 type InitialStateWriter interface {
@@ -33,11 +34,27 @@ type actorConn struct {
 	// External connection used to publish the initial world state
 	conn InitialStateWriter
 
-	lastState *rpg2d.WorldState
+	initialState *rpg2d.WorldState
+	prevState    rpg2d.WorldState
+	nextState    rpg2d.WorldState
+
+	diff rpg2d.WorldStateDiff
 }
 
 func newActorConn(conn InitialStateWriter) actorConn {
-	return actorConn{conn: conn}
+	return actorConn{
+		conn: conn,
+		prevState: rpg2d.WorldState{
+			Entities: make(entity.StateSlice, 0, 1),
+		},
+		nextState: rpg2d.WorldState{
+			Entities: make(entity.StateSlice, 0, 1),
+		},
+		diff: rpg2d.WorldStateDiff{
+			Entities: make(entity.StateSlice, 0, 1),
+			Removed:  make(entity.StateSlice, 0, 1),
+		},
+	}
 }
 
 func (a *actorConn) startIO() {
@@ -276,34 +293,34 @@ func ActorCullBounds(center coord.Cell) coord.Bounds {
 	}
 }
 
-// Culls the world state to the actor's viewport.
-// Is called before actorConn.WriteState()
+// This is the first stage in writing out the state where we cull the
+// state down by the viewport bounds of an actor.
 func (a *actor) WriteState(state rpg2d.WorldState) {
-	state = state.Cull(ActorCullBounds(a.Cell()))
-	a.actorConn.WriteState(state)
+	a.actorConn.WriteState(
+		state.CullInto(a.actorConn.nextState, ActorCullBounds(a.Cell())),
+	)
 }
 
-// Diffs the world state so only the changes are sent.
-// Is called after actor.WriteState(). Expects the state
-// to have been culled already.
 func (a *actorConn) WriteState(state rpg2d.WorldState) {
-	if a.lastState == nil {
-		a.lastState = &state
-		a.sendState <- &state
+	a.nextState = state
+
+	if a.initialState == nil {
+		initialState := state.Clone()
+		a.initialState = &initialState
+		a.sendState <- a.initialState
 
 		// Only 1 world state will ever be written
 		close(a.sendState)
 		a.sendState = nil
-
-		return
-	}
-
-	diff := a.lastState.Diff(state)
-	a.lastState = &state
-
-	if len(diff.Entities) > 0 || len(diff.Removed) > 0 || diff.TerrainMapSlices != nil {
-		a.sendDiff <- &diff
 	} else {
-		a.sendDiff <- nil
+		a.diff.Between(a.prevState, a.nextState)
+
+		if len(a.diff.Entities) > 0 || len(a.diff.Removed) > 0 || a.diff.TerrainMapSlices != nil {
+			a.sendDiff <- &a.diff
+		} else {
+			a.sendDiff <- nil
+		}
 	}
+
+	a.prevState, a.nextState = a.nextState, a.prevState
 }

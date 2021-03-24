@@ -6,7 +6,7 @@ requirejs.config({
         underscore: "lib/underscore",
         react:      "lib/react",
         CAAT:       "lib/caat",
-        app:        "app/app",
+        wasm:       "app/wasm_exec",
     },
 
     shim: {
@@ -15,12 +15,9 @@ requirejs.config({
                 return this._.noConflict();
             },
         },
-        
-        "app": {
-            deps:    ["client/settings"],
-            exports: "gopherjsApplication",
-            init:    function(settings) {
-                return this.gopherjsApplication.initialize(settings);
+        "wasm": {
+            init: function() {
+              return new this.Go();
             },
         },
     },
@@ -28,19 +25,28 @@ requirejs.config({
     priority: ["jquery"],
 });
 
-define("github.com/ghthor/filu/rpg2d/coord", ["app"], function(app) {
-    return app.coord;
-});
+require(["client/settings", "wasm"], (settings, go) => {
+  WebAssembly.instantiateStreaming(fetch("js/app/app.wasm"), go.importObject).then((result) => {
+    go.run(result.instance);
 
-define("github.com/ghthor/aodd/game", ["app"], function(app) {
-    return app.game;
-});
+    define("app", ["client/settings"], () => {
+      return this.gopherjsApplication.initialize(settings);
+    });
 
-require([
-   "app",
-   "ui/login",
-], function(app, LoginUI) {
-    var container = document.getElementById("client");
+    define("github.com/ghthor/filu/rpg2d/coord", ["app"], function(app) {
+      return app.coord;
+    });
 
-    app.dial(new LoginUI(container));
+    define("github.com/ghthor/aodd/game", ["app"], function(app) {
+      return app.game;
+    });
+
+    require([
+      "app",
+      "ui/login",
+    ], function(app, LoginUI) {
+      var container = document.getElementById("client");
+      app.dial(new LoginUI(container));
+    });
+  });
 });

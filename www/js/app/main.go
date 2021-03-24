@@ -1,10 +1,7 @@
-//go:generate gopherjs build
-
-// +build js
-
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -17,23 +14,52 @@ import (
 	"github.com/ghthor/filu/rpg2d/entity"
 	"github.com/ghthor/filu/sim/stime"
 
-	"github.com/gopherjs/gopherjs/js"
-	"github.com/gopherjs/websocket"
+	"syscall/js"
+
+	"nhooyr.io/websocket"
 )
 
-type jsObject map[string]interface{}
-type jsArray []interface{}
+func jsValueTypeMustBeString(v js.Value) string {
+	if v.Type() != js.TypeString {
+		panic(fmt.Sprintf("expected string type, got %v", v.Type()))
+	}
+
+	return v.String()
+}
 
 type EventPublisher interface {
-	Emit(fmt.Stringer, jsArray)
+	Emit(fmt.Stringer, jsArrayWrapped)
 }
 
 type eventPublisher struct {
-	*js.Object
+	js.Value
 }
 
-func (e eventPublisher) Emit(event fmt.Stringer, params jsArray) {
-	e.Call("emit", event.String(), params)
+type jsArrayWrapped struct {
+	js.Value
+}
+
+func jsArray(elements ...interface{}) jsArrayWrapped {
+	result := js.Global().Get("Array").New(len(elements))
+	for i, e := range elements {
+		result.SetIndex(i, e)
+	}
+
+	return jsArrayWrapped{result}
+}
+
+func newJSObject() js.Value {
+	return js.Global().Get("Object").New()
+}
+
+func errorObj(err error) js.Value {
+	result := newJSObject()
+	result.Set("error", err.Error())
+	return result
+}
+
+func (e eventPublisher) Emit(event fmt.Stringer, params jsArrayWrapped) {
+	e.Call("emit", js.ValueOf(event.String()), params)
 }
 
 // Key used on the window object
@@ -43,86 +69,103 @@ const moduleKey = "gopherjsApplication"
 const undefined = "undefined"
 
 func main() {
-	js.Global.Set(moduleKey, jsObject{
+	js.Global().Set(moduleKey, map[string]interface{}{
 		"moduleKey":  moduleKey,
-		"initialize": initialize,
+		"initialize": js.FuncOf(js_initialize),
 	})
+
+	// TODO Figure out what work I can do here instead of block forever
+	<-make(chan struct{})
+}
+
+func js_initialize(this js.Value, args []js.Value) interface{} {
+	return initialize(args[0])
 }
 
 // This function will be called once by requirejs
 // from the shim configuration. The object that is
 // returned here is what will be available as the
 // require("app") module.
-func initialize(settings *js.Object) jsObject {
-	module := jsObject{
-		"moduleKey": moduleKey,
-
-		// Provide a function to dial the server.
-		// pub should be an object that has been
-		// extended with minpubsub.
-		"dial": func(pub *js.Object) {
+func initialize(settings js.Value) js.Value {
+	module := newJSObject()
+	module.Set("moduleKey", moduleKey)
+	// Provide a function to dial the server.
+	// pub should be an object that has been
+	// extended with minpubsub.
+	module.Set("dial", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		pub := args[0]
+		func() {
 			if pub.Get("emit").String() == undefined {
 				log.Println("invalid publisher: missing emit() function")
 				return
 			}
 
 			go func() {
+				ctx := context.Background()
 				wsUrl := settings.Get("websocketURL").String()
 
-				ws, err := websocket.Dial(wsUrl)
+				ws, _, err := websocket.Dial(ctx, wsUrl, nil)
 				if err != nil {
 					log.Print(err)
 					return
 				}
 
-				loginConn := client.NewLoginConn(game.NewGobConn(ws))
+				wsConn := websocket.NetConn(ctx, ws, websocket.MessageBinary)
+
+				loginConn := client.NewLoginConn(game.NewGobConn(wsConn))
 				pub := eventPublisher{pub}
 
 				// Emit a connected event and a object the
 				// login form can use to send messages to the
 				// server.
-				pub.Emit(EV_CONNECTED, jsArray{newLoginConn(loginConn, pub)})
+				pub.Emit(EV_CONNECTED, jsArray(newLoginConn(loginConn, pub)))
 			}()
-		},
-	}
+		}()
+
+		return nil
+	}))
 
 	for i := EV_ERROR; i < EV_SIZE; i++ {
-		module[event(i).String()] = event(i).String()
+		module.Set(event(i).String(), event(i).String())
 	}
 
-	coordModule := make(jsObject, int(coord.West)+1)
+	coordModule := newJSObject()
 
 	for i := 0; i <= int(coord.West); i++ {
-		coordModule[coord.Direction(i).String()] = coord.Direction(i)
+		coordModule.Set(coord.Direction(i).String(), int(coord.Direction(i)))
 	}
 
-	gameModule := make(jsObject, int(game.MR_SIZE)+int(game.UR_SIZE)+int(game.CR_SIZE))
+	gameModule := newJSObject()
 
 	for i := game.MR_ERROR; i < game.MR_SIZE; i++ {
-		gameModule[game.MoveRequestType(i).String()] = game.MoveRequestType(i)
+		gameModule.Set(game.MoveRequestType(i).String(), int(game.MoveRequestType(i)))
 	}
 
 	for i := game.UR_ERROR; i < game.UR_SIZE; i++ {
-		gameModule[game.UseRequestType(i).String()] = game.UseRequestType(i)
+		gameModule.Set(game.UseRequestType(i).String(), int(game.UseRequestType(i)))
 	}
 
 	for i := game.CR_ERROR; i < game.CR_SIZE; i++ {
-		gameModule[game.ChatRequestType(i).String()] = game.ChatRequestType(i)
+		gameModule.Set(game.ChatRequestType(i).String(), int(game.ChatRequestType(i)))
 	}
 
 	// require("github.com/ghthor/filu/rpg2d/coord")
-	module["coord"] = coordModule
+	module.Set("coord", coordModule)
 	// require("github.com/ghthor/aodd/game")
-	module["game"] = gameModule
+	module.Set("game", gameModule)
 
 	return module
 }
 
-func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
+func newLoginConn(loginConn client.LoginConn, pub eventPublisher) (result js.Value) {
 	var conn sync.Mutex
 
-	return jsObject{
-		"attemptLogin": func(name, password string) {
+	result = newJSObject()
+	result.Set("attemptLogin", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		name := jsValueTypeMustBeString(args[0])
+		password := jsValueTypeMustBeString(args[1])
+
+		func(name, password string) {
 			go func() {
 				conn.Lock()
 				defer conn.Unlock()
@@ -131,27 +174,36 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 
 				select {
 				case actorConnected := <-trip.ActorAlreadyConnected:
-					pub.Emit(EV_ACTOR_ALREADY_CONNECTED, jsArray{actorConnected.Name})
+					pub.Emit(EV_ACTOR_ALREADY_CONNECTED, jsArray(actorConnected.Name))
 
 				case actorDoesntExist := <-trip.ActorDoesntExist:
-					pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray{
+					pub.Emit(EV_ACTOR_DOESNT_EXIST, jsArray(
 						actorDoesntExist.Name,
 						actorDoesntExist.Password,
-					})
+					))
 
 				case authFailed := <-trip.AuthFailed:
-					pub.Emit(EV_AUTH_FAILED, jsArray{authFailed.Name})
+					pub.Emit(EV_AUTH_FAILED, jsArray(authFailed.Name))
 
 				case resp := <-trip.Success:
-					pub.Emit(EV_LOGIN_SUCCESS, jsArray{resp.Name, newLoggedInConn(resp.Name, resp.LoggedInConn)})
+					pub.Emit(EV_LOGIN_SUCCESS, jsArray(
+						resp.Name,
+						newLoggedInConn(resp.Name, resp.LoggedInConn),
+					))
 
 				case err := <-trip.Error:
-					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+					pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 				}
 			}()
-		},
+		}(name, password)
 
-		"createActor": func(name, password string) {
+		return nil
+	}))
+
+	result.Set("createActor", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		name := jsValueTypeMustBeString(args[0])
+		password := jsValueTypeMustBeString(args[1])
+		func(name, password string) {
 			go func() {
 				conn.Lock()
 				defer conn.Unlock()
@@ -160,17 +212,24 @@ func newLoginConn(loginConn client.LoginConn, pub eventPublisher) jsObject {
 
 				select {
 				case actorExists := <-trip.ActorExists:
-					pub.Emit(EV_ACTOR_EXISTS, jsArray{actorExists.Name})
+					pub.Emit(EV_ACTOR_EXISTS, jsArray(actorExists.Name))
 
 				case resp := <-trip.Success:
-					pub.Emit(EV_CREATE_SUCCESS, jsArray{resp.Name, newLoggedInConn(resp.Name, resp.LoggedInConn)})
+					pub.Emit(EV_CREATE_SUCCESS, jsArray(
+						resp.Name,
+						newLoggedInConn(resp.Name, resp.LoggedInConn),
+					))
 
 				case err := <-trip.Error:
-					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+					pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 				}
 			}()
-		},
-	}
+		}(name, password)
+
+		return nil
+	}))
+
+	return
 }
 
 type world struct {
@@ -230,27 +289,29 @@ type terrainCanvas struct {
 }
 
 func (c terrainCanvas) Reset(slice rpg2d.TerrainMapStateSlice) {
-	c.pub.Emit(EV_TERRAIN_RESET, jsArray{slice})
+	c.pub.Emit(EV_TERRAIN_RESET, jsArray(slice))
 }
 
 func (c terrainCanvas) Shift(dir canvas.TerrainShift, mags canvas.TerrainShiftMagnitudes) {
 	for dir, mag := range mags {
-		c.pub.Emit(EV_TERRAIN_CANVAS_SHIFT, jsArray{dir, mag})
+		c.pub.Emit(EV_TERRAIN_CANVAS_SHIFT, jsArray(int(dir), mag))
 	}
 }
 
 func (c terrainCanvas) DrawTile(ttype rpg2d.TerrainType, cell coord.Cell) {
-	c.pub.Emit(EV_TERRAIN_DRAW_TILE, jsArray{string(ttype), cell})
+	c.pub.Emit(EV_TERRAIN_DRAW_TILE, jsArray(string(ttype), cell))
 }
 
-func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
-	return jsObject{
-		"connectActor": func(pub *js.Object) {
-			if pub.Get("emit").String() == undefined {
-				log.Println("invalid publisher: missing emit() function")
-				return
-			}
+func newLoggedInConn(name string, loggedInConn client.LoggedInConn) (result js.Value) {
+	result = newJSObject()
+	result.Set("connectActor", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		pub := args[0]
 
+		if pub.Get("emit").String() == undefined {
+			panic("invalid publisher: missing emit() function")
+		}
+
+		func() {
 			go func() {
 				pub := eventPublisher{pub}
 
@@ -263,27 +324,28 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 						state:  resp.InitialState.WorldState,
 					}
 
-					pub.Emit(EV_RECV_INPUT_CONN, jsArray{newInputConn(&world, resp.InputConn, pub)})
-					pub.Emit(EV_RECV_INITIAL_STATE, jsArray{
+					pub.Emit(EV_RECV_INPUT_CONN, jsArray(newInputConn(&world, resp.InputConn, pub)))
+					log.Printf("%#v", resp.InitialState)
+					pub.Emit(EV_RECV_INITIAL_STATE, jsArray(
 						resp.InitialState.Entity,
 						resp.InitialState.WorldState,
-						jsObject{
+						map[string]interface{}{
 							"Bounds":  resp.InitialState.WorldState.Bounds,
 							"Terrain": resp.InitialState.WorldState.TerrainMap.String(),
 						},
-					})
+					))
 
 					for {
 						update, err := resp.NextUpdate()
 						if err != nil {
-							pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+							pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 							return
 						}
 
 						// TODO Fix unsafe concurrent access of world.state
 						err = canvas.ApplyTerrainDiff(terrainCanvas{pub}, world.state, update)
 						if err != nil {
-							pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+							pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 						}
 
 						world.update(update)
@@ -293,23 +355,27 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) jsObject {
 							case game.SayEntityState:
 								err := emitChatRecvEvent(&world, e, pub)
 								if err != nil {
-									pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+									pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 								}
 							}
 						}
 
-						pub.Emit(EV_RECV_UPDATE, jsArray{update})
+						pub.Emit(EV_RECV_UPDATE, jsArray(update))
 					}
 
 				case resp := <-trip.ActorAlreadyConnected:
-					pub.Emit(EV_ACTOR_ALREADY_CONNECTED, jsArray{resp.Name})
+					pub.Emit(EV_ACTOR_ALREADY_CONNECTED, jsArray(resp.Name))
 
 				case err := <-trip.Error:
-					pub.Emit(EV_ERROR, jsArray{jsObject{"error": err.Error()}})
+					pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 				}
 			}()
-		},
-	}
+		}()
+
+		return nil
+	}))
+
+	return result
 }
 
 func emitChatRecvEvent(world *world, say game.SayEntityState, pub EventPublisher) error {
@@ -318,13 +384,22 @@ func emitChatRecvEvent(world *world, say game.SayEntityState, pub EventPublisher
 		return err
 	}
 
-	pub.Emit(EV_RECV_CHAT_SAY, jsArray{say.Id, actor.Name, say.Msg, say.SaidAt})
+	pub.Emit(EV_RECV_CHAT_SAY, jsArray(
+		int64(say.Id),
+		actor.Name,
+		say.Msg,
+		int64(say.SaidAt),
+	))
 	return nil
 }
 
-func newInputConn(world *world, conn client.InputConn, pub EventPublisher) jsObject {
-	return jsObject{
-		"sendMoveRequest": func(typ game.MoveRequestType, d coord.Direction) {
+func newInputConn(world *world, conn client.InputConn, pub EventPublisher) (result js.Value) {
+	result = newJSObject()
+	result.Set("sendMoveRequest", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		typ := game.MoveRequestType(args[0].Int())
+		d := coord.Direction(args[1].Int())
+
+		func(typ game.MoveRequestType, d coord.Direction) {
 			go func() {
 				conn.SendMoveRequest(game.MoveRequest{
 					MoveRequestType: typ,
@@ -332,9 +407,16 @@ func newInputConn(world *world, conn client.InputConn, pub EventPublisher) jsObj
 					Direction:       d,
 				})
 			}()
-		},
+		}(typ, d)
 
-		"sendUseRequest": func(typ game.UseRequestType, skill string) {
+		return nil
+	}))
+
+	result.Set("sendUseRequest", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		typ := game.UseRequestType(args[0].Int())
+		skill := args[1].String()
+
+		func(typ game.UseRequestType, skill string) {
 			go func() {
 				conn.SendUseRequest(game.UseRequest{
 					UseRequestType: typ,
@@ -342,9 +424,15 @@ func newInputConn(world *world, conn client.InputConn, pub EventPublisher) jsObj
 					Skill:          skill,
 				})
 			}()
-		},
+		}(typ, skill)
+		return nil
+	}))
 
-		"sendChatRequest": func(typ game.ChatRequestType, msg string) {
+	result.Set("sendChatRequest", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+		typ := game.ChatRequestType(args[0].Int())
+		msg := args[1].String()
+
+		func(typ game.ChatRequestType, msg string) {
 			go func() {
 				conn.SendChatRequest(game.ChatRequest{
 					ChatRequestType: typ,
@@ -353,7 +441,10 @@ func newInputConn(world *world, conn client.InputConn, pub EventPublisher) jsObj
 				})
 			}()
 
-			pub.Emit(EV_SENT_CHAT_SAY, nil)
-		},
-	}
+			pub.Emit(EV_SENT_CHAT_SAY, jsArray())
+		}(typ, msg)
+		return nil
+	}))
+
+	return result
 }
