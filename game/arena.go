@@ -7,8 +7,9 @@ import (
 )
 
 type wallEntity struct {
-	id   entity.Id
-	cell coord.Cell
+	id    entity.Id
+	cell  coord.Cell
+	flags entity.Flag
 }
 
 type WallEntityState struct {
@@ -20,6 +21,7 @@ type WallEntityState struct {
 func (w wallEntity) Id() entity.Id        { return w.id }
 func (w wallEntity) Cell() coord.Cell     { return w.cell }
 func (w wallEntity) Bounds() coord.Bounds { return coord.Bounds{w.cell, w.cell} }
+func (w wallEntity) Flags() entity.Flag   { return w.flags }
 
 func (w wallEntity) ToState() entity.State {
 	return WallEntityState{

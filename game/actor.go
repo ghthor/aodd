@@ -43,6 +43,8 @@ type actorEntity struct {
 	// Health and Mana
 	hp, hpMax,
 	mp, mpMax int
+
+	flags entity.Flag
 }
 
 type ActorEntityState struct {
@@ -98,6 +100,8 @@ func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWri
 
 			hp:    100,
 			hpMax: 100,
+
+			flags: entity.FlagNew | entity.FlagChanged,
 		},
 
 		actorConn: newActorConn(stateWriter),
@@ -123,6 +127,9 @@ func (e actorEntity) Bounds() coord.Bounds {
 
 	return bounds
 }
+
+func (e actorEntity) Flags() entity.Flag { return e.flags }
+func (e *actorEntity) SetFlagChanged()   { e.flags = e.flags | entity.FlagChanged }
 
 func (e actorEntity) ToState() entity.State {
 	var pathAction *coord.PathActionState
