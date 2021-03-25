@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"text/template"
@@ -243,8 +244,11 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 			sim.ConnectActor(actor)
 
 			return inputReceiver{
-				actor:      actor,
-				disconnect: func() { sim.RemoveActor(actor) },
+				actor: actor,
+				disconnect: func() {
+					sim.RemoveActor(actor)
+					log.Println("actor removed", actor.name)
+				},
 			}, actor.Entity().ToState()
 		},
 	))
