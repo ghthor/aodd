@@ -540,7 +540,16 @@ func (e SayEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }
 func (e SayEntityState) IsDifferentFrom(other entity.State) bool {
-	return false
+	switch other := other.(type) {
+	case SayEntityState:
+		return e.Id != other.Id ||
+			e.Msg != other.Msg ||
+			e.SaidBy != other.SaidBy ||
+			e.SaidAt != other.SaidAt ||
+			e.Cell != other.Cell
+	}
+
+	return true
 }
 
 func (a *actor) ReadChatCmd() *chatCmd {

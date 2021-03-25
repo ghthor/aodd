@@ -165,28 +165,32 @@ func (e actorEntity) String() string {
 func (e ActorEntityState) EntityId() entity.Id  { return e.Id }
 func (e ActorEntityState) Bounds() coord.Bounds { return e.bounds }
 func (e ActorEntityState) IsDifferentFrom(other entity.State) (different bool) {
-	o := other.(ActorEntityState)
+	switch o := other.(type) {
+	case ActorEntityState:
+		switch {
+		case e.Name != o.Name:
+			return true
 
-	switch {
-	case e.Name != o.Name:
-		return true
+		case e.Facing != o.Facing:
+			return true
+		case e.PathAction != nil && o.PathAction != nil:
+			if *e.PathAction != *o.PathAction {
+				return true
+			}
+		case e.Cell != o.Cell:
+			return true
+		case e.bounds != o.bounds:
+			return true
 
-	case e.Facing != o.Facing:
-		return true
-	case e.PathAction != nil && o.PathAction != nil:
-		if *e.PathAction != *o.PathAction {
+		case e.Hp != o.Hp || e.HpMax != o.HpMax:
+			return true
+		case e.Mp != o.Mp || e.MpMax != o.MpMax:
 			return true
 		}
-	case e.Cell != o.Cell:
-		return true
-	case e.bounds != o.bounds:
-		return true
 
-	case e.Hp != o.Hp || e.HpMax != o.HpMax:
-		return true
-	case e.Mp != o.Mp || e.MpMax != o.MpMax:
+		return false
+
+	default:
 		return true
 	}
-
-	return false
 }
