@@ -109,7 +109,8 @@ func initialize(settings js.Value) js.Value {
 					log.Print(err)
 					return
 				}
-
+				// TODO move this into a configuration option
+				ws.SetReadLimit(32768 * 2)
 				wsConn := websocket.NetConn(ctx, ws, websocket.MessageBinary)
 
 				loginConn := client.NewLoginConn(game.NewGobConn(wsConn))
