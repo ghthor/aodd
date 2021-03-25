@@ -2,14 +2,16 @@ package game
 
 import (
 	"bufio"
+	"context"
 	"encoding/gob"
 	"io"
 	"log"
+	"net/http"
 
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/entity"
-	"golang.org/x/net/websocket"
+	"nhooyr.io/websocket"
 )
 
 type ReqLogin struct{ Name, Password string }
@@ -101,17 +103,27 @@ func NewGobConn(rw io.ReadWriter) Conn {
 
 func newGobWebsocketHandler(
 	ds datastore.Datastore,
-	actorConnector ActorConnector) websocket.Handler {
-	return func(ws *websocket.Conn) {
-		ws.PayloadType = websocket.BinaryFrame
+	actorConnector ActorConnector) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			OriginPatterns: []string{"localhost"},
+		})
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		defer ws.Close(websocket.StatusInternalError, "its all coming down")
 
-		c := NewPreLoginConn(NewGobConn(ws), ds)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		conn := websocket.NetConn(ctx, ws, websocket.MessageBinary)
+		c := NewPreLoginConn(NewGobConn(conn), ds)
 
 		// Blocks until the connection has disconnected
-		err := LoginAndConnectActor(c, actorConnector)
-
+		err = LoginAndConnectActor(c, actorConnector)
 		if err != nil {
 			log.Printf("packet handler terminated: %v", err)
 		}
-	}
+	})
 }
