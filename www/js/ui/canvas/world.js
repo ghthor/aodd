@@ -165,6 +165,38 @@ define(["underscore",
 
             player.initialize(time, playerEntity);
 
+            var removeEntity = function(entity) {
+                entity = entities[entity.Id];
+
+                if (_.isUndefined(entity)) {
+                  return; // continue
+                }
+
+                if (!_.isUndefined(entity.Type)) {
+                    if (entity.Type === "say") {
+                        if (player.is(entity.SaidBy)) {
+                            player.clearSayMsg(entity.Id);
+                        } else {
+                            var actor = actors[entity.SaidBy];
+                            if (!_.isUndefined(actor)) {
+                                actor.clearSayMsg(entity.Id);
+                            }
+                        }
+                    }
+
+                    delete entities[entity.Id];
+                    return; //continue
+                }
+
+                var actor = actors[entity.Id];
+                actor.destroy();
+
+                delete entities[entity.Id];
+                delete actors[entity.Id];
+
+                console.log(entity);
+            };
+
             var updateEntity = function(entity) {
                 if (player.is(entity.Id)) {
                     player.update(time, entity);
@@ -195,6 +227,10 @@ define(["underscore",
                             entities[entity.Id] = entity;
                             actors[entity.Id] = actor;
                         }());
+                    }
+
+                    if (entity.Type === "removed") {
+                        removeEntity(entity);
                     }
 
                     return; //continue
@@ -257,37 +293,7 @@ define(["underscore",
                 // Update all entities
                 _.each(worldStateDiff.Entities, updateEntity);
                 // Remove entities that don't exist anymore
-                _.each(worldStateDiff.Removed, function(entity) {
-                    entity = entities[entity.Id];
-
-                    if (_.isUndefined(entity)) {
-                      return; // continue
-                    }
-
-                    if (!_.isUndefined(entity.Type)) {
-                        if (entity.Type === "say") {
-                            if (player.is(entity.SaidBy)) {
-                                player.clearSayMsg(entity.Id);
-                            } else {
-                                var actor = actors[entity.SaidBy];
-                                if (!_.isUndefined(actor)) {
-                                    actor.clearSayMsg(entity.Id);
-                                }
-                            }
-                        }
-
-                        delete entities[entity.Id];
-                        return; //continue
-                    }
-
-                    var actor = actors[entity.Id];
-                    actor.destroy();
-
-                    delete entities[entity.Id];
-                    delete actors[entity.Id];
-
-                    console.log(entity);
-                });
+                _.each(worldStateDiff.Removed, removeEntity);
 
                 if (!_.isNull(worldStateDiff.TerrainMapSlices)) {
                     if (worldStateDiff.TerrainMapSlices.length > 0) {

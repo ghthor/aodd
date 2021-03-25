@@ -44,7 +44,11 @@ type actorEntity struct {
 	hp, hpMax,
 	mp, mpMax int
 
+	createdAt stime.Time
+
 	flags entity.Flag
+
+	lastState entity.State
 }
 
 type ActorEntityState struct {
@@ -101,7 +105,8 @@ func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWri
 			hp:    100,
 			hpMax: 100,
 
-			flags: entity.FlagNew | entity.FlagChanged,
+			createdAt: 0,
+			flags:     entity.FlagNew,
 		},
 
 		actorConn: newActorConn(stateWriter),
@@ -129,7 +134,6 @@ func (e actorEntity) Bounds() coord.Bounds {
 }
 
 func (e actorEntity) Flags() entity.Flag { return e.flags }
-func (e *actorEntity) SetFlagChanged()   { e.flags = e.flags | entity.FlagChanged }
 
 func (e actorEntity) ToState() entity.State {
 	var pathAction *coord.PathActionState
@@ -156,6 +160,10 @@ func (e actorEntity) ToState() entity.State {
 		Mp:    e.mp,
 		MpMax: e.mpMax,
 	}
+}
+
+func (e actorEntity) HasChanged(next entity.State, now stime.Time) bool {
+	return e.lastState.IsDifferentFrom(next)
 }
 
 func (e actorEntity) String() string {

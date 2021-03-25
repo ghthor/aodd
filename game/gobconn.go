@@ -8,6 +8,7 @@ import (
 
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/entity"
 	"golang.org/x/net/websocket"
 )
 
@@ -46,6 +47,7 @@ func init() {
 	gob.Register(rpg2d.WorldState{})
 	gob.Register(rpg2d.WorldStateDiff{})
 	gob.Register(rpg2d.TerrainMapState{})
+	gob.Register(entity.RemovedState{})
 
 	// Other entity states
 	gob.Register(SayEntityState{})

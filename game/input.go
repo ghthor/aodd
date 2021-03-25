@@ -38,42 +38,52 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 	switch e := e.(type) {
 	case actorEntity:
 		actor := phase.index[e.ActorId()]
-		// Unset new entity flag
-		actor.flags = actor.flags &^ entity.FlagNew
+		if actor.createdAt == 0 {
+			actor.flags = actor.flags | entity.FlagNew
+			actor.createdAt = now
+		} else {
+			// Clear FlagNew & set the last know Actor State
+			actor.flags = actor.flags &^ entity.FlagNew
+			actor.lastState = actor.ToState()
+		}
 
 		// Remove any movement actions that have completed
 		if actor.pathAction != nil && actor.pathAction.End() <= now {
 			actor.lastMoveAction = actor.pathAction
 			actor.cell = actor.pathAction.Dest
 			actor.pathAction = nil
-			actor.flags = actor.flags | entity.FlagChanged
 		}
 
 		// Reset speed after a charge
 		if actor.lastStartedCharge+chargeDuration <= now {
 			actor.speed = baseSpeed
-			actor.flags = actor.flags | entity.FlagChanged
 		}
 
 		return actor.Entity()
 
 	case assailEntity:
-		// Destroy all assail entities
-		return nil
+		// Remove all assail entities
+		return entity.Removed{e, now}
 
 	case sayEntity:
 		// TODO parametize server fps
 		if e.saidAt+(sayEntityDuration*40) <= now {
-			// Destroy all say entities
-			return nil
+			// Remove all say entities
+			return entity.Removed{e, now}
 		}
 
 		e.flags = e.flags &^ entity.FlagNew
-		e.flags = e.flags &^ entity.FlagChanged
 		return e
 
 	case wallEntity:
-		e.flags = e.flags &^ (entity.FlagNew | entity.FlagChanged)
+		e.flags = e.flags &^ entity.FlagNew
+		return e
+
+	case entity.Removed:
+		// 3 Secs * Sim FPS
+		if e.RemovedAt+(3*40) <= now {
+			return nil
+		}
 		return e
 
 	default:
@@ -108,6 +118,9 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.
 		return []entity.Entity{e}
 
 	case wallEntity:
+		return []entity.Entity{e}
+
+	case entity.Removed:
 		return []entity.Entity{e}
 
 	default:
@@ -317,7 +330,6 @@ func (a *actor) applyPathAction(pa *coord.PathAction) {
 
 	a.pathAction = pa
 	a.facing = pa.Direction()
-	a.flags = a.flags | entity.FlagChanged
 }
 
 func (a *actor) applyTurnAction(ta coord.TurnAction) {
@@ -334,7 +346,6 @@ func (a *actor) applyTurnAction(ta coord.TurnAction) {
 
 	a.lastMoveAction = ta
 	a.facing = ta.To
-	a.flags = a.flags | entity.FlagChanged
 }
 
 func (a *actor) revertMoveAction() {
@@ -464,7 +475,7 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 			spawnedAt: now,
 
 			cell:  a.Cell().Neighbor(a.facing),
-			flags: entity.FlagNew | entity.FlagChanged,
+			flags: entity.FlagNew,
 
 			damage: 25,
 		}
@@ -478,7 +489,6 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 		if a.lastStartedCharge+chargeCooldown <= now {
 			a.speed = chargeSpeed
 			a.lastStartedCharge = now
-			a.flags = a.flags | entity.FlagChanged
 		}
 	}
 	return nil
@@ -571,7 +581,7 @@ func (phase inputPhase) processChatCmd(a *actor, now stime.Time) []entity.Entity
 			saidAt: now,
 
 			cell:  a.Cell(),
-			flags: entity.FlagNew | entity.FlagChanged | entity.FlagNoCollide,
+			flags: entity.FlagNew | entity.FlagNoCollide,
 
 			msg: cmd.msg,
 		}}

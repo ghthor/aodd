@@ -296,23 +296,27 @@ func ActorCullBounds(center coord.Cell) coord.Bounds {
 // This is the first stage in writing out the state where we cull the
 // state down by the viewport bounds of an actor.
 func (a *actor) WriteState(state rpg2d.WorldState) {
-	a.actorConn.WriteState(
-		state.CullInto(a.actorConn.nextState, ActorCullBounds(a.Cell())),
-	)
+	if a.initialState == nil {
+		// This is a hack that should be removed once the WorldState has been
+		// simplified and it doesn't contain so many entity duplications
+		a.actorConn.WriteState(state.CullForInitialState(ActorCullBounds(a.Cell())))
+	} else {
+		a.actorConn.WriteState(
+			state.CullInto(a.actorConn.nextState, ActorCullBounds(a.Cell())),
+		)
+	}
 }
 
 func (a *actorConn) WriteState(state rpg2d.WorldState) {
-	a.nextState = state
-
 	if a.initialState == nil {
-		initialState := state.Clone()
-		a.initialState = &initialState
+		a.initialState = &state
 		a.sendState <- a.initialState
 
 		// Only 1 world state will ever be written
 		close(a.sendState)
 		a.sendState = nil
 	} else {
+		a.nextState = state
 		a.diff.Between(a.prevState, a.nextState)
 
 		if len(a.diff.Entities) > 0 || len(a.diff.Removed) > 0 || a.diff.TerrainMapSlices != nil {
