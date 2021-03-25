@@ -86,6 +86,8 @@ func connectBot(name, password string) Bot {
 		log.Fatal(err)
 	}
 
+	ws.PayloadType = websocket.BinaryFrame
+
 	conn := game.NewGobConn(ws)
 	loggedIn := loginActor(conn, name, password)
 	resp := connectActor(loggedIn)
@@ -187,7 +189,13 @@ func main() {
 	nameMap := make(map[string]int, *botCount)
 
 	for i := 0; i < *botCount; i++ {
+	generate:
 		name := petname.Generate(2, " ")
+
+		if _, exists := nameMap[name]; exists {
+			goto generate
+		}
+
 		nameMap[name] = i
 	}
 
