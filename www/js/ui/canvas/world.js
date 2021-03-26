@@ -274,7 +274,9 @@ define(["underscore",
             };
 
             // Update all entities
-            _.each(worldState.Entities, updateEntity);
+            _.each(worldState.EntitiesNew, updateEntity);
+            _.each(worldState.EntitiesChanged, updateEntity);
+            _.each(worldState.EntitiesUnchanged, updateEntity);
 
             // Create an actor for the rendered terrain map
             var renderedTerrain = new CAAT.Actor().setBackgroundImage(terrain.canvas, true);

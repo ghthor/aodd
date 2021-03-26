@@ -163,15 +163,16 @@ func (e actorEntity) ToState() entity.State {
 }
 
 func (e actorEntity) HasChanged(next entity.State, now stime.Time) bool {
-	return e.lastState.IsDifferentFrom(next)
+	return e.lastState.(entity.StateCanChange).IsDifferentFrom(next)
 }
 
 func (e actorEntity) String() string {
 	return fmt.Sprintf("{name: %s, id %d, cell%v, %v, speed:%d, pathAction:%v}", e.name, e.id, e.cell, e.facing, e.speed, e.pathAction)
 }
 
-func (e ActorEntityState) EntityId() entity.Id  { return e.Id }
-func (e ActorEntityState) Bounds() coord.Bounds { return e.bounds }
+func (e ActorEntityState) EntityId() entity.Id    { return e.Id }
+func (e ActorEntityState) EntityCell() coord.Cell { return e.Cell }
+func (e ActorEntityState) Bounds() coord.Bounds   { return e.bounds }
 func (e ActorEntityState) IsDifferentFrom(other entity.State) (different bool) {
 	switch o := other.(type) {
 	case ActorEntityState:

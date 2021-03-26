@@ -4,6 +4,8 @@ import (
 	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad/quadstate"
+	"github.com/ghthor/filu/sim/stime"
 )
 
 type InitialStateWriter interface {
@@ -327,4 +329,37 @@ func (a *actorConn) WriteState(state rpg2d.WorldState) {
 	}
 
 	a.prevState, a.nextState = a.nextState, a.prevState
+}
+
+func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *rpg2d.TerrainMapState) {
+	bounds := ActorCullBounds(a.Cell())
+
+	if a.initialState == nil {
+		const defaultEntitiesSize = 300
+		state := rpg2d.WorldState{
+			Time:              now,
+			Bounds:            bounds,
+			EntitiesRemoved:   make(entity.StateSlice, 0, defaultEntitiesSize),
+			EntitiesNew:       make(entity.StateSlice, 0, defaultEntitiesSize),
+			EntitiesChanged:   make(entity.StateSlice, 0, defaultEntitiesSize),
+			EntitiesUnchanged: make(entity.StateSlice, 0, defaultEntitiesSize),
+			TerrainMap:        &rpg2d.TerrainMapState{TerrainMap: terrain.TerrainMap.Slice(bounds)},
+		}
+		quad.QueryBounds(bounds, &state, quadstate.QueryAll)
+
+		a.nextState = state.Clone()
+		a.actorConn.WriteState(state)
+	} else {
+		nextState := a.nextState.Clear()
+		nextState.Time = now
+		nextState.Bounds = bounds
+		quad.QueryBounds(bounds, &nextState, quadstate.QueryDiff)
+		nextState.TerrainMap = &rpg2d.TerrainMapState{TerrainMap: terrain.TerrainMap.Slice(bounds)}
+
+		a.actorConn.WriteState(nextState)
+	}
+}
+
+// TODO
+func (a *actorConn) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *rpg2d.TerrainMapState) {
 }

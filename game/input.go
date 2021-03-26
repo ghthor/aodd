@@ -440,7 +440,8 @@ func (e assailEntity) ToState() entity.State {
 	}
 }
 
-func (e AssailEntityState) EntityId() entity.Id { return e.Id }
+func (e AssailEntityState) EntityId() entity.Id    { return e.Id }
+func (e AssailEntityState) EntityCell() coord.Cell { return e.Cell }
 func (e AssailEntityState) Bounds() coord.Bounds {
 	return coord.Bounds{e.Cell, e.Cell}
 }
@@ -545,10 +546,8 @@ func (e sayEntity) ToState() entity.State {
 	}
 }
 
-func (e SayEntityState) EntityId() entity.Id { return e.Id }
-func (e SayEntityState) Bounds() coord.Bounds {
-	return coord.Bounds{e.Cell, e.Cell}
-}
+func (e SayEntityState) EntityId() entity.Id    { return e.Id }
+func (e SayEntityState) EntityCell() coord.Cell { return e.Cell }
 func (e SayEntityState) IsDifferentFrom(other entity.State) bool {
 	switch other := other.(type) {
 	case SayEntityState:
