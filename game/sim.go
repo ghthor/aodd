@@ -176,7 +176,7 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 		return nil, err
 	}
 
-	terrainMap, err := rpg2d.NewTerrainMap(bounds, startingTerrain)
+	terrainMap, err := worldterrain.NewMap(bounds, startingTerrain)
 	if err != nil {
 		return nil, err
 	}

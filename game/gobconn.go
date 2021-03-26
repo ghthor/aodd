@@ -11,6 +11,7 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/worldterrain"
 	"nhooyr.io/websocket"
 )
 
@@ -48,7 +49,7 @@ func init() {
 	// Engine types
 	gob.Register(rpg2d.WorldState{})
 	gob.Register(rpg2d.WorldStateDiff{})
-	gob.Register(rpg2d.TerrainMapState{})
+	gob.Register(worldterrain.MapState{})
 	gob.Register(entity.RemovedState{})
 
 	// Other entity states

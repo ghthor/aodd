@@ -5,6 +5,7 @@ import (
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
 	"github.com/ghthor/filu/rpg2d/quad/quadstate"
+	"github.com/ghthor/filu/rpg2d/worldterrain"
 	"github.com/ghthor/filu/sim/stime"
 )
 
@@ -331,7 +332,7 @@ func (a *actorConn) WriteState(state rpg2d.WorldState) {
 	a.prevState, a.nextState = a.nextState, a.prevState
 }
 
-func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *rpg2d.TerrainMapState) {
+func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *worldterrain.MapState) {
 	bounds := ActorCullBounds(a.Cell())
 
 	if a.initialState == nil {
@@ -343,7 +344,7 @@ func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *rpg
 			EntitiesNew:       make(entity.StateSlice, 0, defaultEntitiesSize),
 			EntitiesChanged:   make(entity.StateSlice, 0, defaultEntitiesSize),
 			EntitiesUnchanged: make(entity.StateSlice, 0, defaultEntitiesSize),
-			TerrainMap:        &rpg2d.TerrainMapState{TerrainMap: terrain.TerrainMap.Slice(bounds)},
+			TerrainMap:        &worldterrain.MapState{Map: terrain.Map.Slice(bounds)},
 		}
 		quad.QueryBounds(bounds, &state, quadstate.QueryAll)
 
@@ -354,12 +355,12 @@ func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *rpg
 		nextState.Time = now
 		nextState.Bounds = bounds
 		quad.QueryBounds(bounds, &nextState, quadstate.QueryDiff)
-		nextState.TerrainMap = &rpg2d.TerrainMapState{TerrainMap: terrain.TerrainMap.Slice(bounds)}
+		nextState.TerrainMap = &worldterrain.MapState{Map: terrain.Map.Slice(bounds)}
 
 		a.actorConn.WriteState(nextState)
 	}
 }
 
 // TODO
-func (a *actorConn) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *rpg2d.TerrainMapState) {
+func (a *actorConn) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *worldterrain.MapState) {
 }
