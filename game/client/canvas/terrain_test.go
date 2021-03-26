@@ -4,26 +4,25 @@ import (
 	"fmt"
 
 	"github.com/ghthor/aodd/game/client/canvas"
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/quad"
-	"github.com/ghthor/filu/sim/stime"
+	"github.com/ghthor/filu/rpg2d/worldterrain"
 
 	"github.com/ghthor/gospec"
 	. "github.com/ghthor/gospec"
 )
 
 type terrainContext struct {
-	rpg2d.TerrainMap
+	worldterrain.Map
 }
 
-func (t *terrainContext) Reset(slice rpg2d.TerrainMapStateSlice) {
-	tm, err := rpg2d.NewTerrainMap(slice.Bounds, slice.Terrain)
+func (t *terrainContext) Reset(slice worldterrain.MapStateSlice) {
+	tm, err := worldterrain.NewMap(slice.Bounds, slice.Terrain)
 	if err != nil {
 		panic(err)
 	}
 
-	t.TerrainMap = tm
+	t.Map = tm
 }
 
 func (t *terrainContext) Shift(dir canvas.TerrainShift, mags canvas.TerrainShiftMagnitudes) {
@@ -61,11 +60,11 @@ func (t *terrainContext) Shift(dir canvas.TerrainShift, mags canvas.TerrainShift
 	}
 }
 
-func joinWithEmptySpace(newBounds coord.Bounds, m rpg2d.TerrainMap, diffs []coord.Bounds) rpg2d.TerrainMap {
-	maps := make([]rpg2d.TerrainMap, 0, len(diffs)+1)
+func joinWithEmptySpace(newBounds coord.Bounds, m worldterrain.Map, diffs []coord.Bounds) worldterrain.Map {
+	maps := make([]worldterrain.Map, 0, len(diffs)+1)
 
 	for _, d := range diffs {
-		m, err := rpg2d.NewTerrainMap(d, string(' '))
+		m, err := worldterrain.NewMap(d, string(' '))
 		if err != nil {
 			panic(err)
 		}
@@ -75,7 +74,7 @@ func joinWithEmptySpace(newBounds coord.Bounds, m rpg2d.TerrainMap, diffs []coor
 
 	maps = append(maps, m.Slice(newBounds))
 
-	m, err := rpg2d.JoinTerrain(newBounds, maps...)
+	m, err := worldterrain.JoinTerrain(newBounds, maps...)
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +92,7 @@ func (t *terrainContext) shiftNorth(mag int) {
 		t.Bounds.BotR.Add(0, -mag),
 	}
 
-	t.TerrainMap = joinWithEmptySpace(newBounds, t.TerrainMap, t.Bounds.DiffFrom(newBounds))
+	t.Map = joinWithEmptySpace(newBounds, t.Map, t.Bounds.DiffFrom(newBounds))
 }
 
 func (t *terrainContext) shiftEast(mag int) {
@@ -103,7 +102,7 @@ func (t *terrainContext) shiftEast(mag int) {
 		t.Bounds.BotR.Add(-mag, 0),
 	}
 
-	t.TerrainMap = joinWithEmptySpace(newBounds, t.TerrainMap, t.Bounds.DiffFrom(newBounds))
+	t.Map = joinWithEmptySpace(newBounds, t.Map, t.Bounds.DiffFrom(newBounds))
 }
 
 func (t *terrainContext) shiftSouth(mag int) {
@@ -113,7 +112,7 @@ func (t *terrainContext) shiftSouth(mag int) {
 		t.Bounds.BotR.Add(0, mag),
 	}
 
-	t.TerrainMap = joinWithEmptySpace(newBounds, t.TerrainMap, t.Bounds.DiffFrom(newBounds))
+	t.Map = joinWithEmptySpace(newBounds, t.Map, t.Bounds.DiffFrom(newBounds))
 }
 
 func (t *terrainContext) shiftWest(mag int) {
@@ -123,10 +122,10 @@ func (t *terrainContext) shiftWest(mag int) {
 		t.Bounds.BotR.Add(mag, 0),
 	}
 
-	t.TerrainMap = joinWithEmptySpace(newBounds, t.TerrainMap, t.Bounds.DiffFrom(newBounds))
+	t.Map = joinWithEmptySpace(newBounds, t.Map, t.Bounds.DiffFrom(newBounds))
 }
 
-func (t *terrainContext) DrawTile(terrainType rpg2d.TerrainType, cell coord.Cell) {
+func (t *terrainContext) DrawTile(terrainType worldterrain.Type, cell coord.Cell) {
 	t.SetType(terrainType, cell)
 }
 
@@ -138,7 +137,7 @@ func DescribeTerrainCanvas(c gospec.Context) {
 		}, 20, nil)
 		c.Assume(err, IsNil)
 
-		terrain, err := rpg2d.NewTerrainMap(quadTree.Bounds(), `
+		terrain, err := worldterrain.NewMap(quadTree.Bounds(), `
 DDDDDDDD
 DGGGGGGD
 DGGRRGGD
@@ -149,10 +148,6 @@ DGGGGGGD
 DDDDDDDD
 `)
 		c.Assume(err, IsNil)
-
-		world := rpg2d.NewWorld(stime.Time(0), quadTree, terrain)
-
-		worldState := world.ToState()
 
 		north := coord.Bounds{
 			coord.Cell{-2, 4},
@@ -200,69 +195,66 @@ DDDDDDDD
 		}
 
 		c.Specify("can be reset by a diff if there is no overlap", func() {
-			initialState := worldState.Cull(northWest)
-
+			initialMap := terrain.Slice(northWest)
 			context := &terrainContext{
-				TerrainMap: initialState.Clone().TerrainMap.TerrainMap,
+				Map: initialMap,
 			}
+			nextMap := terrain.Slice(northEast)
 
-			nextState := worldState.Cull(northEast)
-
-			canvas.ApplyTerrainDiff(context, initialState, initialState.Diff(nextState))
-			c.Expect(context.String(), Equals, nextState.TerrainMap.String())
+			canvas.ApplyTerrainDiff(context, initialMap.Bounds, initialMap.ToState().Diff(nextMap.ToState()))
+			c.Expect(context.String(), Equals, nextMap.String())
 		})
 
 		c.Specify("can be shifted by a diff to the", func() {
-			initialState := worldState.Cull(center)
-
+			initialMap := terrain.Slice(center)
 			context := &terrainContext{
-				TerrainMap: initialState.Clone().TerrainMap.TerrainMap,
+				Map: initialMap,
 			}
-
-			var nextState rpg2d.WorldState
+			var nextMap worldterrain.Map
 
 			expectContextIsUpdated := func() {
-				canvas.ApplyTerrainDiff(context, initialState, initialState.Diff(nextState))
-				c.Expect(context.String(), Equals, nextState.TerrainMap.String())
+				diff := initialMap.ToState().Diff(nextMap.ToState())
+				canvas.ApplyTerrainDiff(context, initialMap.Bounds, diff)
+				c.Expect(context.String(), Equals, nextMap.String())
 			}
 
 			c.Specify("north", func() {
-				nextState = worldState.Cull(north)
+				nextMap = terrain.Slice(north)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("north & east", func() {
-				nextState = worldState.Cull(northEast)
+				nextMap = terrain.Slice(northEast)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("east", func() {
-				nextState = worldState.Cull(east)
+				nextMap = terrain.Slice(east)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("south & east", func() {
-				nextState = worldState.Cull(southEast)
+				nextMap = terrain.Slice(southEast)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("south", func() {
-				nextState = worldState.Cull(south)
+				nextMap = terrain.Slice(south)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("south & west", func() {
-				nextState = worldState.Cull(southWest)
+				nextMap = terrain.Slice(southWest)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("west", func() {
-				nextState = worldState.Cull(west)
+				nextMap = terrain.Slice(west)
 				expectContextIsUpdated()
 			})
 
 			c.Specify("north & west", func() {
-				nextState = worldState.Cull(northWest)
+				nextMap = terrain.Slice(northWest)
 				expectContextIsUpdated()
 			})
 		})

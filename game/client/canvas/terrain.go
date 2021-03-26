@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/rpg2d/worldterrain"
 )
 
 type TerrainShift int
@@ -27,7 +27,7 @@ type TerrainContext interface {
 	// Used if the bounds of the diff does NOT
 	// have any overlap with the bounds of the
 	// previous state.
-	Reset(rpg2d.TerrainMapStateSlice)
+	Reset(worldterrain.MapStateSlice)
 
 	// Shift should expect A direction the canvas
 	// should be shifted to maintian the tiles that
@@ -39,7 +39,7 @@ type TerrainContext interface {
 	// DrawTile should expect a terrain type for
 	// the tile and a cell with the absolute coord
 	// where the cell should be drawn.
-	DrawTile(rpg2d.TerrainType, coord.Cell)
+	DrawTile(worldterrain.Type, coord.Cell)
 }
 
 func abs(a int) int {
@@ -54,25 +54,25 @@ func abs(a int) int {
 // state, this function will call the terrain context
 // with the necessary steps to apply the diff and update
 // the painting of the canvas.
-func ApplyTerrainDiff(c TerrainContext, prevState rpg2d.WorldState, diff rpg2d.WorldStateDiff) error {
-	if diff.TerrainMapSlices == nil {
+func ApplyTerrainDiff(c TerrainContext, prevBounds coord.Bounds, diff *worldterrain.MapStateSlices) error {
+	if diff == nil {
 		return nil
 	}
 
-	if len(diff.TerrainMapSlices) == 0 {
+	if len(diff.Slices) == 0 {
 		return nil
 	}
 
-	if !prevState.Bounds.Overlaps(diff.Bounds) {
-		if len(diff.TerrainMapSlices) != 1 {
-			return fmt.Errorf("unexpected number of terrain state slices {%v}", diff.TerrainMapSlices)
+	if !prevBounds.Overlaps(diff.Bounds) {
+		if len(diff.Slices) != 1 {
+			return fmt.Errorf("unexpected number of terrain state slices {%#v}", diff.Slices)
 		}
 
-		c.Reset(diff.TerrainMapSlices[0])
+		c.Reset(diff.Slices[0])
 		return nil
 	}
 
-	pb, nb := prevState.Bounds, diff.Bounds
+	pb, nb := prevBounds, diff.Bounds
 	switch {
 	case pb.Contains(nb.BotL()) && pb.Contains(nb.BotR):
 		c.Shift(TS_SOUTH, TerrainShiftMagnitudes{
@@ -122,8 +122,8 @@ func ApplyTerrainDiff(c TerrainContext, prevState rpg2d.WorldState, diff rpg2d.W
 		return errors.New("invalid terrain diff")
 	}
 
-	for _, m := range diff.TerrainMapSlices {
-		types, err := rpg2d.NewTerrainArray(m.Bounds, m.Terrain)
+	for _, m := range diff.Slices {
+		types, err := worldterrain.NewType2dArray(m.Bounds, m.Terrain)
 		if err != nil {
 			return err
 		}
