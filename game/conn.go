@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/ghthor/aodd/game/datastore"
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/worldstate"
 )
 
 // Used to determine the next type that's in the
@@ -218,11 +218,11 @@ type loggedInResult struct {
 }
 
 type initialStateWriter struct {
-	sendState  chan<- rpg2d.WorldState
+	sendState  chan<- *worldstate.Snapshot
 	diffWriter <-chan DiffWriter
 }
 
-func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) DiffWriter {
+func (c initialStateWriter) WriteWorldState(s *worldstate.Snapshot) DiffWriter {
 	// Pass state out to connection to be written
 	c.sendState <- s
 	// Only 1 world state will ever be written
@@ -232,8 +232,8 @@ func (c initialStateWriter) WriteWorldState(s rpg2d.WorldState) DiffWriter {
 	return <-c.diffWriter
 }
 
-func (c loggedInResult) connect(connectActor ActorConnector) (InputReceiver, entity.State, <-chan rpg2d.WorldState, chan<- DiffWriter) {
-	initialStateCh := make(chan rpg2d.WorldState)
+func (c loggedInResult) connect(connectActor ActorConnector) (InputReceiver, entity.State, <-chan *worldstate.Snapshot, chan<- DiffWriter) {
+	initialStateCh := make(chan *worldstate.Snapshot)
 	diffWriterCh := make(chan DiffWriter)
 
 	actor, entity := connectActor(c.loggedInActor, initialStateWriter{
@@ -383,7 +383,7 @@ func (c *connectedConn) handleChatReq() (stateFn, error) {
 	return c.handleInputReq, nil
 }
 
-func (c connectedConn) WriteWorldStateDiff(s rpg2d.WorldStateDiff) {
+func (c connectedConn) WriteWorldStateDiff(s *worldstate.Update) {
 	// TODO Handle this potentional write error
 	// TODO This Write needs to timeout to avoid Denial-Of-Service attacks
 	//      by misbehaving clients that never read of the frames we send them.

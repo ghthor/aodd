@@ -7,10 +7,12 @@ import (
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
 	"github.com/ghthor/aodd/game/datastore"
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad/quadstate"
 	"github.com/ghthor/filu/rpg2d/rpg2dtest"
+	"github.com/ghthor/filu/rpg2d/worldstate"
+	"github.com/ghthor/filu/rpg2d/worldterrain"
 
 	"github.com/ghthor/gospec"
 	. "github.com/ghthor/gospec"
@@ -232,17 +234,16 @@ func DescribeActorGobConn(c gospec.Context) {
 
 			var actor *mockActor
 
-			initialState := func() rpg2d.WorldState {
-				state := rpg2d.WorldState{}
-				state.Time = 2
-				state.Bounds = coord.Bounds{
+			initialState := func() *worldstate.Snapshot {
+				bounds := coord.Bounds{
 					coord.Cell{-10, 10},
 					coord.Cell{10, -10},
 				}
-				state.Entities = append(state.Entities, actor.entityState)
-				terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
+				state := worldstate.NewSnapshot(2, bounds, 2)
+				state.Entities.New = append(state.Entities.New, &quadstate.Entity{State: actor.entityState, Type: quadstate.TypeNew})
+				terrainMap, err := worldterrain.NewMap(state.Bounds, string(worldterrain.TT_GRASS))
 				c.Assume(err, IsNil)
-				state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
+				state.TerrainMap = &worldterrain.MapState{terrainMap}
 
 				return state
 			}
@@ -271,7 +272,7 @@ func DescribeActorGobConn(c gospec.Context) {
 
 				c.Assume(err, IsNil)
 				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
-				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals, initialState())
+				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.SnapshotEquals, initialState())
 
 				dsactor, exists := ds.ActorExists("actor")
 				c.Assume(exists, IsTrue)
@@ -350,29 +351,30 @@ func DescribeActorGobConn(c gospec.Context) {
 			trip := loginResp.ConnectActor(loginResp.Name)
 			actor := <-connectedActor
 
-			initialState := func() rpg2d.WorldState {
-				state := rpg2d.WorldState{}
-				state.Time = 2
-				state.Bounds = coord.Bounds{
-					coord.Cell{-10, 10},
-					coord.Cell{10, -10},
-				}
-				state.Entities = append(state.Entities, actor.entityState)
-				terrainMap, err := rpg2d.NewTerrainMap(state.Bounds, string(rpg2d.TT_GRASS))
+			worldBounds := coord.Bounds{
+				coord.Cell{-10, 10},
+				coord.Cell{10, -10},
+			}
+			initialQuad := func() quadstate.Quad {
+				quad, err := quadstate.New(worldBounds, 10)
 				c.Assume(err, IsNil)
-				state.TerrainMap = &rpg2d.TerrainMapState{terrainMap}
-
-				return state
+				quad = quad.Insert(&quadstate.Entity{State: actor.entityState, Type: quadstate.TypeNew})
+				return quad
+			}
+			initialTerrain := func() *worldterrain.MapState {
+				terrainMap, err := worldterrain.NewMap(worldBounds, string(worldterrain.TT_GRASS))
+				c.Assume(err, IsNil)
+				return &worldterrain.MapState{terrainMap}
 			}
 
-			worldState := initialState()
+			newSnapshot := func(bounds coord.Bounds) *worldstate.Snapshot {
+				return worldstate.CullForInitialState(2, bounds, initialQuad(), initialTerrain(), 1)
+			}
 
-			diffWriter := actor.stateWriter.WriteWorldState(
-				worldState.Cull(coord.Bounds{
-					coord.Cell{-2, 2},
-					coord.Cell{2, -2},
-				}),
-			)
+			diffWriter := actor.stateWriter.WriteWorldState(newSnapshot(coord.Bounds{
+				coord.Cell{-2, 2},
+				coord.Cell{2, -2},
+			}))
 
 			var err error
 			var connectResp client.RespConnected
@@ -386,8 +388,8 @@ func DescribeActorGobConn(c gospec.Context) {
 
 			c.Specify("will receive an initial world state", withStopServer(func() {
 				c.Expect(connectResp.InitialState.Entity, Equals, actor.entityState)
-				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.StateEquals,
-					worldState.Cull(coord.Bounds{
+				c.Expect(connectResp.InitialState.WorldState, rpg2dtest.SnapshotEquals,
+					newSnapshot(coord.Bounds{
 						coord.Cell{-2, 2},
 						coord.Cell{2, -2},
 					}),

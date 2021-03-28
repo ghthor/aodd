@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ghthor/aodd/game"
-	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/worldstate"
 )
 
 type LoggedInConn interface {
@@ -118,7 +118,7 @@ func (trip ConnectRoundTrip) run(r game.ReqConnect) ConnectRoundTrip {
 		case game.ET_WORLD_STATE:
 		}
 
-		var state rpg2d.WorldState
+		var state *worldstate.Snapshot
 
 		err = trip.conn.Decode(&state)
 		if err != nil {

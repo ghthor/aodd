@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/ghthor/aodd/game"
-	"github.com/ghthor/filu/rpg2d"
+	"github.com/ghthor/filu/rpg2d/worldstate"
 )
 
 type UpdateConn interface {
-	NextUpdate() (rpg2d.WorldStateDiff, error)
+	NextUpdate() (*worldstate.Update, error)
 }
 
 type InputConn interface {
@@ -22,11 +22,11 @@ type InitialState struct {
 	Entity game.ActorEntityState
 
 	// The initial state of the world.
-	WorldState rpg2d.WorldState
+	WorldState *worldstate.Snapshot
 }
 
-func receiveUpdates(conn game.Conn, sendUpdate chan<- rpg2d.WorldStateDiff) (err error) {
-	var diff rpg2d.WorldStateDiff
+func receiveUpdates(conn game.Conn, sendUpdate chan<- *worldstate.Update) (err error) {
+	var diff *worldstate.Update
 	for {
 		diff, err = receiveUpdate(conn)
 		if err != nil {
@@ -37,7 +37,7 @@ func receiveUpdates(conn game.Conn, sendUpdate chan<- rpg2d.WorldStateDiff) (err
 	return
 }
 
-func receiveUpdate(conn game.Conn) (diff rpg2d.WorldStateDiff, err error) {
+func receiveUpdate(conn game.Conn) (diff *worldstate.Update, err error) {
 	eType, err := conn.ReadNextType()
 	if err != nil {
 		return diff, err
@@ -64,7 +64,7 @@ type updateReceiver struct {
 	conn game.Conn
 }
 
-func (c updateReceiver) NextUpdate() (rpg2d.WorldStateDiff, error) {
+func (c updateReceiver) NextUpdate() (*worldstate.Update, error) {
 	return receiveUpdate(c.conn)
 }
 

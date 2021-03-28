@@ -62,6 +62,8 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 		return actor.Entity()
 
 	case assailEntity:
+		// TODO Fix assail entities never being sent to the server
+		//      I already checked the flags and they seem fine
 		// Remove all assail entities
 		return entity.Removed{e, now}
 

@@ -298,7 +298,7 @@ define(["underscore",
                 _.each(worldStateDiff.Removed, removeEntity);
 
                 if (!_.isNull(worldStateDiff.TerrainMapSlices)) {
-                    if (worldStateDiff.TerrainMapSlices.length > 0) {
+                    if (worldStateDiff.TerrainMapSlices.Slices.length > 0) {
                         terrainSetPosition(terrain.map.center());
                     }
                 }

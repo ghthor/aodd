@@ -15,7 +15,7 @@ type wallEntity struct {
 type WallEntityState struct {
 	Type string     `json:"type"`
 	Id   entity.Id  `json:"id"`
-	Cell coord.Cell `jsonZ:"cell"`
+	Cell coord.Cell `json:"cell"`
 }
 
 func (w wallEntity) Id() entity.Id        { return w.id }

@@ -3,18 +3,18 @@ package game
 import (
 	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
-	"github.com/ghthor/filu/rpg2d/entity"
 	"github.com/ghthor/filu/rpg2d/quad/quadstate"
+	"github.com/ghthor/filu/rpg2d/worldstate"
 	"github.com/ghthor/filu/rpg2d/worldterrain"
 	"github.com/ghthor/filu/sim/stime"
 )
 
 type InitialStateWriter interface {
-	WriteWorldState(rpg2d.WorldState) DiffWriter
+	WriteWorldState(*worldstate.Snapshot) DiffWriter
 }
 
 type DiffWriter interface {
-	WriteWorldStateDiff(rpg2d.WorldStateDiff)
+	WriteWorldStateDiff(*worldstate.Update)
 }
 
 type actorConn struct {
@@ -28,8 +28,8 @@ type actorConn struct {
 	readChatCmd <-chan *chatCmd
 
 	// Comm interface to muxer used to send world states
-	sendState chan<- *rpg2d.WorldState
-	sendDiff  chan<- *rpg2d.WorldStateDiff
+	sendState chan<- *worldstate.Snapshot
+	sendDiff  chan<- *worldstate.Update
 
 	// Comm interface to muxer used by stopIO() method
 	stop chan<- chan<- struct{}
@@ -37,26 +37,19 @@ type actorConn struct {
 	// External connection used to publish the initial world state
 	conn InitialStateWriter
 
-	initialState *rpg2d.WorldState
-	prevState    rpg2d.WorldState
-	nextState    rpg2d.WorldState
+	diffWriter DiffWriter
 
-	diff rpg2d.WorldStateDiff
+	initialState *worldstate.Snapshot
+	prevState    *worldstate.Snapshot
+	nextState    *worldstate.Snapshot
+
+	diff *worldstate.Update
 }
 
 func newActorConn(conn InitialStateWriter) actorConn {
 	return actorConn{
 		conn: conn,
-		prevState: rpg2d.WorldState{
-			Entities: make(entity.StateSlice, 0, 1),
-		},
-		nextState: rpg2d.WorldState{
-			Entities: make(entity.StateSlice, 0, 1),
-		},
-		diff: rpg2d.WorldStateDiff{
-			Entities: make(entity.StateSlice, 0, 1),
-			Removed:  make(entity.StateSlice, 0, 1),
-		},
+		diff: worldstate.NewUpdate(1),
 	}
 }
 
@@ -70,8 +63,8 @@ func (a *actorConn) startIO() {
 	useCmdCh := make(chan *useCmd)
 	chatCmdCh := make(chan *chatCmd)
 
-	stateOutputCh := make(chan *rpg2d.WorldState)
-	diffOutputCh := make(chan *rpg2d.WorldStateDiff)
+	stateOutputCh := make(chan *worldstate.Snapshot)
+	diffOutputCh := make(chan *worldstate.Update)
 	stopCh := make(chan chan<- struct{})
 
 	// Set the channels accessible to the outside world
@@ -96,8 +89,8 @@ func (a *actorConn) startIO() {
 	var sendUseCmd chan<- *useCmd
 	var sendChatCmd chan<- *chatCmd
 
-	var newState <-chan *rpg2d.WorldState
-	var newDiff <-chan *rpg2d.WorldStateDiff
+	var newState <-chan *worldstate.Snapshot
+	var newDiff <-chan *worldstate.Update
 	var stopReq <-chan chan<- struct{}
 
 	newMoveRequest = moveReqCh
@@ -175,7 +168,7 @@ func (a *actorConn) startIO() {
 				cmd.chatCmd = nil
 			case state := <-newState:
 				if state != nil {
-					diffWriter = a.conn.WriteWorldState(*state)
+					diffWriter = a.conn.WriteWorldState(state)
 					// Only 1 world state will ever be written
 					a.conn = nil
 				}
@@ -227,7 +220,7 @@ func (a *actorConn) startIO() {
 
 		case diff := <-newDiff:
 			if diff != nil {
-				diffWriter.WriteWorldStateDiff(*diff)
+				diffWriter.WriteWorldStateDiff(diff)
 			}
 
 			goto unlocked
@@ -258,7 +251,7 @@ func (a *actorConn) startIO() {
 		select {
 		case diff := <-newDiff:
 			if diff != nil {
-				diffWriter.WriteWorldStateDiff(*diff)
+				diffWriter.WriteWorldStateDiff(diff)
 			}
 
 			goto unlocked
@@ -296,34 +289,64 @@ func ActorCullBounds(center coord.Cell) coord.Bounds {
 	}
 }
 
-// This is the first stage in writing out the state where we cull the
-// state down by the viewport bounds of an actor.
+// TODO Remove this method requirement from rpg2d.Actor interface
 func (a *actor) WriteState(state rpg2d.WorldState) {
+}
+
+// TODO Remove this method requirement from rpg2d.Actor interface
+func (a *actorConn) WriteState(state rpg2d.WorldState) {
+}
+
+// TODO Port all this state initialization work into filu
+//      Actor will need to be able to provide the bounds for this to happen.
+func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *worldterrain.MapState, encoder chan<- quadstate.EncodingRequest) {
+	bounds := ActorCullBounds(a.Cell())
+
 	if a.initialState == nil {
-		// This is a hack that should be removed once the WorldState has been
-		// simplified and it doesn't contain so many entity duplications
-		a.actorConn.WriteState(state.CullForInitialState(ActorCullBounds(a.Cell())))
+		state := worldstate.NewSnapshot(now, bounds, 0)
+		quad.QueryBounds(bounds, state, quadstate.QueryAll)
+		state.TerrainMap = &worldterrain.MapState{Map: terrain.Map.Slice(bounds)}
+
+		a.prevState = state.Clone()
+		a.nextState = state.Clone()
+		a.diff = worldstate.NewUpdate(1)
+
+		a.actorConn.WriteStateNext(state, encoder)
 	} else {
-		a.actorConn.WriteState(
-			state.CullInto(a.actorConn.nextState, ActorCullBounds(a.Cell())),
-		)
+		a.nextState.Clear()
+		a.nextState.Time = now
+		a.nextState.Bounds = bounds
+		quad.QueryBounds(bounds, a.nextState, quadstate.QueryDiff)
+		a.nextState.TerrainMap = &worldterrain.MapState{Map: terrain.Map.Slice(bounds)}
+
+		a.actorConn.WriteStateNext(a.nextState, encoder)
 	}
 }
 
-func (a *actorConn) WriteState(state rpg2d.WorldState) {
+func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- quadstate.EncodingRequest) {
 	if a.initialState == nil {
-		a.initialState = &state
-		a.sendState <- a.initialState
+		a.initialState = state
+		// TODO Enable encoding cachce
+		// CacheEncodingsFor([][]*quadstate.Entity{state.Removed, state.New, state.Changed, state.Unchanged}, encoder)
 
+		a.sendState <- a.initialState
 		// Only 1 world state will ever be written
 		close(a.sendState)
 		a.sendState = nil
+
+		// // TODO Enable bypassing the startIO loop and just go straight to writing
+		// a.diffWriter = a.conn.WriteWorldState(state)
 	} else {
 		a.nextState = state
-		a.diff.Between(a.prevState, a.nextState)
+		a.diff.FromSnapshot(a.prevState, a.nextState)
+
+		// TODO Enable encoding cache
+		// CacheEncodingsFor([][]*quadstate.Entity{a.diff.Removed, a.diff.Entities}, encoder)
 
 		if len(a.diff.Entities) > 0 || len(a.diff.Removed) > 0 || a.diff.TerrainMapSlices != nil {
-			a.sendDiff <- &a.diff
+			a.sendDiff <- a.diff
+			// TODO Enable bypassing the startIO loop and just go straight to writing
+			// a.diffWriter.WriteWorldStateDiff(a.diff)
 		} else {
 			a.sendDiff <- nil
 		}
@@ -332,35 +355,10 @@ func (a *actorConn) WriteState(state rpg2d.WorldState) {
 	a.prevState, a.nextState = a.nextState, a.prevState
 }
 
-func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *worldterrain.MapState) {
-	bounds := ActorCullBounds(a.Cell())
-
-	if a.initialState == nil {
-		const defaultEntitiesSize = 300
-		state := rpg2d.WorldState{
-			Time:              now,
-			Bounds:            bounds,
-			EntitiesRemoved:   make(entity.StateSlice, 0, defaultEntitiesSize),
-			EntitiesNew:       make(entity.StateSlice, 0, defaultEntitiesSize),
-			EntitiesChanged:   make(entity.StateSlice, 0, defaultEntitiesSize),
-			EntitiesUnchanged: make(entity.StateSlice, 0, defaultEntitiesSize),
-			TerrainMap:        &worldterrain.MapState{Map: terrain.Map.Slice(bounds)},
-		}
-		quad.QueryBounds(bounds, &state, quadstate.QueryAll)
-
-		a.nextState = state.Clone()
-		a.actorConn.WriteState(state)
-	} else {
-		nextState := a.nextState.Clear()
-		nextState.Time = now
-		nextState.Bounds = bounds
-		quad.QueryBounds(bounds, &nextState, quadstate.QueryDiff)
-		nextState.TerrainMap = &worldterrain.MapState{Map: terrain.Map.Slice(bounds)}
-
-		a.actorConn.WriteState(nextState)
-	}
-}
-
-// TODO
-func (a *actorConn) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *worldterrain.MapState) {
+// TODO move this to a more apprioate place
+func CacheEncodingsFor(entities [][]*quadstate.Entity, encoder chan<- quadstate.EncodingRequest) {
+	done := make(chan [][]*quadstate.Entity)
+	encoder <- quadstate.EncodingRequest{entities, done}
+	<-done
+	close(done)
 }

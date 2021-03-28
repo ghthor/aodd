@@ -9,8 +9,9 @@ import (
 	"net/http"
 
 	"github.com/ghthor/aodd/game/datastore"
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad/quadstate"
+	"github.com/ghthor/filu/rpg2d/worldstate"
 	"github.com/ghthor/filu/rpg2d/worldterrain"
 	"nhooyr.io/websocket"
 )
@@ -43,14 +44,16 @@ func init() {
 	gob.Register(RespLoginSuccess{})
 	gob.Register(RespCreateSuccess{})
 
-	// ActorEntityState used for response to connect
-	gob.Register(ActorEntityState{})
-
 	// Engine types
-	gob.Register(rpg2d.WorldState{})
-	gob.Register(rpg2d.WorldStateDiff{})
+	gob.Register(&worldstate.Snapshot{})
+	gob.Register(&worldstate.Update{})
 	gob.Register(worldterrain.MapState{})
 	gob.Register(entity.RemovedState{})
+	gob.Register(quadstate.Entity{})
+	gob.Register([]*quadstate.Entity{})
+
+	// ActorEntityState used for response to connect
+	gob.Register(ActorEntityState{})
 
 	// Other entity states
 	gob.Register(SayEntityState{})
@@ -107,7 +110,8 @@ func newGobWebsocketHandler(
 	actorConnector ActorConnector) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-			OriginPatterns: []string{"localhost"},
+			OriginPatterns:  []string{"localhost"},
+			CompressionMode: websocket.CompressionDisabled,
 		})
 		if err != nil {
 			log.Println(err)

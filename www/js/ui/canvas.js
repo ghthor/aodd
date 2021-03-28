@@ -47,8 +47,8 @@ define(["jquery",
                 });
             });
 
-            client.on(app.EV_RECV_UPDATE, function(worldStateDiff) {
-                world.update(worldStateDiff);
+            client.on(app.EV_RECV_UPDATE, function(worldStateUpdate) {
+                world.update(worldStateUpdate);
             });
 
             canvas.emit("ready", [director.canvas]);

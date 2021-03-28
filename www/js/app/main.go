@@ -9,9 +9,11 @@ import (
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
 	"github.com/ghthor/aodd/game/client/canvas"
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad/quadstate"
+	"github.com/ghthor/filu/rpg2d/worldstate"
+	"github.com/ghthor/filu/rpg2d/worldterrain"
 	"github.com/ghthor/filu/sim/stime"
 
 	"syscall/js"
@@ -110,7 +112,7 @@ func initialize(settings js.Value) js.Value {
 					return
 				}
 				// TODO move this into a configuration option
-				ws.SetReadLimit(32768 * 2)
+				ws.SetReadLimit(32768 * 4)
 				wsConn := websocket.NetConn(ctx, ws, websocket.MessageBinary)
 
 				loginConn := client.NewLoginConn(game.NewGobConn(wsConn))
@@ -237,30 +239,100 @@ type world struct {
 	mu sync.RWMutex
 
 	entity game.ActorEntityState
-	state  rpg2d.WorldState
+
+	initialSnapshot *worldstate.Snapshot
+	lastUpdate      *worldstate.Update
+	entities        map[entity.Id]*quadstate.Entity
 }
 
 func (w *world) now() stime.Time {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	return w.state.Time
+	if w.lastUpdate == nil {
+		if w.initialSnapshot == nil {
+			return 0
+		}
+
+		return w.initialSnapshot.Time
+	}
+
+	return w.lastUpdate.Time
 }
 
-func (w *world) update(diff rpg2d.WorldStateDiff) {
+func (w *world) apply(snapshot *worldstate.Snapshot) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	for _, e := range snapshot.Entities.New {
+		// Update the actors entity
+		if e.EntityId() == w.entity.EntityId() {
+			w.entity = e.State.(game.ActorEntityState)
+			break
+		}
+
+		w.entities[e.EntityId()] = e
+	}
+
+	for _, e := range snapshot.Entities.Changed {
+		// Update the actors entity
+		if e.EntityId() == w.entity.EntityId() {
+			w.entity = e.State.(game.ActorEntityState)
+			break
+		}
+
+		w.entities[e.EntityId()] = e
+	}
+
+	for _, e := range snapshot.Entities.Unchanged {
+		// Update the actors entity
+		if e.EntityId() == w.entity.EntityId() {
+			w.entity = e.State.(game.ActorEntityState)
+			break
+		}
+
+		w.entities[e.EntityId()] = e
+	}
+
+	for _, e := range snapshot.Entities.Removed {
+		delete(w.entities, e.EntityId())
+	}
+
+	w.initialSnapshot = snapshot
+}
+
+func (w *world) update(update *worldstate.Update) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	// Update the state
-	w.state.Apply(diff)
-
-	// Update the entity
-	for _, e := range w.state.Entities {
+	//w.state.Apply(diff)
+	for _, e := range update.Entities {
+		// Update the actors entity
 		if e.EntityId() == w.entity.EntityId() {
-			w.entity = e.(game.ActorEntityState)
+			w.entity = e.State.(game.ActorEntityState)
 			break
 		}
+
+		w.entities[e.EntityId()] = e
 	}
+
+	for _, e := range update.Removed {
+		delete(w.entities, e.EntityId())
+	}
+
+	// TODO Fix the rendering of entities at edge of view bounds
+	//      I might need to be running this even when there are no updates?
+	// This is an attempt to fix that, but they are still building up
+	// At the edges of the viewport.
+	for id, e := range w.entities {
+		if !update.Bounds.Contains(e.State.EntityCell()) {
+			update.Removed = append(update.Removed, &quadstate.Entity{State: e.State, Type: quadstate.TypeRemoved})
+			delete(w.entities, id)
+		}
+	}
+
+	w.lastUpdate = update
 }
 
 func (w *world) actorEntityById(id entity.Id) (game.ActorEntityState, error) {
@@ -268,9 +340,9 @@ func (w *world) actorEntityById(id entity.Id) (game.ActorEntityState, error) {
 	defer w.mu.RUnlock()
 	var err error
 
-	for _, e := range w.state.Entities {
-		if e.EntityId() == id {
-			switch e := e.(type) {
+	for k, e := range w.entities {
+		if k == id {
+			switch e := e.State.(type) {
 			case game.ActorEntityState:
 				return e, nil
 
@@ -289,7 +361,7 @@ type terrainCanvas struct {
 	pub EventPublisher
 }
 
-func (c terrainCanvas) Reset(slice rpg2d.TerrainMapStateSlice) {
+func (c terrainCanvas) Reset(slice worldterrain.MapStateSlice) {
 	c.pub.Emit(EV_TERRAIN_RESET, jsArray(slice))
 }
 
@@ -299,7 +371,7 @@ func (c terrainCanvas) Shift(dir canvas.TerrainShift, mags canvas.TerrainShiftMa
 	}
 }
 
-func (c terrainCanvas) DrawTile(ttype rpg2d.TerrainType, cell coord.Cell) {
+func (c terrainCanvas) DrawTile(ttype worldterrain.Type, cell coord.Cell) {
 	c.pub.Emit(EV_TERRAIN_DRAW_TILE, jsArray(string(ttype), cell))
 }
 
@@ -321,19 +393,18 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) (result js.V
 				select {
 				case resp := <-trip.Connected:
 					world := world{
-						entity: resp.InitialState.Entity,
-						state:  resp.InitialState.WorldState,
+						entity:   resp.InitialState.Entity,
+						entities: make(map[entity.Id]*quadstate.Entity, len(resp.InitialState.WorldState.Entities.Changed)),
 					}
+					world.apply(resp.InitialState.WorldState)
 
-					pub.Emit(EV_RECV_INPUT_CONN, jsArray(newInputConn(&world, resp.InputConn, pub)))
 					log.Printf("%#v", resp.InitialState)
+					log.Printf("%#v", resp.InitialState.WorldState)
+					pub.Emit(EV_RECV_INPUT_CONN, jsArray(newInputConn(&world, resp.InputConn, pub)))
 					pub.Emit(EV_RECV_INITIAL_STATE, jsArray(
 						resp.InitialState.Entity,
 						resp.InitialState.WorldState,
-						map[string]interface{}{
-							"Bounds":  resp.InitialState.WorldState.Bounds,
-							"Terrain": resp.InitialState.WorldState.TerrainMap.String(),
-						},
+						resp.InitialState.WorldState.TerrainMap,
 					))
 
 					for {
@@ -344,7 +415,14 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) (result js.V
 						}
 
 						// TODO Fix unsafe concurrent access of world.state
-						err = canvas.ApplyTerrainDiff(terrainCanvas{pub}, world.state, update)
+						var bounds coord.Bounds
+						if world.lastUpdate == nil {
+							bounds = world.initialSnapshot.Bounds
+						} else {
+							bounds = world.lastUpdate.Bounds
+						}
+
+						err = canvas.ApplyTerrainDiff(terrainCanvas{pub}, bounds, update.TerrainMapSlices)
 						if err != nil {
 							pub.Emit(EV_ERROR, jsArray(errorObj(err)))
 						}
@@ -352,7 +430,7 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) (result js.V
 						world.update(update)
 
 						for _, e := range update.Entities {
-							switch e := e.(type) {
+							switch e := e.State.(type) {
 							case game.SayEntityState:
 								err := emitChatRecvEvent(&world, e, pub)
 								if err != nil {

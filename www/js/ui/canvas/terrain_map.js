@@ -13,8 +13,8 @@ define(["app",
 
     // Constructs a new terrain map.
     //
-    // terrainMap rpg2d.TerrainMapStateSlice
-    //            http://godoc.org/github.com/ghthor/filu/rpg2d#TerrainMapStateSlice
+    // terrainMap worldterrain.MapState
+    //            http://godoc.org/github.com/ghthor/filu/rpg2d/worldterrain#MapState
     //
     // canvas     canvas dom element
     // tileSz     int

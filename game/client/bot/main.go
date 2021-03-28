@@ -3,15 +3,18 @@ package main
 import (
 	"context"
 	"flag"
+	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"time"
 
 	petname "github.com/dustinkirkland/golang-petname"
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/aodd/game/client"
 	"github.com/ghthor/filu/rpg2d/coord"
-	"golang.org/x/net/websocket"
+	"nhooyr.io/websocket"
 )
 
 const (
@@ -81,14 +84,16 @@ func connectActor(conn client.RespLoggedIn) client.RespConnected {
 }
 
 func connectBot(name, password string) Bot {
-	ws, err := websocket.Dial(url, "", origin)
+	ctx := context.Background()
+	ws, _, err := websocket.Dial(ctx, url, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// TODO move this into a configuration option
+	ws.SetReadLimit(32768 * 4)
+	wsConn := websocket.NetConn(ctx, ws, websocket.MessageBinary)
 
-	ws.PayloadType = websocket.BinaryFrame
-
-	conn := game.NewGobConn(ws)
+	conn := game.NewGobConn(wsConn)
 	loggedIn := loginActor(conn, name, password)
 	resp := connectActor(loggedIn)
 
@@ -114,7 +119,7 @@ func (b Bot) startRandomMove(ctx context.Context) {
 			}
 
 			for _, e := range diff.Entities {
-				switch e := e.(type) {
+				switch e := e.State.(type) {
 				case game.SayEntityState:
 					switch e.Msg {
 					case "stop":
