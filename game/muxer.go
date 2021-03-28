@@ -157,6 +157,7 @@ func (a *actorConn) startIO() {
 		}
 
 		var diffWriter DiffWriter
+		goto unlocked
 
 		// Wait for the initial world state
 		// and send it out to the client.
@@ -189,12 +190,12 @@ func (a *actorConn) startIO() {
 		// 4. stopIO() method has been called
 		select {
 		case sendMoveCmd <- cmd.moveCmd:
-			goto locked
+			goto unlocked
 		case sendUseCmd <- cmd.useCmd:
-			goto locked
+			goto unlocked
 		case sendChatCmd <- cmd.chatCmd:
 			cmd.chatCmd = nil
-			goto locked
+			goto unlocked
 
 		case hasStopped = <-stopReq:
 			goto exit
@@ -226,12 +227,12 @@ func (a *actorConn) startIO() {
 			goto unlocked
 
 		case sendMoveCmd <- cmd.moveCmd:
-			goto locked
+			goto unlocked
 		case sendUseCmd <- cmd.useCmd:
-			goto locked
+			goto unlocked
 		case sendChatCmd <- cmd.chatCmd:
 			cmd.chatCmd = nil
-			goto locked
+			goto unlocked
 
 		case hasStopped = <-stopReq:
 			goto exit
@@ -326,29 +327,15 @@ func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *wor
 func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- quadstate.EncodingRequest) {
 	if a.initialState == nil {
 		a.initialState = state
-		// TODO Enable encoding cachce
-		// CacheEncodingsFor([][]*quadstate.Entity{state.Removed, state.New, state.Changed, state.Unchanged}, encoder)
-
-		a.sendState <- a.initialState
-		// Only 1 world state will ever be written
-		close(a.sendState)
-		a.sendState = nil
-
-		// // TODO Enable bypassing the startIO loop and just go straight to writing
-		// a.diffWriter = a.conn.WriteWorldState(state)
+		CacheEncodingsFor([][]*quadstate.Entity{state.Removed, state.New, state.Changed, state.Unchanged}, encoder)
+		a.diffWriter = a.conn.WriteWorldState(state)
 	} else {
 		a.nextState = state
 		a.diff.FromSnapshot(a.prevState, a.nextState)
 
-		// TODO Enable encoding cache
-		// CacheEncodingsFor([][]*quadstate.Entity{a.diff.Removed, a.diff.Entities}, encoder)
-
 		if len(a.diff.Entities) > 0 || len(a.diff.Removed) > 0 || a.diff.TerrainMapSlices != nil {
-			a.sendDiff <- a.diff
-			// TODO Enable bypassing the startIO loop and just go straight to writing
-			// a.diffWriter.WriteWorldStateDiff(a.diff)
-		} else {
-			a.sendDiff <- nil
+			CacheEncodingsFor([][]*quadstate.Entity{a.diff.Removed, a.diff.Entities}, encoder)
+			a.diffWriter.WriteWorldStateDiff(a.diff)
 		}
 	}
 
