@@ -100,40 +100,48 @@ func connectBot(name, password string) Bot {
 	return Bot{
 		name,
 		resp,
+		wsConn,
 	}
 }
 
 type Bot struct {
 	Name string
 	client.RespConnected
+	ws net.Conn
 }
 
-func (b Bot) startRandomMove(ctx context.Context) {
+func (b Bot) startRandomMove(ctx context.Context, discard bool) {
 	stopCh := make(chan struct{}, 1)
 	startCh := make(chan struct{}, 1)
-	go func() {
-		for {
-			diff, err := b.NextUpdate()
-			if err != nil {
-				log.Println(b.Name, err)
-			}
+	if discard {
+		go func() {
+			io.Copy(ioutil.Discard, b.ws)
+		}()
+	} else {
+		go func() {
+			for {
+				diff, err := b.NextUpdate()
+				if err != nil {
+					log.Println(b.Name, err)
+				}
 
-			for _, e := range diff.Entities {
-				switch e := e.State.(type) {
-				case game.SayEntityState:
-					switch e.Msg {
-					case "stop":
-						stopCh <- struct{}{}
-						break
-					case "start":
-						startCh <- struct{}{}
-						break
-					default:
+				for _, e := range diff.Entities {
+					switch e := e.State.(type) {
+					case game.SayEntityState:
+						switch e.Msg {
+						case "stop":
+							stopCh <- struct{}{}
+							break
+						case "start":
+							startCh <- struct{}{}
+							break
+						default:
+						}
 					}
 				}
 			}
-		}
-	}()
+		}()
+	}
 
 	go func() {
 		next := time.Tick(2 * time.Second)
@@ -218,7 +226,7 @@ func main() {
 		bots = append(bots, b)
 
 		log.Printf("%v: %s starting movement", i, b.Name)
-		b.startRandomMove(ctx)
+		b.startRandomMove(ctx, false)
 	}
 
 	c := make(chan struct{})
