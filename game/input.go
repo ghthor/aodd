@@ -8,6 +8,7 @@ import (
 
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
+	"github.com/ghthor/filu/rpg2d/quad"
 	"github.com/ghthor/filu/sim/stime"
 )
 
@@ -93,40 +94,27 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 	}
 }
 
-func (phase inputPhaseLocker) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
+func (phase inputPhaseLocker) ApplyInputsTo(e entity.Entity, now stime.Time, changes quad.InputPhaseChanges) entity.Entity {
 	defer phase.ActorIndexLocker.RUnlock()
-	return inputPhase{phase.RLock(), phase.nextId}.ApplyInputsTo(e, now)
+	return inputPhase{phase.RLock(), phase.nextId}.ApplyInputsTo(e, now, changes)
 }
 
-func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time) []entity.Entity {
+func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time, changes quad.InputPhaseChanges) entity.Entity {
 	switch e := e.(type) {
 	case actorEntity:
-		var entities []entity.Entity
 		actor := phase.index[e.ActorId()]
 
-		entities = append(entities,
-			phase.processUseCmd(actor, now)...,
-		)
-
+		phase.processUseCmd(actor, now, changes)
 		phase.processMoveCmd(actor, now)
+		phase.processChatCmd(actor, now, changes)
 
-		entities = append(entities,
-			phase.processChatCmd(actor, now)...,
-		)
-
-		return append(entities, actor.Entity())
-
-	case sayEntity:
-		return []entity.Entity{e}
-
-	case wallEntity:
-		return []entity.Entity{e}
-
-	case entity.Removed:
-		return []entity.Entity{e}
+		return actor.Entity()
 
 	default:
-		panic(fmt.Sprint("unexpected entity type:", e))
+		// TODO Panic here after adding an InputPhase flag so only actorEntity's
+		//      are called on
+		// No Changes Made
+		return nil
 	}
 }
 
@@ -456,10 +444,10 @@ func (c actorConn) ReadUseCmd() *useCmd {
 	return <-c.readUseCmd
 }
 
-func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity {
+func (phase inputPhase) processUseCmd(a *actor, now stime.Time, changes quad.InputPhaseChanges) {
 	cmd := a.ReadUseCmd()
 	if cmd == nil {
-		return nil
+		return
 	}
 
 	// TODO Only allow when stationary
@@ -468,7 +456,7 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 	case "assail":
 		// Implement a cooldown
 		if a.lastAssail.spawnedAt+assailCooldown > now {
-			return nil
+			return
 		}
 
 		e := assailEntity{
@@ -484,8 +472,8 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 		}
 
 		a.lastAssail = e
-
-		return []entity.Entity{e}
+		changes.New(e)
+		return
 
 	case "charge":
 		// Implement a cooldown
@@ -494,7 +482,8 @@ func (phase inputPhase) processUseCmd(a *actor, now stime.Time) []entity.Entity 
 			a.lastStartedCharge = now
 		}
 	}
-	return nil
+
+	return
 }
 
 // In seconds
@@ -567,15 +556,15 @@ func (a *actor) ReadChatCmd() *chatCmd {
 	return <-a.readChatCmd
 }
 
-func (phase inputPhase) processChatCmd(a *actor, now stime.Time) []entity.Entity {
+func (phase inputPhase) processChatCmd(a *actor, now stime.Time, changes quad.InputPhaseChanges) {
 	cmd := a.ReadChatCmd()
 	if cmd == nil {
-		return nil
+		return
 	}
 
 	switch cmd.ChatRequestType {
 	case CR_SAY:
-		return []entity.Entity{sayEntity{
+		e := sayEntity{
 			id: phase.nextId(),
 
 			saidBy: a.actorEntity.Id(),
@@ -585,8 +574,11 @@ func (phase inputPhase) processChatCmd(a *actor, now stime.Time) []entity.Entity
 			flags: entity.FlagNew | entity.FlagNoCollide,
 
 			msg: cmd.msg,
-		}}
+		}
+
+		changes.New(e)
+		return
 	}
 
-	return nil
+	return
 }
