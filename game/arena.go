@@ -34,7 +34,7 @@ func (w wallEntity) ToState() entity.State {
 func (w WallEntityState) EntityId() entity.Id    { return w.Id }
 func (w WallEntityState) EntityCell() coord.Cell { return w.Cell }
 
-func addWalls(quad quad.Quad, nextId func() entity.Id) quad.Quad {
+func addWalls(quad quad.QuadRoot, nextId func() entity.Id) quad.QuadRoot {
 	//return quad
 	c := func(x, y int) coord.Cell { return coord.Cell{x, y} }
 	newWall := func(c coord.Cell) {

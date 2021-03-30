@@ -396,10 +396,11 @@ func DescribeActorGobConn(c gospec.Context) {
 				)
 
 				c.Specify("followed by world state diffs", withStopServer(func() {
-					diff := worldState.Cull(coord.Bounds{
+					diff := worldstate.NewUpdate(0)
+					diff.FromSnapshot(newSnapshot(coord.Bounds{
 						coord.Cell{-2, 2},
 						coord.Cell{2, -2},
-					}).Diff(worldState.Cull(coord.Bounds{
+					}), newSnapshot(coord.Bounds{
 						coord.Cell{-3, 3},
 						coord.Cell{1, -1},
 					}))

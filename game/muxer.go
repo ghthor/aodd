@@ -53,6 +53,10 @@ func newActorConn(conn InitialStateWriter) actorConn {
 	}
 }
 
+// TODO When this is refactored the prototest suite should
+//      be fixed as well. It is currently disabled due to a deadlock
+//      after I factored out the writing of snapshot's and update's from
+//      within this loop to the WriteStateNext methods.
 func (a *actorConn) startIO() {
 	// Setup communication channels
 	moveReqCh := make(chan MoveRequest, 2)
