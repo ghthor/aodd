@@ -49,25 +49,26 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 	index[0].applyPathAction(&pa0)
 	index[1].applyPathAction(&pa1)
 
+	cg := func(a, b rpg2d.ActorId) *quad.CollisionGroup {
+		cg := quad.NewCollisionGroup(1)
+		cg.AddCollision(index[a].Entity(), index[b].Entity())
+		c.Assume(len(cg.Entities), Equals, 2)
+		c.Assume(len(cg.CollisionsById), Equals, 1)
+		return cg
+	}
+
 	phase := newNarrowPhase(index)
 	testCases := []struct {
 		spec string
-		cgrp quad.CollisionGroup
-	}{{
-		"AB", quad.CollisionGroup{}.AddCollision(quad.Collision{
-			index[0].Entity(),
-			index[1].Entity(),
-		}),
-	}, {
-		"BA", quad.CollisionGroup{}.AddCollision(quad.Collision{
-			index[1].Entity(),
-			index[0].Entity(),
-		}),
-	}}
+		cgrp *quad.CollisionGroup
+	}{
+		{"AB", cg(0, 1)},
+		{"BA", cg(1, 0)},
+	}
 
 	for _, testCase := range testCases {
 		c.Specify(testCase.spec, func() {
-			stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+			stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
 			c.Assume(len(stillExisting), Equals, 2)
 			c.Assume(len(removed), Equals, 0)
 
@@ -114,26 +115,25 @@ func (t spec_1move_1stand) runSpec(c gospec.Context) {
 
 	index[0].applyPathAction(&t.path)
 
+	cg := func(a, b rpg2d.ActorId) *quad.CollisionGroup {
+		cg := quad.NewCollisionGroup(1)
+		cg.AddCollision(index[a].Entity(), index[b].Entity())
+		return cg
+	}
+
 	phase := newNarrowPhase(index)
 	testCases := []struct {
 		spec string
-		cgrp quad.CollisionGroup
-	}{{
-		"AB", quad.CollisionGroup{}.AddCollision(quad.Collision{
-			index[0].Entity(),
-			index[1].Entity(),
-		}),
-	}, {
-		"BA", quad.CollisionGroup{}.AddCollision(quad.Collision{
-			index[1].Entity(),
-			index[0].Entity(),
-		}),
-	}}
+		cgrp *quad.CollisionGroup
+	}{
+		{"AB", cg(0, 1)},
+		{"BA", cg(1, 0)},
+	}
 
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
 				c.Assume(len(stillExisting), Equals, 2)
 				c.Assume(len(removed), Equals, 0)
 
@@ -209,52 +209,61 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	index[0].applyPathAction(&t.paths[0])
 	index[1].applyPathAction(&t.paths[1])
 
+	checkSetup := func(cg *quad.CollisionGroup) {
+		c.Assume(len(cg.Entities), Equals, 3)
+		c.Assume(len(cg.CollisionsById), Equals, 2)
+	}
+
 	var A, B, C rpg2d.ActorId = 0, 1, 2
 
-	ABBC := quad.CollisionGroup{}
-	ABBC = ABBC.AddCollision(quad.Collision{
+	ABBC := quad.NewCollisionGroup(2)
+	ABBC.AddCollision(
 		index[A].Entity(),
 		index[B].Entity(),
-	})
-	ABBC = ABBC.AddCollision(quad.Collision{
+	)
+	ABBC.AddCollision(
 		index[B].Entity(),
 		index[C].Entity(),
-	})
+	)
+	checkSetup(ABBC)
 
-	ABCB := quad.CollisionGroup{}
-	ABCB = ABCB.AddCollision(quad.Collision{
+	ABCB := quad.NewCollisionGroup(2)
+	ABCB.AddCollision(
 		index[A].Entity(),
 		index[B].Entity(),
-	})
-	ABCB = ABCB.AddCollision(quad.Collision{
+	)
+	ABCB.AddCollision(
 		index[C].Entity(),
 		index[B].Entity(),
-	})
+	)
+	checkSetup(ABCB)
 
-	CBAB := quad.CollisionGroup{}
-	CBAB = CBAB.AddCollision(quad.Collision{
+	CBAB := quad.NewCollisionGroup(2)
+	CBAB.AddCollision(
 		index[C].Entity(),
 		index[B].Entity(),
-	})
-	CBAB = CBAB.AddCollision(quad.Collision{
+	)
+	CBAB.AddCollision(
 		index[A].Entity(),
 		index[B].Entity(),
-	})
+	)
+	checkSetup(CBAB)
 
-	CBBA := quad.CollisionGroup{}
-	CBBA = CBAB.AddCollision(quad.Collision{
+	CBBA := quad.NewCollisionGroup(2)
+	CBBA.AddCollision(
 		index[C].Entity(),
 		index[B].Entity(),
-	})
-	CBBA = CBAB.AddCollision(quad.Collision{
+	)
+	CBBA.AddCollision(
 		index[B].Entity(),
 		index[A].Entity(),
-	})
+	)
+	checkSetup(CBBA)
 
 	phase := newNarrowPhase(index)
 	testCases := []struct {
 		spec string
-		cgrp quad.CollisionGroup
+		cgrp *quad.CollisionGroup
 	}{{
 		"[0,1],[1,2]", ABBC,
 	}, {
@@ -268,7 +277,7 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
 				c.Assume(len(stillExisting), Equals, 3)
 				c.Assume(len(removed), Equals, 0)
 
@@ -326,50 +335,59 @@ func (t spec_3move) runSpec(c gospec.Context) {
 
 	var A, B, C rpg2d.ActorId = 0, 1, 2
 
-	ABBC := quad.CollisionGroup{}
-	ABBC = ABBC.AddCollision(quad.Collision{
-		index[A].Entity(),
-		index[B].Entity(),
-	})
-	ABBC = ABBC.AddCollision(quad.Collision{
-		index[B].Entity(),
-		index[C].Entity(),
-	})
+	checkSetup := func(cg *quad.CollisionGroup) {
+		c.Assume(len(cg.Entities), Equals, 3)
+		c.Assume(len(cg.CollisionsById), Equals, 2)
+	}
 
-	ABCB := quad.CollisionGroup{}
-	ABCB = ABCB.AddCollision(quad.Collision{
+	ABBC := quad.NewCollisionGroup(2)
+	ABBC.AddCollision(
 		index[A].Entity(),
 		index[B].Entity(),
-	})
-	ABCB = ABCB.AddCollision(quad.Collision{
-		index[C].Entity(),
+	)
+	ABBC.AddCollision(
 		index[B].Entity(),
-	})
+		index[C].Entity(),
+	)
+	checkSetup(ABBC)
 
-	CBAB := quad.CollisionGroup{}
-	CBAB = CBAB.AddCollision(quad.Collision{
-		index[C].Entity(),
-		index[B].Entity(),
-	})
-	CBAB = CBAB.AddCollision(quad.Collision{
+	ABCB := quad.NewCollisionGroup(2)
+	ABCB.AddCollision(
 		index[A].Entity(),
 		index[B].Entity(),
-	})
+	)
+	ABCB.AddCollision(
+		index[C].Entity(),
+		index[B].Entity(),
+	)
+	checkSetup(ABCB)
 
-	CBBA := quad.CollisionGroup{}
-	CBBA = CBAB.AddCollision(quad.Collision{
+	CBAB := quad.NewCollisionGroup(2)
+	CBAB.AddCollision(
 		index[C].Entity(),
 		index[B].Entity(),
-	})
-	CBBA = CBAB.AddCollision(quad.Collision{
+	)
+	CBAB.AddCollision(
+		index[A].Entity(),
+		index[B].Entity(),
+	)
+	checkSetup(CBAB)
+
+	CBBA := quad.NewCollisionGroup(2)
+	CBBA.AddCollision(
+		index[C].Entity(),
+		index[B].Entity(),
+	)
+	CBBA.AddCollision(
 		index[B].Entity(),
 		index[A].Entity(),
-	})
+	)
+	checkSetup(CBBA)
 
 	phase := newNarrowPhase(index)
 	testCases := []struct {
 		spec string
-		cgrp quad.CollisionGroup
+		cgrp *quad.CollisionGroup
 	}{{
 		"[0,1],[1,2]", ABBC,
 	}, {
@@ -383,7 +401,7 @@ func (t spec_3move) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
 				c.Assume(len(stillExisting), Equals, 3)
 				c.Assume(len(removed), Equals, 0)
 
@@ -403,7 +421,7 @@ type spec_allMoving struct {
 
 type testCase struct {
 	spec string
-	cgrp quad.CollisionGroup
+	cgrp *quad.CollisionGroup
 }
 
 func findCollisions(index ActorIndex) []quad.Collision {
@@ -419,7 +437,7 @@ func findCollisions(index ActorIndex) []quad.Collision {
 			}
 
 			if a1.Bounds().Overlaps(a2.Bounds()) {
-				collisions = append(collisions, quad.Collision{a1.Entity(), a2.Entity()})
+				collisions = append(collisions, quad.NewCollision(a1.Entity(), a2.Entity()))
 			}
 		}
 	}
@@ -434,20 +452,21 @@ func generateCases(index ActorIndex) []testCase {
 	// Assume that each index is only colliding with the
 	// one in front of it and behind it.
 	var spec string
-	cg := quad.CollisionGroup{}
-
 	collisions := findCollisions(index)
+	cg := quad.NewCollisionGroup(len(collisions))
 
 	for _, c := range collisions {
-		cg = cg.AddCollision(c)
+		cg.AddCollision(c.A, c.B)
 	}
 
-	for i, c := range cg.Collisions {
+	i := 0
+	for _, c := range cg.CollisionsById {
 		if i == 0 {
 			spec = fmt.Sprintf("[%d, %d]", c.A.Id(), c.B.Id())
 		} else {
 			spec = fmt.Sprintf("%s,[%d, %d]", spec, c.A.Id(), c.B.Id())
 		}
+		i++
 	}
 
 	testCases = append(testCases, testCase{spec, cg})
@@ -478,7 +497,7 @@ func (t spec_allMoving) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(&testCase.cgrp, 0)
+				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
 				c.Assume(len(stillExisting), Equals, len(t.paths))
 				c.Assume(len(removed), Equals, 0)
 

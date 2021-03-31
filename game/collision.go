@@ -19,7 +19,7 @@ type narrowPhase struct {
 	actorIndex ActorIndex
 
 	// Reset at the beginning of every ResolveCollisions call
-	solved []quad.Collision
+	solved map[quad.CollisionId]quad.Collision
 	// Generated at the beginning of every ResolveCollisions call
 	collisionIndex quad.CollisionIndex
 }
@@ -29,20 +29,15 @@ func newNarrowPhaseLocker(actorMap *ActorIndexLocker) narrowPhaseLocker {
 }
 
 func newNarrowPhase(actorIndex ActorIndex) narrowPhase {
-	return narrowPhase{actorIndex, make([]quad.Collision, 0, 10), nil}
+	return narrowPhase{actorIndex, make(quad.CollisionById, 10), nil}
 }
 
 // Returns if the collision exists in the
 // slice of collisions that have been
 // solved during this narrow phase tick.
 func (phase narrowPhase) hasSolved(c quad.Collision) bool {
-	for _, solved := range phase.solved {
-		if c.IsSameAs(solved) {
-			return true
-		}
-	}
-
-	return false
+	_, exists := phase.solved[c.CollisionId]
+	return exists
 }
 
 func (phase narrowPhaseLocker) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
@@ -53,7 +48,9 @@ func (phase narrowPhaseLocker) ResolveCollisions(cg *quad.CollisionGroup, now st
 // Implementation of the quad.NarrowPhaseHandler interface.
 func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
 	// Reset the resolved slice
-	phase.solved = phase.solved[:0]
+	for k := range phase.solved {
+		delete(phase.solved, k)
+	}
 
 	// Generate a collision index for the collision group
 	phase.collisionIndex = cg.CollisionIndex()
@@ -69,7 +66,7 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 		return s
 	}
 
-	for _, c := range cg.Collisions {
+	for _, c := range cg.CollisionsById {
 		if phase.hasSolved(c) {
 			continue
 		}
@@ -286,7 +283,7 @@ func (phase *narrowPhase) solveActorActor(solver *solverActorActor, a, b *actor,
 	// When this functions returns the
 	// collision will have been solved
 	defer func() {
-		phase.solved = append(phase.solved, collision)
+		phase.solved[collision.CollisionId] = collision
 	}()
 
 	var entities []entity.Entity
