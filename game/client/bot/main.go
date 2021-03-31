@@ -113,6 +113,7 @@ type Bot struct {
 func (b Bot) startRandomMove(ctx context.Context, discard bool) {
 	stopCh := make(chan struct{}, 1)
 	startCh := make(chan struct{}, 1)
+	attackCh := make(chan bool, 1)
 	if discard {
 		go func() {
 			io.Copy(ioutil.Discard, b.ws)
@@ -135,6 +136,10 @@ func (b Bot) startRandomMove(ctx context.Context, discard bool) {
 						case "start":
 							startCh <- struct{}{}
 							break
+						case "start attack":
+							attackCh <- true
+						case "stop attack":
+							attackCh <- false
 						default:
 						}
 					}
@@ -171,6 +176,12 @@ func (b Bot) startRandomMove(ctx context.Context, discard bool) {
 					b.SendChatRequest(game.ChatRequest{game.CR_SAY, 0, "start"})
 				}
 				running = true
+			case start := <-attackCh:
+				if start {
+					b.SendUseRequest(game.UseRequest{game.UR_USE, 0, "assail"})
+				} else {
+					b.SendUseRequest(game.UseRequest{game.UR_USE_CANCEL, 0, "assail"})
+				}
 			case <-next:
 				continue
 			}
