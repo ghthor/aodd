@@ -60,7 +60,7 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 			actor.speed = baseSpeed
 		}
 
-		return actor.Entity()
+		return actor.actorEntity
 
 	case assailEntity:
 		// TODO Fix assail entities never being sent to the server
@@ -108,7 +108,7 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time, changes q
 		phase.processMoveCmd(actor, now)
 		phase.processChatCmd(actor, now, changes)
 
-		return actor.Entity()
+		return actor.actorEntity
 
 	default:
 		// TODO Panic here after adding an InputPhase flag so only actorEntity's

@@ -23,7 +23,8 @@ type narrowPhase struct {
 	// Reset at the beginning of every ResolveCollisions call
 	solved map[quad.CollisionId]quad.Collision
 	// Generated at the beginning of every ResolveCollisions call
-	collisionIndex quad.CollisionIndex
+	collisionIndex         quad.CollisionIndex
+	collisionIndexPrealloc [][]quad.Collision
 
 	updates      map[entity.Id]entity.Entity
 	updatesSlice []entity.Entity
@@ -42,6 +43,7 @@ func newNarrowPhase(actorIndex ActorIndex) *narrowPhase {
 		actorIndex,
 		make(quad.CollisionById, 10),
 		nil,
+		make([][]quad.Collision, 0, 1),
 		make(map[entity.Id]entity.Entity, 1),
 		make([]entity.Entity, 0, 1),
 	}
@@ -87,7 +89,14 @@ func (phase *narrowPhase) resolveCollisions(cg *quad.CollisionGroup, now stime.T
 	}
 
 	// Generate a collision index for the collision group
-	phase.collisionIndex = cg.CollisionIndex()
+	phase.collisionIndex, phase.collisionIndexPrealloc =
+		cg.FillIndex(phase.collisionIndexPrealloc)
+	defer func() {
+		for _, a := range phase.collisionIndex {
+			phase.collisionIndexPrealloc =
+				append(phase.collisionIndexPrealloc, a[:0])
+		}
+	}()
 
 	for _, c := range cg.CollisionsById {
 		if phase.hasSolved(c) {
@@ -439,13 +448,13 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 	// If the next node only has one collision
 	// then there are no dependencies and the
 	// collision can be solved
-	if len(phase.collisionIndex[node.entity]) == 1 {
+	if len(phase.collisionIndex[node.entity.Id()]) == 1 {
 		return errNoDependencies
 	}
 
 	// Walk through the directed graph of collisions and solve
 	// all the collisions that the collision depends on.
-	for _, c := range phase.collisionIndex[node.entity] {
+	for _, c := range phase.collisionIndex[node.entity.Id()] {
 		// Ignore the collision that caused us to recurse
 		if c.IsSameAs(collision) {
 			continue
