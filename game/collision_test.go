@@ -68,9 +68,8 @@ func (t spec_2moving) runSpec(c gospec.Context) {
 
 	for _, testCase := range testCases {
 		c.Specify(testCase.spec, func() {
-			stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
-			c.Assume(len(stillExisting), Equals, 2)
-			c.Assume(len(removed), Equals, 0)
+			result := phase.ResolveCollisions([]*quad.CollisionGroup{testCase.cgrp}, 0)
+			c.Assume(len(result.Updated()), Equals, 2)
 
 			t.expectations(t, index, c)
 		})
@@ -133,9 +132,8 @@ func (t spec_1move_1stand) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
-				c.Assume(len(stillExisting), Equals, 2)
-				c.Assume(len(removed), Equals, 0)
+				result := phase.ResolveCollisions([]*quad.CollisionGroup{testCase.cgrp}, 0)
+				c.Assume(len(result.Updated()), Equals, 2)
 
 				t.expectations(t, index, c)
 			})
@@ -277,9 +275,8 @@ func (t spec_2move_1stand) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
-				c.Assume(len(stillExisting), Equals, 3)
-				c.Assume(len(removed), Equals, 0)
+				result := phase.ResolveCollisions([]*quad.CollisionGroup{testCase.cgrp}, 0)
+				c.Assume(len(result.Updated()), Equals, 3)
 
 				t.expectations(t, index, c)
 			})
@@ -401,9 +398,8 @@ func (t spec_3move) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
-				c.Assume(len(stillExisting), Equals, 3)
-				c.Assume(len(removed), Equals, 0)
+				result := phase.ResolveCollisions([]*quad.CollisionGroup{testCase.cgrp}, 0)
+				c.Assume(len(result.Updated()), Equals, 3)
 
 				t.expectations(t, index, c)
 			})
@@ -497,9 +493,8 @@ func (t spec_allMoving) runSpec(c gospec.Context) {
 	c.Specify(t.spec, func() {
 		for _, testCase := range testCases {
 			c.Specify(testCase.spec, func() {
-				stillExisting, removed := phase.ResolveCollisions(testCase.cgrp, 0)
-				c.Assume(len(stillExisting), Equals, len(t.paths))
-				c.Assume(len(removed), Equals, 0)
+				result := phase.ResolveCollisions([]*quad.CollisionGroup{testCase.cgrp}, 0)
+				c.Assume(len(result.Updated()), Equals, len(t.paths))
 
 				t.expectations(t, index, c)
 			})

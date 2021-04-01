@@ -13,6 +13,8 @@ import (
 
 type narrowPhaseLocker struct {
 	*ActorIndexLocker
+
+	*narrowPhase
 }
 
 type narrowPhase struct {
@@ -22,31 +24,63 @@ type narrowPhase struct {
 	solved map[quad.CollisionId]quad.Collision
 	// Generated at the beginning of every ResolveCollisions call
 	collisionIndex quad.CollisionIndex
+
+	updates      map[entity.Id]entity.Entity
+	updatesSlice []entity.Entity
 }
+
+var _ quad.NarrowPhaseHandler = narrowPhaseLocker{}
+var _ quad.NarrowPhaseHandler = &narrowPhase{}
+var _ quad.NarrowPhaseChanges = &narrowPhase{}
 
 func newNarrowPhaseLocker(actorMap *ActorIndexLocker) narrowPhaseLocker {
-	return narrowPhaseLocker{actorMap}
+	return narrowPhaseLocker{actorMap, newNarrowPhase(nil)}
 }
 
-func newNarrowPhase(actorIndex ActorIndex) narrowPhase {
-	return narrowPhase{actorIndex, make(quad.CollisionById, 10), nil}
+func newNarrowPhase(actorIndex ActorIndex) *narrowPhase {
+	return &narrowPhase{
+		actorIndex,
+		make(quad.CollisionById, 10),
+		nil,
+		make(map[entity.Id]entity.Entity, 1),
+		make([]entity.Entity, 0, 1),
+	}
 }
 
-// Returns if the collision exists in the
-// slice of collisions that have been
-// solved during this narrow phase tick.
+// Returns if the collision exists in the slice of collisions that have been solved during this narrow phase tick.
 func (phase narrowPhase) hasSolved(c quad.Collision) bool {
 	_, exists := phase.solved[c.CollisionId]
 	return exists
 }
 
-func (phase narrowPhaseLocker) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
-	defer phase.ActorIndexLocker.RUnlock()
-	return newNarrowPhase(phase.ActorIndexLocker.RLock()).ResolveCollisions(cg, now)
+func (phase *narrowPhase) Updated() []entity.Entity {
+	phase.updatesSlice = phase.updatesSlice[:0]
+	for _, e := range phase.updates {
+		phase.updatesSlice = append(phase.updatesSlice, e)
+	}
+
+	for k := range phase.updates {
+		delete(phase.updates, k)
+	}
+
+	return phase.updatesSlice
 }
 
-// Implementation of the quad.NarrowPhaseHandler interface.
-func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Time) ([]entity.Entity, []entity.Entity) {
+func (phase narrowPhaseLocker) ResolveCollisions(cgrps []*quad.CollisionGroup, now stime.Time) quad.NarrowPhaseChanges {
+	defer phase.ActorIndexLocker.RUnlock()
+	phase.narrowPhase.actorIndex = phase.ActorIndexLocker.RLock()
+	return phase.narrowPhase.ResolveCollisions(cgrps, now)
+}
+
+func (phase *narrowPhase) ResolveCollisions(cgrps []*quad.CollisionGroup, now stime.Time) quad.NarrowPhaseChanges {
+	for _, g := range cgrps {
+		phase.resolveCollisions(g, now)
+	}
+
+	return phase
+}
+
+func (phase *narrowPhase) resolveCollisions(cg *quad.CollisionGroup, now stime.Time) quad.NarrowPhaseChanges {
 	// Reset the resolved slice
 	for k := range phase.solved {
 		delete(phase.solved, k)
@@ -55,72 +89,51 @@ func (phase narrowPhase) ResolveCollisions(cg *quad.CollisionGroup, now stime.Ti
 	// Generate a collision index for the collision group
 	phase.collisionIndex = cg.CollisionIndex()
 
-	// A map to store entities that still remain in the world
-	remaining := make(map[entity.Id]entity.Entity, len(cg.Entities))
-	remainingSlice := func() []entity.Entity {
-		// Build a slice from the `remaining` map
-		s := make([]entity.Entity, 0, len(remaining))
-		for _, e := range remaining {
-			s = append(s, e)
-		}
-		return s
-	}
-
 	for _, c := range cg.CollisionsById {
 		if phase.hasSolved(c) {
 			continue
 		}
 
-		var entities []entity.Entity
-
 		// Resolve type of entity in collision.A
 		switch e := c.A.(type) {
 		case actorEntity:
 			// Resolve the type of entity in collision.B
-			entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c, now)
+			phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.B, c, now)
 		default:
 			switch e := c.B.(type) {
 			case actorEntity:
 				// Resolve the type of entity in collision.B
-				entities = phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.A, c, now)
+				phase.resolveActorEntity(phase.actorIndex[e.ActorId()], c.A, c, now)
 			}
-		}
-
-		// As collisions are solved they return entities
-		// that have been created or modified and we store
-		// them in a map by their Id. Multiple collisions
-		// may modify and entity, therefor we only will
-		// one version of the entity back to engine when
-		// we return.
-		for _, e := range entities {
-			remaining[e.Id()] = e
 		}
 	}
 
-	return remainingSlice(), nil
+	return phase
 }
 
-func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision, now stime.Time) []entity.Entity {
+func (phase *narrowPhase) resolveActorEntity(a *actor, with entity.Entity, collision quad.Collision, now stime.Time) {
 	switch e := with.(type) {
 	case actorEntity:
 		b := phase.actorIndex[e.ActorId()]
 
-		return phase.solveActorActor(&solverActorActor{}, a, b, collision)
+		// TODO there should be a solverActorActor freelist
+		//      Likely a lot of small allocations happening becuase of this
+		phase.solveActorActor(&solverActorActor{}, a, b, collision)
 	case assailEntity:
-		return phase.solveActorAssail(a, e, collision, now)
+		phase.solveActorAssail(a, e, collision, now)
 
 	case wallEntity:
 		a.revertMoveAction()
-		return []entity.Entity{a.Entity(), e}
+		phase.updates[a.actorEntity.id] = a.actorEntity
+		phase.updates[e.id] = e
 	}
-
-	return nil
 }
 
-func (phase *narrowPhase) solveActorAssail(a *actor, assail assailEntity, collision quad.Collision, now stime.Time) []entity.Entity {
+func (phase *narrowPhase) solveActorAssail(a *actor, assail assailEntity, collision quad.Collision, now stime.Time) {
 	// Don't damage yourself
 	if assail.spawnedBy == a.actorEntity.Id() {
-		return []entity.Entity{a.Entity()}
+		phase.updates[a.actorEntity.id] = a.actorEntity
+		return
 	}
 
 	var percentDamage float64
@@ -147,7 +160,7 @@ func (phase *narrowPhase) solveActorAssail(a *actor, assail assailEntity, collis
 		a.actorEntity.pathAction = nil
 	}
 
-	return []entity.Entity{a.Entity()}
+	phase.updates[a.actorEntity.id] = a.actorEntity
 }
 
 func newActorActorCollision(a, b *actor) (*actor, *actor, coord.Collision) {
@@ -278,15 +291,13 @@ func (s solverActorActor) hasVisited(actor *actor) bool {
 	return false
 }
 
-func (phase *narrowPhase) solveActorActor(solver *solverActorActor, a, b *actor, collision quad.Collision) []entity.Entity {
+func (phase *narrowPhase) solveActorActor(solver *solverActorActor, a, b *actor, collision quad.Collision) {
 
 	// When this functions returns the
 	// collision will have been solved
 	defer func() {
 		phase.solved[collision.CollisionId] = collision
 	}()
-
-	var entities []entity.Entity
 
 attemptSolve:
 	a, b, coordCollision := newActorActorCollision(a, b)
@@ -304,14 +315,10 @@ attemptSolve:
 		// have a collision that when solved will
 		// render them motionless, thus we would become
 		// motionless as well.
-		e, err := phase.solveDependencies(solver, a, b, collision)
+		err := phase.solveDependencies(solver, a, b, collision)
 
 		switch err {
 		case nil:
-			if len(e) > 0 {
-				entities = append(entities, e...)
-			}
-
 			// Try solving again
 			goto attemptSolve
 
@@ -344,14 +351,10 @@ attemptSolve:
 		// have a collision that when solved will
 		// render them motionless, thus we would become
 		// motionless as well.
-		e, err := phase.solveDependencies(solver, a, b, collision)
+		err := phase.solveDependencies(solver, a, b, collision)
 
 		switch err {
 		case nil:
-			if len(e) > 0 {
-				entities = append(entities, e...)
-			}
-
 			// Try solving again
 			goto attemptSolve
 
@@ -415,14 +418,15 @@ attemptSolve:
 	}
 
 resolved:
-	return append(entities, a.Entity(), b.Entity())
+	phase.updates[a.actorEntity.id] = a.actorEntity
+	phase.updates[b.actorEntity.id] = b.actorEntity
 }
 
 var errNoDependencies = errors.New("no dependencies")
 var errCycleDetected = errors.New("cycle detected")
 
 // Error can be errNoDependencies, errCycleDetected or nil
-func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *actor, collision quad.Collision) ([]entity.Entity, error) {
+func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *actor, collision quad.Collision) error {
 	node := followGraph(a, b, collision)
 
 	// Mark what actors have been visited
@@ -436,7 +440,7 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 	// then there are no dependencies and the
 	// collision can be solved
 	if len(phase.collisionIndex[node.entity]) == 1 {
-		return nil, errNoDependencies
+		return errNoDependencies
 	}
 
 	// Walk through the directed graph of collisions and solve
@@ -460,13 +464,14 @@ func (phase *narrowPhase) solveDependencies(solver *solverActorActor, a, b *acto
 
 			// Detect cycles
 			if solver.hasVisited(actor) {
-				return nil, errCycleDetected
+				return errCycleDetected
 			}
 
 			// Recurse
-			return phase.solveActorActor(solver, node.actor, actor, c), nil
+			phase.solveActorActor(solver, node.actor, actor, c)
+			return nil
 		}
 	}
 
-	return nil, errNoDependencies
+	return errNoDependencies
 }
