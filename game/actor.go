@@ -92,7 +92,7 @@ func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWri
 
 			name: dsactor.Name,
 
-			cell:   origin,
+			cell:   arenaRandom(),
 			facing: dsactor.Facing,
 			speed:  baseSpeed,
 

@@ -1,6 +1,9 @@
 package game
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
 	"github.com/ghthor/filu/rpg2d/quad"
@@ -66,25 +69,41 @@ func addWalls(quad quad.QuadRoot, nextId func() entity.Id) quad.QuadRoot {
 	}
 
 	// Inner Wall
-	// {c(45, -45), c(84, -45)}
-	for x := 45; x < 85; x++ {
-		newWall(c(x, -45))
-	}
+	// // {c(45, -45), c(84, -45)}
+	// for x := 45; x < 85; x++ {
+	// 	newWall(c(x, -45))
+	// }
 
-	// {c(85, -45), c(85, -84)}
-	for y := -45; y > -85; y-- {
-		newWall(c(85, y))
-	}
+	// // {c(85, -45), c(85, -84)}
+	// for y := -45; y > -85; y-- {
+	// 	newWall(c(85, y))
+	// }
 
-	// {c(46, -85), c(85, -85)}
-	for x := 46; x <= 85; x++ {
-		newWall(c(x, -85))
-	}
+	// // {c(46, -85), c(85, -85)}
+	// for x := 46; x <= 85; x++ {
+	// 	newWall(c(x, -85))
+	// }
 
-	// {c(45, -46), c(45, -85)}
-	for y := -46; y >= -85; y-- {
-		newWall(c(45, y))
-	}
+	// // {c(45, -46), c(45, -85)}
+	// for y := -46; y >= -85; y-- {
+	// 	newWall(c(45, y))
+	// }
 
 	return quad
+}
+
+var innerWall = coord.Bounds{
+	coord.Cell{45, -45},
+	coord.Cell{85, -85},
+}
+
+var outerWall = coord.Bounds{
+	coord.Cell{30, -30},
+	coord.Cell{100, -100},
+}
+
+var seedNow = rand.New(rand.NewSource(time.Now().Unix()))
+
+func arenaRandom() coord.Cell {
+	return outerWall.RandInnerCell(seedNow)
 }
