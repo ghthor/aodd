@@ -59,7 +59,6 @@ type simulation struct {
 func (s simulation) ConnectActor(a rpg2d.Actor) {
 	switch a := a.(type) {
 	case *actor:
-		a.startIO()
 		actorIndex := s.ActorIndexLocker.Lock()
 		actorIndex[a.Id()] = a
 		s.ActorIndexLocker.Unlock(actorIndex)
@@ -76,7 +75,6 @@ func (s simulation) RemoveActor(a rpg2d.Actor) {
 
 	switch a := a.(type) {
 	case *actor:
-		a.stopIO()
 		actorIndex := s.ActorIndexLocker.Lock()
 		delete(actorIndex, a.Id())
 		s.ActorIndexLocker.Unlock(actorIndex)

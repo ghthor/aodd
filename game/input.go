@@ -3,8 +3,6 @@ package game
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
@@ -104,9 +102,11 @@ func (phase inputPhase) ApplyInputsTo(e entity.Entity, now stime.Time, changes q
 	case actorEntity:
 		actor := phase.index[e.ActorId()]
 
-		phase.processUseCmd(actor, now, changes)
-		phase.processMoveCmd(actor, now)
-		phase.processChatCmd(actor, now, changes)
+		state := <-actor.inputState
+		phase.processUseCmd(actor, state, now, changes)
+		phase.processMoveCmd(actor, state, now)
+		state = phase.processChatCmd(actor, state, now, changes)
+		actor.inputState <- state
 
 		return actor.actorEntity
 
@@ -217,93 +217,52 @@ func newChatRequest(t ChatRequestType, timeIssued stime.Time, params string) (Ch
 	}, nil
 }
 
-// If the cmd and params are a valid combination
-// a request will be made and passed into the
-// IO muxer. SubmitCmd() will return an error
-// if the submitted cmd and params are invalid.
-func (c actorConn) SubmitCmd(cmd, params string) error {
-	parts := strings.Split(cmd, "=")
-
-	if len(parts) != 2 {
-		return errors.New("invalid command syntax")
-	}
-
-	timeIssued, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		return err
-	}
-
-	switch parts[0] {
-	case "move":
-		r, err := newMoveRequest(MR_MOVE, stime.Time(timeIssued), params)
-		if err != nil {
-			return err
-		}
-
-		c.submitMoveRequest <- r
-
-	case "moveCancel":
-		r, err := newMoveRequest(MR_MOVE_CANCEL, stime.Time(timeIssued), params)
-		if err != nil {
-			return err
-		}
-
-		c.submitMoveRequest <- r
-
-	case "use":
-		r, err := newUseRequest(UR_USE, stime.Time(timeIssued), params)
-		if err != nil {
-			return err
-		}
-
-		c.submitUseRequest <- r
-
-	case "useCancel":
-		r, err := newUseRequest(UR_USE_CANCEL, stime.Time(timeIssued), params)
-		if err != nil {
-			return err
-		}
-
-		c.submitUseRequest <- r
-
-	case "say":
-		r, err := newChatRequest(CR_SAY, stime.Time(timeIssued), params)
-		if err != nil {
-			return err
-		}
-
-		c.submitChatRequest <- r
-
-	default:
-		return fmt.Errorf("unknown command: %s", parts[0])
-	}
-
-	return nil
-}
-
 func (c actorConn) SubmitMoveRequest(r MoveRequest) {
-	select {
-	case c.submitMoveRequest <- r:
-	default:
+	state := <-c.inputState
+	switch r.MoveRequestType {
+	case MR_MOVE:
+		state.moveCmd = &moveCmd{
+			Time:      r.Time,
+			Direction: r.Direction,
+		}
+	case MR_MOVE_CANCEL:
+		if state.moveCmd != nil {
+			if state.moveCmd.Direction == r.Direction {
+				state.moveCmd = nil
+			}
+		}
 	}
+	c.inputState <- state
 }
 
 func (c actorConn) SubmitUseRequest(r UseRequest) {
-	select {
-	case c.submitUseRequest <- r:
-	default:
+	state := <-c.inputState
+	switch r.UseRequestType {
+	case UR_USE:
+		state.useCmd = &useCmd{
+			Time:  r.Time,
+			skill: r.Skill,
+		}
+
+	case UR_USE_CANCEL:
+		if state.useCmd != nil {
+			if state.useCmd.skill == r.Skill {
+				state.useCmd = nil
+			}
+		}
 	}
+	c.inputState <- state
 }
 
 func (c actorConn) SubmitChatRequest(r ChatRequest) {
-	select {
-	case c.submitChatRequest <- r:
-	default:
+	state := <-c.inputState
+	chatCmd := chatCmd{
+		ChatRequestType: r.ChatRequestType,
+		Time:            r.Time,
+		msg:             r.Msg,
 	}
-}
-
-func (c actorConn) ReadMoveCmd() *moveCmd {
-	return <-c.readMoveCmd
+	state.chatCmd = &chatCmd
+	c.inputState <- state
 }
 
 func (a *actor) applyPathAction(pa *coord.PathAction) {
@@ -344,8 +303,8 @@ func (a *actor) revertMoveAction() {
 	}
 }
 
-func (phase inputPhase) processMoveCmd(a *actor, now stime.Time) {
-	cmd := a.ReadMoveCmd()
+func (phase inputPhase) processMoveCmd(a *actor, state actorInputState, now stime.Time) {
+	cmd := state.moveCmd
 	if cmd == nil {
 		// The client has canceled all move requests
 		return
@@ -440,12 +399,8 @@ func (e AssailEntityState) IsDifferentFrom(entity.State) bool {
 	return true
 }
 
-func (c actorConn) ReadUseCmd() *useCmd {
-	return <-c.readUseCmd
-}
-
-func (phase inputPhase) processUseCmd(a *actor, now stime.Time, changes quad.InputPhaseChanges) {
-	cmd := a.ReadUseCmd()
+func (phase inputPhase) processUseCmd(a *actor, state actorInputState, now stime.Time, changes quad.InputPhaseChanges) {
+	cmd := state.useCmd
 	if cmd == nil {
 		return
 	}
@@ -552,15 +507,12 @@ func (e SayEntityState) IsDifferentFrom(other entity.State) bool {
 	return true
 }
 
-func (a *actor) ReadChatCmd() *chatCmd {
-	return <-a.readChatCmd
-}
-
-func (phase inputPhase) processChatCmd(a *actor, now stime.Time, changes quad.InputPhaseChanges) {
-	cmd := a.ReadChatCmd()
+func (phase inputPhase) processChatCmd(a *actor, state actorInputState, now stime.Time, changes quad.InputPhaseChanges) actorInputState {
+	cmd := state.chatCmd
 	if cmd == nil {
-		return
+		return state
 	}
+	state.chatCmd = nil
 
 	switch cmd.ChatRequestType {
 	case CR_SAY:
@@ -577,8 +529,7 @@ func (phase inputPhase) processChatCmd(a *actor, now stime.Time, changes quad.In
 		}
 
 		changes.New(e)
-		return
 	}
 
-	return
+	return state
 }
