@@ -419,7 +419,7 @@ func (phase inputPhase) processUseCmd(a *actor, state actorInputState, now stime
 			spawnedAt: now,
 
 			cell:  a.Cell().Neighbor(a.facing),
-			flags: entity.FlagNew,
+			flags: entity.FlagInstant,
 
 			damage: 25,
 		}

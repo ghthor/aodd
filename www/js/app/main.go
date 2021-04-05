@@ -305,10 +305,11 @@ func (w *world) update(update *worldstate.Update) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Remove all Assail Entities
+	// Remove all Instant Entities
 	for id, e := range w.entities {
-		if _, isAssail := e.State.(game.AssailEntityState); isAssail {
+		if e.Type == quadstate.TypeInstant {
 			delete(w.entities, id)
+			update.RemovedIds = append(update.RemovedIds, id)
 		}
 	}
 
