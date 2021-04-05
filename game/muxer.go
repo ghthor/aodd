@@ -101,6 +101,11 @@ func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- qu
 			state.Entities.ByType[quadstate.TypeChanged],
 			state.Entities.ByType[quadstate.TypeUnchanged],
 		}, encoder)
+		for _, set := range [...][]*quadstate.Entity{
+			state.Entities.ByType[quadstate.TypeUnchanged],
+		} {
+			a.nextBloom.AddEntities(set)
+		}
 		a.diffWriter = a.conn.WriteWorldState(state)
 	} else {
 		a.nextState = state
