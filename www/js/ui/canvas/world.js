@@ -9,6 +9,8 @@ define(["underscore",
     var World = function(director, scene) {
         var world = this;
 
+        var sfxAssail = new Audio("asset/audio/assail.wav");
+
         world.grid = 16;
         var grid = world.grid,
             // TODO should be set from "client/settings" module
@@ -217,7 +219,7 @@ define(["underscore",
 
                 if (!_.isUndefined(entity.Type)) {
                     if (entity.Type === "assail") {
-                        (new Audio("asset/audio/assail.wav")).play();
+                      sfxAssail.play()
                     }
 
                     if (entity.Type === "say") {
