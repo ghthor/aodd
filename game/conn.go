@@ -49,19 +49,19 @@ type Conn interface {
 	Decode(interface{}) error
 }
 
-type InputReceiver interface {
+type ConnectedActor interface {
 	SubmitMoveRequest(MoveRequest)
 	SubmitUseRequest(UseRequest)
 	SubmitChatRequest(ChatRequest)
 
-	Close()
+	Disconnect()
 }
 
 type PreLoginConn interface {
 	HandleLogin() (LoggedInConn, error)
 }
 
-type ActorConnector func(datastore.Actor, InitialStateWriter) (InputReceiver, entity.State)
+type ActorConnector func(datastore.Actor, InitialStateWriter) (ConnectedActor, entity.State)
 
 type LoggedInConn interface {
 	HandleConnect(ActorConnector) (ConnectedActorConn, error)
@@ -232,7 +232,7 @@ func (c initialStateWriter) WriteWorldState(s *worldstate.Snapshot) DiffWriter {
 	return <-c.diffWriter
 }
 
-func (c loggedInResult) connect(connectActor ActorConnector) (InputReceiver, entity.State, <-chan *worldstate.Snapshot, chan<- DiffWriter) {
+func (c loggedInResult) connect(connectActor ActorConnector) (ConnectedActor, entity.State, <-chan *worldstate.Snapshot, chan<- DiffWriter) {
 	initialStateCh := make(chan *worldstate.Snapshot)
 	diffWriterCh := make(chan DiffWriter)
 
@@ -326,7 +326,7 @@ type connectedConn struct {
 
 	connectedActor datastore.Actor
 
-	actor InputReceiver
+	actor ConnectedActor
 }
 
 func (c *connectedConn) handleInputReq() (stateFn, error) {
@@ -397,7 +397,7 @@ func (c connectedConn) HandleIO() (err error) {
 		f, err = f()
 	}
 
-	c.actor.Close()
+	c.actor.Disconnect()
 
 	if <-c.connectedActor.IsConnected {
 		c.connectedActor.IsConnected <- false

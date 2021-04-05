@@ -154,13 +154,15 @@ type ShardConfig struct {
 	Handler http.Handler
 }
 
-type inputReceiver struct {
+var _ ConnectedActor = connectedActor{}
+
+type connectedActor struct {
 	*actor
 	disconnect func()
 }
 
-func (i inputReceiver) Close() {
-	i.disconnect()
+func (a connectedActor) Disconnect() {
+	a.disconnect()
 }
 
 func NewSimShard(c ShardConfig) (*http.Server, error) {
@@ -238,11 +240,11 @@ func NewSimShard(c ShardConfig) (*http.Server, error) {
 	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir(c.CssDir))))
 	mux.Handle(wsRoute, newGobWebsocketHandler(
 		ds,
-		func(dsactor datastore.Actor, stateWriter InitialStateWriter) (InputReceiver, entity.State) {
+		func(dsactor datastore.Actor, stateWriter InitialStateWriter) (ConnectedActor, entity.State) {
 			actor := NewActor(entityIdGen(), dsactor, stateWriter)
 			sim.ConnectActor(actor)
 
-			return inputReceiver{
+			return connectedActor{
 				actor: actor,
 				disconnect: func() {
 					sim.RemoveActor(actor)

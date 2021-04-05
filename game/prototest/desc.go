@@ -109,7 +109,7 @@ func DescribeActorGobConn(c gospec.Context) {
 
 		go func() {
 			exitWithError <- game.LoginAndConnectActor(loginConn,
-				func(dsactor datastore.Actor, stateWriter game.InitialStateWriter) (game.InputReceiver, entity.State) {
+				func(dsactor datastore.Actor, stateWriter game.InitialStateWriter) (game.ConnectedActor, entity.State) {
 					actor := &mockActor{
 						actor:       dsactor,
 						stateWriter: stateWriter,
