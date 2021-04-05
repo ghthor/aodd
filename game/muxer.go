@@ -95,7 +95,12 @@ func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *wor
 func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- quadstate.EncodingRequest) {
 	if a.initialState == nil {
 		a.initialState = state
-		CacheEncodingsFor([][]*quadstate.Entity{state.Removed, state.New, state.Changed, state.Unchanged}, encoder)
+		CacheEncodingsFor([][]*quadstate.Entity{
+			state.Entities.ByType[quadstate.TypeRemoved],
+			state.Entities.ByType[quadstate.TypeNew],
+			state.Entities.ByType[quadstate.TypeChanged],
+			state.Entities.ByType[quadstate.TypeUnchanged],
+		}, encoder)
 		a.diffWriter = a.conn.WriteWorldState(state)
 	} else {
 		a.nextState = state

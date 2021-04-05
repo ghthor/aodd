@@ -166,7 +166,11 @@ define(["underscore",
             player.initialize(time, playerEntity);
 
             var removeEntity = function(entity) {
-                entity = entities[entity.Id];
+                if (_.isUndefined(entity.Id)) {
+                  entity = entities[entity]
+                } else {
+                  entity = entities[entity.Id];
+                }
 
                 if (_.isUndefined(entity)) {
                   return; // continue
@@ -182,6 +186,14 @@ define(["underscore",
                                 actor.clearSayMsg(entity.Id);
                             }
                         }
+                    }
+
+                    if (entity.Type === "wall") {
+                      (function() {
+                        var actor = actors[entity.Id];
+                        actor.destroy()
+                        delete actors[entity.Id]
+                      }());
                     }
 
                     delete entities[entity.Id];
@@ -222,7 +234,12 @@ define(["underscore",
 
                     if (entity.Type === "wall") {
                         (function() {
-                            var actor = newWall(entity);
+                            var actor = actors[entity.Id]
+                            if (!_.isUndefined(actor)) {
+                              // TODO This should be an error, because it means there is a logic error on the server
+                              actor.destroy()
+                            }
+                            actor = newWall(entity);
                             container.addChild(actor);
                             entities[entity.Id] = entity;
                             actors[entity.Id] = actor;
@@ -296,6 +313,7 @@ define(["underscore",
                 _.each(worldStateDiff.Entities, updateEntity);
                 // Remove entities that don't exist anymore
                 _.each(worldStateDiff.Removed, removeEntity);
+                _.each(worldStateDiff.RemovedIds, removeEntity);
 
                 if (!_.isNull(worldStateDiff.TerrainMapSlices)) {
                     if (worldStateDiff.TerrainMapSlices.Slices.length > 0) {

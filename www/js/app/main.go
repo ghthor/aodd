@@ -264,7 +264,7 @@ func (w *world) apply(snapshot *worldstate.Snapshot) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	for _, e := range snapshot.Entities.New {
+	for _, e := range snapshot.Entities.ByType[quadstate.TypeNew] {
 		// Update the actors entity
 		if e.EntityId() == w.entity.EntityId() {
 			w.entity = e.State.(game.ActorEntityState)
@@ -274,7 +274,7 @@ func (w *world) apply(snapshot *worldstate.Snapshot) {
 		w.entities[e.EntityId()] = e
 	}
 
-	for _, e := range snapshot.Entities.Changed {
+	for _, e := range snapshot.Entities.ByType[quadstate.TypeChanged] {
 		// Update the actors entity
 		if e.EntityId() == w.entity.EntityId() {
 			w.entity = e.State.(game.ActorEntityState)
@@ -284,7 +284,7 @@ func (w *world) apply(snapshot *worldstate.Snapshot) {
 		w.entities[e.EntityId()] = e
 	}
 
-	for _, e := range snapshot.Entities.Unchanged {
+	for _, e := range snapshot.Entities.ByType[quadstate.TypeUnchanged] {
 		// Update the actors entity
 		if e.EntityId() == w.entity.EntityId() {
 			w.entity = e.State.(game.ActorEntityState)
@@ -294,7 +294,7 @@ func (w *world) apply(snapshot *worldstate.Snapshot) {
 		w.entities[e.EntityId()] = e
 	}
 
-	for _, e := range snapshot.Entities.Removed {
+	for _, e := range snapshot.Entities.ByType[quadstate.TypeRemoved] {
 		delete(w.entities, e.EntityId())
 	}
 
@@ -328,15 +328,8 @@ func (w *world) update(update *worldstate.Update) {
 		delete(w.entities, e.EntityId())
 	}
 
-	// TODO Fix the rendering of entities at edge of view bounds
-	//      I might need to be running this even when there are no updates?
-	// This is an attempt to fix that, but they are still building up
-	// At the edges of the viewport.
-	for id, e := range w.entities {
-		if !update.Bounds.Contains(e.State.EntityCell()) {
-			update.Removed = append(update.Removed, &quadstate.Entity{State: e.State, Type: quadstate.TypeRemoved})
-			delete(w.entities, id)
-		}
+	for _, id := range update.RemovedIds {
+		delete(w.entities, id)
 	}
 
 	w.lastUpdate = update
@@ -400,8 +393,10 @@ func newLoggedInConn(name string, loggedInConn client.LoggedInConn) (result js.V
 				select {
 				case resp := <-trip.Connected:
 					world := world{
-						entity:   resp.InitialState.Entity,
-						entities: make(map[entity.Id]*quadstate.Entity, len(resp.InitialState.WorldState.Entities.Changed)),
+						entity: resp.InitialState.Entity,
+						entities: make(
+							map[entity.Id]*quadstate.Entity,
+							len(resp.InitialState.WorldState.Entities.ByType[quadstate.TypeChanged])),
 					}
 					world.apply(resp.InitialState.WorldState)
 
