@@ -30,9 +30,9 @@ type actorConn struct {
 	conn       InitialStateWriter
 	diffWriter DiffWriter
 
-	initialState *worldstate.Snapshot
-	prevState    *worldstate.Snapshot
-	nextState    *worldstate.Snapshot
+	initialState         *worldstate.Snapshot
+	prevState, nextState *worldstate.Snapshot
+	prevBloom, nextBloom worldstate.InverseBloomMap
 
 	diff *worldstate.Update
 }
@@ -41,7 +41,10 @@ func newActorConn(conn InitialStateWriter) actorConn {
 	c := actorConn{
 		conn:       conn,
 		inputState: make(chan actorInputState, 1),
-		diff:       worldstate.NewUpdate(1),
+
+		prevBloom: worldstate.NewInverseBloomMap(100),
+		nextBloom: worldstate.NewInverseBloomMap(100),
+		diff:      worldstate.NewUpdate(1),
 	}
 
 	c.inputState <- actorInputState{}
@@ -82,7 +85,7 @@ func (a *actor) WriteStateNext(now stime.Time, quad quadstate.Quad, terrain *wor
 		a.nextState.Clear()
 		a.nextState.Time = now
 		a.nextState.Bounds = bounds
-		quad.QueryBounds(bounds, a.nextState, quadstate.QueryDiff)
+		quad.QueryBounds(bounds, a.nextState, quadstate.QueryAll)
 		a.nextState.TerrainMap = &worldterrain.MapState{Map: terrain.Map.Slice(bounds)}
 
 		a.actorConn.WriteStateNext(a.nextState, encoder)
@@ -96,7 +99,11 @@ func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- qu
 		a.diffWriter = a.conn.WriteWorldState(state)
 	} else {
 		a.nextState = state
-		a.diff.FromSnapshot(a.prevState, a.nextState)
+		a.nextBloom.Reset()
+		a.diff.FromSnapshot(
+			a.prevState, a.nextState,
+			a.prevBloom, a.nextBloom,
+		)
 
 		if len(a.diff.Entities) > 0 || len(a.diff.Removed) > 0 || a.diff.TerrainMapSlices != nil {
 			CacheEncodingsFor([][]*quadstate.Entity{a.diff.Removed, a.diff.Entities}, encoder)
@@ -105,6 +112,7 @@ func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- qu
 	}
 
 	a.prevState, a.nextState = a.nextState, a.prevState
+	a.prevBloom, a.nextBloom = a.nextBloom, a.prevBloom
 }
 
 // TODO move this to a more apprioate place
