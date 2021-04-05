@@ -61,10 +61,8 @@ func (phase updatePhase) Update(e entity.Entity, now stime.Time) entity.Entity {
 		return actor.actorEntity
 
 	case assailEntity:
-		// TODO Fix assail entities never being sent to the server
-		//      I already checked the flags and they seem fine
 		// Remove all assail entities
-		return entity.Removed{e, now}
+		return nil
 
 	case sayEntity:
 		// TODO parametize server fps
@@ -374,7 +372,7 @@ func (e assailEntity) Cell() coord.Cell { return e.cell }
 func (e assailEntity) Bounds() coord.Bounds {
 	return coord.Bounds{e.cell, e.cell}
 }
-func (e assailEntity) Flags() entity.Flag { return 0 }
+func (e assailEntity) Flags() entity.Flag { return e.flags }
 
 func (e assailEntity) ToState() entity.State {
 	return AssailEntityState{

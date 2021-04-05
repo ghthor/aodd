@@ -305,6 +305,13 @@ func (w *world) update(update *worldstate.Update) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// Remove all Assail Entities
+	for id, e := range w.entities {
+		if _, isAssail := e.State.(game.AssailEntityState); isAssail {
+			delete(w.entities, id)
+		}
+	}
+
 	// Update the state
 	//w.state.Apply(diff)
 	for _, e := range update.Entities {
