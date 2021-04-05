@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
+	"github.com/ghthor/filu/rpg2d/entity"
 	"github.com/ghthor/filu/rpg2d/quad/quadstate"
 	"github.com/ghthor/filu/rpg2d/worldstate"
 	"github.com/ghthor/filu/rpg2d/worldterrain"
@@ -24,7 +25,8 @@ type actorInputState struct {
 }
 
 type actorConn struct {
-	inputState chan actorInputState
+	inputState    chan actorInputState
+	entityRequest chan map[entity.Id]struct{}
 
 	// External connection used to publish the initial world state
 	conn       InitialStateWriter
@@ -39,8 +41,9 @@ type actorConn struct {
 
 func newActorConn(conn InitialStateWriter) actorConn {
 	c := actorConn{
-		conn:       conn,
-		inputState: make(chan actorInputState, 1),
+		conn:          conn,
+		inputState:    make(chan actorInputState, 1),
+		entityRequest: make(chan map[entity.Id]struct{}, 1),
 
 		prevBloom: worldstate.NewInverseBloomMap(100),
 		nextBloom: worldstate.NewInverseBloomMap(100),
@@ -48,6 +51,7 @@ func newActorConn(conn InitialStateWriter) actorConn {
 	}
 
 	c.inputState <- actorInputState{}
+	c.entityRequest <- make(map[entity.Id]struct{})
 	return c
 }
 
@@ -64,6 +68,15 @@ func (a *actor) WriteState(state rpg2d.WorldState) {
 
 // TODO Remove this method requirement from rpg2d.Actor interface
 func (a *actorConn) WriteState(state rpg2d.WorldState) {
+}
+
+// TODO Maybe remove this
+func (a actorConn) SubmitEntityRequest(ids []entity.Id) {
+	existing := <-a.entityRequest
+	for _, id := range ids {
+		existing[id] = struct{}{}
+	}
+	a.entityRequest <- existing
 }
 
 // TODO Port all this state initialization work into filu
@@ -113,6 +126,7 @@ func (a *actorConn) WriteStateNext(state *worldstate.Snapshot, encoder chan<- qu
 		a.diff.FromSnapshot(
 			a.prevState, a.nextState,
 			a.prevBloom, a.nextBloom,
+			nil, // TODO Utilize the entityRequests map here
 		)
 
 		if len(a.diff.Entities) > 0 || len(a.diff.Removed) > 0 || a.diff.TerrainMapSlices != nil {

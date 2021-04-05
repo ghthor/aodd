@@ -2,6 +2,8 @@ package game_test
 
 import (
 	"bytes"
+	"encoding/gob"
+	"testing"
 
 	"github.com/ghthor/aodd/game"
 	"github.com/ghthor/filu/rpg2d"
@@ -45,4 +47,47 @@ func DescribeGobConn(c gospec.Context) {
 			})
 		})
 	})
+}
+
+func TestGobDecodingSlices(t *testing.T) {
+	ids := make([]entity.Id, 0, 20)
+	ids = append(ids, 0, 1, 4)
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(ids)
+	if err != nil {
+		t.Fatalf("gob encoding error: %v", err)
+	}
+
+	ids = make([]entity.Id, 0, 20)
+
+	dec := gob.NewDecoder(&buf)
+	err = dec.Decode(&ids)
+	if err != nil {
+		t.Fatalf("gob decoding error: %v", err)
+	}
+
+	if len(ids) != 3 {
+		t.Errorf("len(ids) != 3, %#v", ids)
+	}
+
+	err = enc.Encode(ids)
+	if err != nil {
+		t.Fatalf("gob encoding error: %v", err)
+	}
+
+	ids = nil
+	err = dec.Decode(&ids)
+	if err != nil {
+		t.Fatalf("gob decoding error: %v", err)
+	}
+
+	if len(ids) != 3 {
+		t.Errorf("len(ids) != 3, %#v", ids)
+	}
+
+	if ids[2] != 4 {
+		t.Fatal(ids)
+	}
 }

@@ -38,6 +38,7 @@ const (
 	ET_WORLD_STATE
 	ET_WORLD_STATE_DIFF
 
+	ET_REQ_ENTITY
 	ET_REQ_MOVE
 	ET_REQ_USE
 	ET_REQ_CHAT
@@ -50,6 +51,7 @@ type Conn interface {
 }
 
 type ConnectedActor interface {
+	SubmitEntityRequest([]entity.Id)
 	SubmitMoveRequest(MoveRequest)
 	SubmitUseRequest(UseRequest)
 	SubmitChatRequest(ChatRequest)
@@ -327,6 +329,8 @@ type connectedConn struct {
 	connectedActor datastore.Actor
 
 	actor ConnectedActor
+
+	entityIds []entity.Id
 }
 
 func (c *connectedConn) handleInputReq() (stateFn, error) {
@@ -339,6 +343,8 @@ func (c *connectedConn) handleInputReq() (stateFn, error) {
 	default:
 		return c.handleInputReq, fmt.Errorf("unexpected type %v when handling input", eType)
 
+	case ET_REQ_ENTITY:
+		return c.handleEntityReq, nil
 	case ET_REQ_MOVE:
 		return c.handleMoveReq, nil
 	case ET_REQ_USE:
@@ -347,6 +353,17 @@ func (c *connectedConn) handleInputReq() (stateFn, error) {
 		return c.handleChatReq, nil
 	}
 
+	return c.handleInputReq, nil
+}
+
+func (c *connectedConn) handleEntityReq() (stateFn, error) {
+	c.entityIds = c.entityIds[:0]
+	err := c.Decode(&c.entityIds)
+	if err != nil {
+		return nil, err
+	}
+
+	c.actor.SubmitEntityRequest(c.entityIds)
 	return c.handleInputReq, nil
 }
 
