@@ -9,7 +9,7 @@ import (
 	"github.com/ghthor/aodd/game/datastore"
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
-	"github.com/ghthor/filu/rpg2d/quad/quadstate"
+	"github.com/ghthor/filu/rpg2d/quadstate"
 	"github.com/ghthor/filu/rpg2d/rpg2dtest"
 	"github.com/ghthor/filu/rpg2d/worldstate"
 	"github.com/ghthor/filu/rpg2d/worldterrain"
