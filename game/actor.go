@@ -70,6 +70,8 @@ type ActorEntityState struct {
 	MpMax int `json:"mpMax"`
 }
 
+var _ rpg2d.Actor = &actor{}
+
 type actor struct {
 	id rpg2d.ActorId
 

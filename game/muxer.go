@@ -1,7 +1,6 @@
 package game
 
 import (
-	"github.com/ghthor/filu/rpg2d"
 	"github.com/ghthor/filu/rpg2d/coord"
 	"github.com/ghthor/filu/rpg2d/entity"
 	"github.com/ghthor/filu/rpg2d/quadstate"
@@ -60,14 +59,6 @@ func ActorCullBounds(center coord.Cell) coord.Bounds {
 		center.Add(-26, 26),
 		center.Add(26, -26),
 	}
-}
-
-// TODO Remove this method requirement from rpg2d.Actor interface
-func (a *actor) WriteState(state rpg2d.WorldState) {
-}
-
-// TODO Remove this method requirement from rpg2d.Actor interface
-func (a *actorConn) WriteState(state rpg2d.WorldState) {
 }
 
 // TODO Maybe remove this
