@@ -85,6 +85,8 @@ type actor struct {
 }
 
 func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWriter) *actor {
+	position := arenaRandom()
+
 	return &actor{
 		id: dsactor.Id,
 
@@ -94,7 +96,7 @@ func NewActor(id entity.Id, dsactor datastore.Actor, stateWriter InitialStateWri
 
 			name: dsactor.Name,
 
-			cell:   arenaRandom(),
+			cell:   position,
 			facing: dsactor.Facing,
 			speed:  baseSpeed,
 
